@@ -24,22 +24,39 @@ export type TipoTech = keyof typeof TIPOS;
  * sequência só para todos os tipos; o prefixo vem do tipo de agora. Se o tipo
  * do item muda, o endereço com o prefixo antigo continua achando o item pelo
  * número e passa para o novo. Toda tela, a API e o MCP montam o link por aqui.
+ *
+ * Desde 25/11/2026 (melhoria-818, alternativa B do Kauan), o prefixo é a sigla
+ * de três letras do tipo: FUN-816 na tela, na API e no MCP; /controle-interno/fun-816
+ * no endereço. Os prefixos por extenso de antes (melhoria-45,
+ * funcionalidade-816…) continuam achando o item, para sempre, e a tela passa
+ * para o de agora.
  */
-export const PREFIXO_DO_TIPO: Record<TipoTech, string> = { BUG: "bug", IMPROVEMENT: "melhoria", FEATURE: "funcionalidade", TEST: "teste", MIGRATION: "migracao" };
+export const PREFIXO_DO_TIPO: Record<TipoTech, string> = { BUG: "bug", IMPROVEMENT: "mel", FEATURE: "fun", TEST: "tes", MIGRATION: "mig" };
+/** Os prefixos que um tipo já usou (até 25/11/2026): o endereço velho acha o item e passa para o de agora. */
+const PREFIXOS_ANTIGOS_DO_TIPO: Record<TipoTech, readonly string[]> = { BUG: [], IMPROVEMENT: ["melhoria"], FEATURE: ["funcionalidade"], TEST: ["teste"], MIGRATION: ["migracao"] };
+const TIPO_DO_PREFIXO: Record<string, TipoTech> = Object.fromEntries((Object.keys(PREFIXO_DO_TIPO) as TipoTech[])
+  .flatMap(t => [PREFIXO_DO_TIPO[t], ...PREFIXOS_ANTIGOS_DO_TIPO[t]].map(p => [p, t])));
 type NumeroDoItem = { type: TipoTech; number: number };
-/** "bug-123": o id curto, como aparece no endereço e na API. */
-export const idCurtoDoItem = (item: NumeroDoItem) => `${PREFIXO_DO_TIPO[item.type]}-${item.number}`;
-/** "/controle-interno/bug-123": o endereço do item no Connect. */
-export const enderecoDoItem = (item: NumeroDoItem) => `${ROTA_TECH_INTERNO}/${idCurtoDoItem(item)}`;
-const ID_CURTO = new RegExp(`^(${Object.values(PREFIXO_DO_TIPO).join("|")})-([1-9][0-9]{0,9})$`, "i");
+/** "FUN-816": o id curto, como aparece na tela, na API e no MCP (`shortId`). */
+export const idCurtoDoItem = (item: NumeroDoItem) => `${PREFIXO_DO_TIPO[item.type].toUpperCase()}-${item.number}`;
+/** "/controle-interno/fun-816": o endereço do item no Connect, em minúsculas. */
+export const enderecoDoItem = (item: NumeroDoItem) => `${ROTA_TECH_INTERNO}/${PREFIXO_DO_TIPO[item.type]}-${item.number}`;
+/**
+ * O pedaço do endereço já é o de agora? Senão, a tela do item passa para ele:
+ * o uuid, outra grafia (FUN-816) e o prefixo antigo (funcionalidade-816).
+ */
+export const ehOEnderecoDeAgora = (segmento: string, item: NumeroDoItem) => `${ROTA_TECH_INTERNO}/${segmento}` === enderecoDoItem(item);
+const ID_CURTO = new RegExp(`^(${Object.keys(TIPO_DO_PREFIXO).join("|")})-([1-9][0-9]{0,9})$`, "i");
 const MAIOR_NUMERO = 2147483647;
-/** Lê "bug-123" (sem diferença de maiúsculas): o número e o tipo do prefixo, ou null. */
+/**
+ * Lê "FUN-816", "fun-816" ou o prefixo antigo, "funcionalidade-816" (sem
+ * diferença de maiúsculas): o número e o tipo do prefixo, ou null.
+ */
 export function lerIdCurto(valor: string): { tipo: TipoTech; numero: number } | null {
   const [, prefixo, digitos] = ID_CURTO.exec(valor.trim()) ?? [];
   const numero = Number(digitos);
   if (!prefixo || !Number.isSafeInteger(numero) || numero > MAIOR_NUMERO) return null;
-  const tipo = (Object.keys(PREFIXO_DO_TIPO) as TipoTech[]).find(t => PREFIXO_DO_TIPO[t] === prefixo.toLowerCase())!;
-  return { tipo, numero };
+  return { tipo: TIPO_DO_PREFIXO[prefixo.toLowerCase()], numero };
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const ehUuid = (valor: string) => UUID.test(valor);

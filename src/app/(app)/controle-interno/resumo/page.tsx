@@ -4,10 +4,13 @@ import { CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, enderecoDoItem, hojeEmSaoPaulo } from "@/lib/tech-interno/regras";
 import { PERIODOS_DO_RESUMO, deslocarPeriodo, ehPeriodoDoResumo, resumoEmTexto, type ItemParaResumo, type PeriodoDoResumo } from "@/lib/tech-interno/resumo";
+import { agrupamentoDoRitmo, ritmoDoPeriodo, type AgrupamentoDoRitmo, type GrupoDoRitmo } from "@/lib/tech-interno/ritmo";
 import { resumoTech } from "@/lib/tech-interno/servidor";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ColunasPareadas } from "@/components/shared/Graficos";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -42,13 +45,24 @@ function Linha({ item, detalhe }: { item: ItemParaResumo; detalhe: React.ReactNo
   );
 }
 
+// As quatro listas recolhidas (melhoria-822, 25/11/2026): começam fechadas, com
+// a contagem na linha; o gráfico do ritmo é o que se lê primeiro.
 function Secao({ id, titulo, vazio, children, quantos }: { id: string; titulo: string; vazio: string; quantos: number; children: React.ReactNode }) {
   return (
-    <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-20">
-      <h2 id={`${id}-titulo`} className="text-card-title font-semibold text-fg">{titulo} <span className="text-fg-muted font-normal">({quantos})</span></h2>
-      {quantos === 0 ? <p className="py-3 text-ui text-fg-muted">{vazio}</p> : <ul className="divide-y divide-border">{children}</ul>}
-    </section>
+    <div id={id} className="scroll-mt-20">
+      <BlocoRecolhivel titulo={titulo} resumo={quantos} className="bg-surface shadow-xs">
+        {quantos === 0 ? <p className="pb-1 text-ui text-fg-muted">{vazio}</p> : <ul className="divide-y divide-border">{children}</ul>}
+      </BlocoRecolhivel>
+    </div>
   );
+}
+
+const POR_GRUPO: Record<AgrupamentoDoRitmo, string> = { dia: "por dia", semana: "por semana", mes: "por mês" };
+
+/** O dia, a semana ou o mês por extenso na dica e na tabela acessível. */
+function dicaDoGrupo(g: GrupoDoRitmo, agrupamento: AgrupamentoDoRitmo) {
+  const nome = agrupamento === "semana" ? `Semana de ${g.descricao}` : g.descricao;
+  return g.contemHoje ? `${nome} (${agrupamento === "dia" ? "hoje" : agrupamento === "semana" ? "esta semana" : "este mês"})` : nome;
 }
 
 export default async function ResumoTechPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -66,6 +80,8 @@ export default async function ResumoTechPage({ searchParams }: { searchParams: P
   const base = host ? `${h.get("x-forwarded-proto")?.split(",")[0]?.trim() === "http" ? "http" : "https"}://${host}` : "";
   const texto = resumoEmTexto(`${NOME_DO_PERIODO[periodo]} de ${r.rotulo}`, r, (item) => `${base}${enderecoDoItem(item)}`);
   const nada = !r.concluidos.length && !r.emAndamento.length && !r.planejados.length && !r.cancelados.length;
+  const agrupamento = agrupamentoDoRitmo(periodo);
+  const ritmo = ritmoDoPeriodo(periodo, r, r, hoje);
 
   return (
     <PageContainer>
@@ -100,6 +116,8 @@ export default async function ResumoTechPage({ searchParams }: { searchParams: P
       ) : (
         <>
           <FaixaDeTotais
+            compacta
+            className="mb-4"
             itens={[
               { rotulo: "Concluídos", valor: String(r.concluidos.length), tom: "text-success-fg", href: "#concluidos" },
               { rotulo: "Em andamento", valor: String(r.emAndamento.length), tom: "text-brand", href: "#em-andamento" },
@@ -107,7 +125,25 @@ export default async function ResumoTechPage({ searchParams }: { searchParams: P
               { rotulo: "Cancelados", valor: String(r.cancelados.length), tom: "text-fg-muted", href: "#cancelados" },
             ]}
           />
-          <Card className="mt-5 flex flex-col gap-6 p-5">
+          {/* O ritmo do período (melhoria-822): concluídos × entradas, nas
+              colunas em degradê da Home. No dia não há o que desenhar. */}
+          {agrupamento && ritmo && (
+            <Card className="mb-5 p-5">
+              <ColunasPareadas
+                titulo={`Ritmo: concluídos e entradas ${POR_GRUPO[agrupamento]}`}
+                series={["Concluídos", "Entradas"]}
+                vazio="Nenhum item concluído nem entrada neste período."
+                pares={ritmo.map((g) => ({
+                  chave: g.primeiroDia,
+                  rotulo: g.rotulo,
+                  valores: [g.concluidos, g.entradas] as const,
+                  dica: dicaDoGrupo(g, agrupamento),
+                  destaque: g.contemHoje,
+                }))}
+              />
+            </Card>
+          )}
+          <div className="flex flex-col gap-3">
             <Secao id="concluidos" titulo="Concluídos no período" quantos={r.concluidos.length} vazio="Nenhum item concluído neste período.">
               {r.concluidos.map((i) => (
                 <Linha key={i.id} item={i} detalhe={<>
@@ -136,7 +172,7 @@ export default async function ResumoTechPage({ searchParams }: { searchParams: P
             <Secao id="cancelados" titulo="Cancelados no período" quantos={r.cancelados.length} vazio="Nenhum item cancelado neste período.">
               {r.cancelados.map((i) => <Linha key={i.id} item={i} detalhe={<span>Cancelado em {formatInstantDate(i.em)}</span>} />)}
             </Secao>
-          </Card>
+          </div>
         </>
       )}
     </PageContainer>

@@ -127,7 +127,7 @@ describe("servidor MCP: as ações", () => {
       period: "month", from: "2026-11-01", to: "2026-11-30", label: "novembro de 2026",
       totals: { done: 1, inProgress: 1, planned: 0, canceled: 0 },
       done: [{ id: ID_ITEM, title: "Corrigir X", typeLabel: "Bug", prUrl: "https://github.com/a/b/pull/1", doneAt: quando.toISOString(), shortId: ID_CURTO, url: "https://connect.example.test/controle-interno/bug-7" }],
-      inProgress: [{ id: "outro", shortId: "bug-8", url: "https://connect.example.test/controle-interno/bug-8", statusLabel: "Em validação", priorityLabel: "Alta", movedInPeriod: true }],
+      inProgress: [{ id: "outro", shortId: "BUG-8", url: "https://connect.example.test/controle-interno/bug-8", statusLabel: "Em validação", priorityLabel: "Alta", movedInPeriod: true }],
     });
     await ferramenta(LEITOR, "resumo_do_periodo", {});
     expect(s.resumoTech).toHaveBeenLastCalledWith(ator, "semana", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));

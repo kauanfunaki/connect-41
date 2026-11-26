@@ -28,6 +28,10 @@ export default async function DesligamentosPage() {
     orderBy: { requestedAt: "asc" },
     include: { person: { select: { id: true, name: true } } },
   });
+  // A rescisão gravada no DP 2 e ligada a este desligamento (funcionalidade-746).
+  const comRescisao = new Set(
+    (await prisma.dp2Rescisao.findMany({ where: { tenantId: ctx.tenantId, terminationId: { in: terminations.map((t) => t.id) } }, select: { terminationId: true } })).map((r) => r.terminationId)
+  );
 
   return (
     <PageContainer>
@@ -53,6 +57,7 @@ export default async function DesligamentosPage() {
                   </InfoDoCartao>
                   <PeDoCartao>
                     <SeloDoDP cor={COR_DO_DESLIGAMENTO[t.status]}>{SITUACAO_DO_DESLIGAMENTO[t.status]}</SeloDoDP>
+                    {comRescisao.has(t.id) && <span className="ml-2 text-fs-2 text-brand">Rescisão gravada no DP 2</span>}
                   </PeDoCartao>
                 </Cartao>
               </Link>
@@ -101,6 +106,7 @@ export default async function DesligamentosPage() {
                       <td className="px-4 py-3 text-fg-secondary">{TIPO_DO_DESLIGAMENTO[t.type]}</td>
                       <td className="px-4 py-3">
                         <SeloDoDP cor={COR_DO_DESLIGAMENTO[t.status]}>{SITUACAO_DO_DESLIGAMENTO[t.status]}</SeloDoDP>
+                        {comRescisao.has(t.id) && <span className="ml-2 text-fs-2 text-brand">Rescisão gravada no DP 2</span>}
                       </td>
                       <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(t.requestedAt)}</td>
                       <td className="px-4 py-3">
