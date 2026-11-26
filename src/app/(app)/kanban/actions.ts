@@ -26,8 +26,22 @@ import { apagarAtividadeComAnexos, subarvoreDoItem } from "@/lib/kanban/exclusao
 import { MARCA_DA_CAPA, ehCorDaCapa, textoDaTrocaDeCapa } from "@/lib/kanban/capa";
 import { conferirMovimentoDoCartao, moverCartaoDaSolicitacao } from "@/lib/solicitacoes/cartaoServidor";
 import { concluirSolicitacao } from "@/app/(app)/solicitacoes/actions";
+import { conferirMovimentoDoCartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
+import { recusaDoMovimento } from "@/lib/kanban/cartaoDoProcesso";
 
 export type PipelineState = { error: string } | null;
+
+// ─── O cartão de um processo societário (27/11/2026, funcionalidade-844) ─────
+// O processo manda na coluna, no título, no responsável, na prioridade e no
+// prazo do cartão (ver src/lib/kanban/cartaoDoProcesso.ts). Aqui, as ações do
+// quadro que mexeriam nisso recusam com o caminho; comentário, etiqueta, anexo,
+// checklist e capa seguem livres.
+
+/** O número do processo do cartão, para a recusa dizer qual. */
+async function numeroDoProcesso(tenantId: string, processId: string): Promise<number | null> {
+  const p = await getPrisma().process.findFirst({ where: { id: processId, tenantId }, select: { number: true } });
+  return p?.number ?? null;
+}
 
 // ─── O cartão de uma solicitação do cliente (09/11/2026) ─────────────────────
 // A solicitação manda na coluna do cartão (ver src/lib/solicitacoes/cartao.ts).
@@ -424,6 +438,11 @@ export async function moverItem(
     const daSolicitacao =
       item.serviceRequestId && toStage ? await conferirMovimentoDoCartao(ctx, item.serviceRequestId, toStage.type) : null;
     if (daSolicitacao && !daSolicitacao.ok) return { error: daSolicitacao.erro };
+    // Cartão de processo: a coluna é a situação do processo (27/11/2026).
+    if (item.processId) {
+      const doProcesso = await conferirMovimentoDoCartaoDoProcesso(tenantId, item.processId, item.pipelineId, newStageId);
+      if (!doProcesso.ok) return { error: doProcesso.motivo };
+    }
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
@@ -722,9 +741,14 @@ export async function atualizarPrazoPrioridade(
     // pipelineId do chamador) e tinha seu prazo/prioridade sobrescritos.
     const before = await prisma.pipelineItem.findFirst({
       where: { id: itemId, tenantId, pipelineId },
-      select: { dueDate: true, priority: true },
+      select: { dueDate: true, priority: true, processId: true },
     });
     if (!before) return { error: "Atividade não encontrada." };
+    // Prazo e prioridade do cartão de processo vêm do processo (27/11/2026).
+    if (before.processId) {
+      const n = await numeroDoProcesso(tenantId, before.processId);
+      return { error: `O prazo e a prioridade deste cartão vêm do Processo nº ${n ?? "?"}. Mude no processo.` };
+    }
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
@@ -933,8 +957,10 @@ export async function alternarResponsavelItem(
   if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   // Mesmo fix de alternarTagItem — valida que itemId é mesmo desse pipeline/tenant.
-  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true, processId: true } });
   if (!item) return;
+  // O responsável do cartão de processo é o do processo (27/11/2026); a tela já não oferece.
+  if (item.processId) return;
   // Desmarcar responsável segue livre (exceção do dia a dia); marcar só aceita
   // pessoa deste escritório.
   if (marcado && !(await usuarioDoEscritorio(tenantId, userId))) return;
@@ -1147,6 +1173,9 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
   // O card tem de ser desta lista — o pipelineId que libera a ação é o dela.
   const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId } });
   if (!item) return;
+  // O cartão de processo sai com o processo, não pelo quadro (27/11/2026): a
+  // reconciliação o recriaria. A tela não oferece o "Excluir" nele.
+  if (item.processId) return;
 
   try {
     await excluirComSubatividades(ctx, item);
@@ -1479,6 +1508,8 @@ export async function concluirTarefa(pipelineId: string, itemId: string, comSuba
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
+  // Concluir o cartão de processo é concluir o processo, pelas etapas (27/11/2026).
+  if (item.processId) return { error: recusaDoMovimento((await numeroDoProcesso(tenantId, item.processId)) ?? 0) };
 
   let concluirASolicitacao = false;
   try {
@@ -1550,6 +1581,8 @@ export async function reabrirTarefa(pipelineId: string, itemId: string): Promise
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
+  // Reabrir o cartão de processo é retomar o processo (27/11/2026).
+  if (item.processId) return { error: recusaDoMovimento((await numeroDoProcesso(tenantId, item.processId)) ?? 0) };
 
   try {
     const firstStage = await prisma.pipelineStage.findFirst({

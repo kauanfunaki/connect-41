@@ -1,7 +1,9 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Check, CheckCircle2, ChevronDown, Circle, Eye, Flag, Play, Plus, Square, Tag as TagIcon, Timer, Users, Calendar, Repeat } from "lucide-react";
+import Link from "next/link";
+import { Check, CheckCircle2, ChevronDown, Circle, Eye, Flag, Lock, Play, Plus, Square, Tag as TagIcon, Timer, Users, Calendar, Repeat } from "lucide-react";
+import { formatCalendarDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { TempoDecorrido } from "@/components/kanban/TempoDecorrido";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
@@ -43,6 +45,25 @@ const PRIORITY_COLOR: Record<number, string> = {
 };
 const FREQUENCY_LABEL: Record<string, string> = { DAILY: "Diária", WEEKLY: "Semanal", BIWEEKLY: "Quinzenal", MONTHLY: "Mensal" };
 
+
+/** O campo que vem do processo: o valor fica, travado, com o caminho para mudar (27/11/2026). */
+function MudarNoProcesso({ href }: { href: string | null }) {
+  if (!href) {
+    return (
+      <span className="inline-flex items-center gap-1 text-micro text-fg-muted">
+        <Lock size={11} aria-hidden /> Vem do processo
+      </span>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1 rounded text-micro text-fg-muted hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+    >
+      <Lock size={11} aria-hidden /> Mudar no processo
+    </Link>
+  );
+}
 
 function FieldRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
@@ -98,6 +119,14 @@ type Props = {
 
   selectedWatcherIds: string[];
   watcherToggleAction: (userId: string, marcado: boolean) => Promise<void>;
+
+  /**
+   * O cartão acompanha um processo societário (27/11/2026, funcionalidade-844):
+   * situação, datas (o prazo combinado do processo), responsáveis e prioridade
+   * ficam travados, com o caminho para mudar no processo (`href`, nulo para quem
+   * não abre os Processos). Etiquetas, participantes e tempo seguem livres.
+   */
+  doProcesso?: { href: string | null; prazo: string | null } | null;
 };
 
 export function TaskFieldsPanel({
@@ -109,7 +138,10 @@ export function TaskFieldsPanel({
   allTags, selectedTagIds, tagToggleAction,
   allUsers, selectedUserIds, assigneeToggleAction,
   selectedWatcherIds, watcherToggleAction,
+  doProcesso = null,
 }: Props) {
+  // Os campos que o processo manda não se editam no cartão (27/11/2026).
+  const podeMexer = canAct && !doProcesso;
   // Os campos extras que a pessoa pediu agora em "Adicionar campo" (05/11/2026).
   const [extrasPedidos, setExtrasPedidos] = useState<CampoExtra[]>([]);
   const [mudando, startTransition] = useTransition();
@@ -150,7 +182,7 @@ export function TaskFieldsPanel({
           "Status" era o único rótulo em inglês do cartão (07/10/2026). */}
       <FieldRow icon={<Circle size={14} />} label="Situação">
         <span className="inline-flex flex-wrap items-center gap-2">
-          {canAct ? (
+          {podeMexer ? (
             <Dropdown
               trigger={({ open, toggle }) => (
                 <button
@@ -177,9 +209,10 @@ export function TaskFieldsPanel({
           ) : (
             <Selo tom={tomDaSituacao}>{currentStageName}</Selo>
           )}
+          {doProcesso && <MudarNoProcesso href={doProcesso.href} />}
           {/* "Marcar como concluída" ao lado da situação, como no ClickUp
               (05/11/2026) — era um botão solto acima dos campos. */}
-          {canAct && concluirAction && !isCompleted && (
+          {podeMexer && concluirAction && !isCompleted && (
             <Button
               type="button"
               variant="secondary"
@@ -195,8 +228,17 @@ export function TaskFieldsPanel({
         </span>
       </FieldRow>
 
-      <FieldRow icon={<Calendar size={14} />} label="Datas">
-        {canAct ? (
+      <FieldRow icon={<Calendar size={14} />} label={doProcesso ? "Prazo combinado" : "Datas"}>
+        {doProcesso ? (
+          // O prazo combinado do processo, lido na hora — não é copiado para o
+          // cartão, para não virar um segundo alerta do mesmo trabalho.
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <span className={`text-fs-3 ${doProcesso.prazo ? "text-fg" : "text-fg-muted"}`}>
+              {doProcesso.prazo ? formatCalendarDate(new Date(doProcesso.prazo.slice(0, 10)), { day: "2-digit", month: "short", year: "numeric" }) : VAZIO}
+            </span>
+            <MudarNoProcesso href={doProcesso.href} />
+          </span>
+        ) : canAct ? (
           <DatesPopover
             dueDate={dueDate}
             startDate={startDate}
@@ -247,7 +289,12 @@ export function TaskFieldsPanel({
       </FieldRow>
 
       <FieldRow icon={<Users size={14} />} label="Responsáveis">
-        {canAct ? (
+        {doProcesso ? (
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <span className={`text-fs-3 ${hasResponsaveis ? "text-fg" : "text-fg-muted"}`}>{hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : VAZIO}</span>
+            <MudarNoProcesso href={doProcesso.href} />
+          </span>
+        ) : canAct ? (
           <Dropdown
             width={260}
             trigger={({ open, toggle }) => (
@@ -264,7 +311,12 @@ export function TaskFieldsPanel({
       </FieldRow>
 
       <FieldRow icon={<Flag size={14} />} label="Prioridade">
-        {canAct ? (
+        {doProcesso ? (
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <MostraPrioridade prioridade={priority} />
+            <MudarNoProcesso href={doProcesso.href} />
+          </span>
+        ) : canAct ? (
           <PriorityPopover priority={priority} dueDate={dueDate} startDate={startDate} recurring={recurring} recurrenceFrequency={recurrenceFrequency} datesAction={datesAction} />
         ) : (
           <MostraPrioridade prioridade={priority} />
