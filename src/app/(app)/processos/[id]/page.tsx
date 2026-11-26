@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { EtiquetaDaCor } from "@/components/kanban/CapaDoCartao";
+import { corDaCapa } from "@/lib/kanban/capa";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
@@ -105,7 +107,7 @@ export default async function ProcessoDetalhePage({
       company: { select: { id: true, number: true, name: true, displayName: true } },
       owner: { select: { id: true, name: true } },
       type: {
-        select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
+        select: { name: true, color: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
       },
       template: {
         select: {
@@ -337,6 +339,8 @@ export default async function ProcessoDetalhePage({
           .filter(Boolean)
           .join(" · ");
 
+  const corDoTipo = corDaCapa(processo.type.color);
+
   return (
     <PageContainer>
       {/* Trilha no lugar do "Voltar" (padrão aceito em 08/10/2026): o processo
@@ -370,6 +374,9 @@ export default async function ProcessoDetalhePage({
         }
         meta={
           <>
+          {/* A cor do tipo, a mesma da faixa no kanban (27/11/2026,
+              funcionalidade-845), com o nome do tipo escrito. */}
+          {corDoTipo && <EtiquetaDaCor cor={corDoTipo}>{processo.type.name}</EtiquetaDaCor>}
           {/* Situação e prioridade em Selo: é a situação da ficha (regra de
               02/10 no Selo; auditoria de 07/10/2026). */}
           {encerradoSemConclusao ? (

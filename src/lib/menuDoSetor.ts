@@ -52,8 +52,8 @@ export type OrdemDoMenu = {
   geral?: string[];
   /**
    * A ordem do que fica DENTRO de cada menu (09/11/2026): por menu (o código da
-   * tela de cima, ou um grupo do Geral — "apoio" e, desde 10/11/2026,
-   * "cadastros"; ver `GRUPOS_DO_GERAL`), as chaves das telas de dentro — o
+   * tela de cima, ou um grupo do Geral — "apoio", desde 10/11/2026
+   * "cadastros" e desde 26/11/2026 "clientes"; ver `GRUPOS_DO_GERAL`), as chaves das telas de dentro — o
    * código da tela, ou `sub:<nome>` para as abas com entrada no menu (Robôs,
    * Sites, Apps…). Só a posição: nada sai de um menu nem entra em outro.
    */
@@ -124,7 +124,7 @@ export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
     const dentro = porMenu(o.dentro);
     const ocultasDentro = porMenu(o.ocultasDentro);
     const ocultasGeral = lista(o.ocultasGeral);
-    return comQuadroForaDoApoio({
+    return comAtendimentoAoClienteEmGrupo(comQuadroForaDoApoio({
       grupos: lista(o.grupos),
       telas: lista(o.telas),
       ...(ocultas.length ? { ocultas } : {}),
@@ -132,7 +132,7 @@ export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
       ...(Object.keys(dentro).length ? { dentro } : {}),
       ...(ocultasGeral.length ? { ocultasGeral } : {}),
       ...(Object.keys(ocultasDentro).length ? { ocultasDentro } : {}),
-    });
+    }));
   } catch {
     return ORDEM_PADRAO;
   }
@@ -192,6 +192,66 @@ export function comQuadroForaDoApoio(ordem: OrdemDoMenu): OrdemDoMenu {
     ...(dentro ? { dentro } : {}),
     ...(ocultasGeral?.length ? { ocultasGeral } : {}),
     ...(ocultasDentro ? { ocultasDentro } : {}),
+  };
+}
+
+/** A chave do grupo "Atendimento ao cliente" no Geral (26/11/2026, melhoria-871). */
+export const GRUPO_DO_CLIENTE = "clientes";
+
+/**
+ * O nome do grupo no menu. "Clientes", o nome da área de cor, ficava a uma
+ * letra do grupo "Cliente" do menu do BPO (Pendências ao cliente, Conversa com
+ * o cliente, Aprovações) — no BPO os dois apareceriam juntos.
+ */
+export const NOME_DO_GRUPO_DO_CLIENTE = "Atendimento ao cliente";
+
+/** As telas que entraram no grupo, na ordem de sempre do menu. */
+export const TELAS_DO_GRUPO_DO_CLIENTE = ["solicitacoes", "atendimento", "arquivos"] as const;
+
+/**
+ * A ordem gravada antes de Solicitações, Atendimento e Arquivos virarem o
+ * grupo "Atendimento ao cliente" do Geral (26/11/2026, melhoria-871), lida no
+ * jeito novo — como a `comQuadroForaDoApoio`, sem script de banco: vale na
+ * leitura e fica gravada no próximo "Concluir" do organizador.
+ *
+ * - Na ordem do Geral, o grupo entra no lugar da primeira das três, e as
+ *   outras saem. A ordem em que elas estavam vira a ordem de dentro do grupo.
+ * - Sem nenhuma das três na ordem do Geral (os módulos estavam desligados
+ *   quando o setor gravou), o grupo vai para o fim, como qualquer item novo
+ *   (`pelaOrdem`) — onde as três iriam antes.
+ * - Escondida pelo olho no Geral continua escondida, agora dentro do grupo.
+ *
+ * Sem isso a ordem gravada mandaria o grupo para o fim do Geral e as telas
+ * escondidas voltariam a aparecer.
+ */
+export function comAtendimentoAoClienteEmGrupo(ordem: OrdemDoMenu): OrdemDoMenu {
+  const doGrupo = (c: string) => (TELAS_DO_GRUPO_DO_CLIENTE as readonly string[]).includes(c);
+  const naOrdem = (ordem.geral ?? []).filter(doGrupo);
+  const escondidas = (ordem.ocultasGeral ?? []).filter(doGrupo);
+  if (naOrdem.length === 0 && escondidas.length === 0) return ordem;
+
+  let geral = ordem.geral ? [...ordem.geral] : undefined;
+  if (geral) {
+    const primeira = geral.findIndex(doGrupo);
+    if (primeira >= 0 && !geral.includes(GRUPO_DO_CLIENTE)) geral.splice(primeira, 0, GRUPO_DO_CLIENTE);
+    geral = geral.filter((c) => !doGrupo(c));
+  }
+
+  // A ordem de dentro: a que o setor já escolheu no grupo ou, na falta, a das três no Geral.
+  const dentro = { ...(ordem.dentro ?? {}) };
+  if (naOrdem.length > 1 && !dentro[GRUPO_DO_CLIENTE]?.length) dentro[GRUPO_DO_CLIENTE] = naOrdem;
+  const ocultasDentro = { ...(ordem.ocultasDentro ?? {}) };
+  if (escondidas.length) ocultasDentro[GRUPO_DO_CLIENTE] = [...new Set([...(ocultasDentro[GRUPO_DO_CLIENTE] ?? []), ...escondidas])];
+  const ocultasGeral = (ordem.ocultasGeral ?? []).filter((c) => !doGrupo(c));
+
+  return {
+    grupos: ordem.grupos,
+    telas: ordem.telas,
+    ...(ordem.ocultas ? { ocultas: ordem.ocultas } : {}),
+    ...(geral?.length ? { geral } : {}),
+    ...(Object.keys(dentro).length ? { dentro } : {}),
+    ...(ocultasGeral.length ? { ocultasGeral } : {}),
+    ...(Object.keys(ocultasDentro).length ? { ocultasDentro } : {}),
   };
 }
 

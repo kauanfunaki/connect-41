@@ -12,6 +12,8 @@ import { enderecoDe } from "@/lib/enderecoCurto";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
+import { EtiquetaDaCor } from "@/components/kanban/CapaDoCartao";
+import { corDaCapa } from "@/lib/kanban/capa";
 
 export const SITUACAO_LABEL: Record<SituacaoDoProcesso, string> = {
   EM_EXIGENCIA: "Em exigência",
@@ -71,6 +73,35 @@ export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
       <span className="tabular-nums">{prazo.dias}</span> de{" "}
       <span className="tabular-nums">{faixa}</span> dias úteis
       {prazo.situacao === "estourado" && " · estourado"}
+    </span>
+  );
+}
+
+/**
+ * O tipo do processo e o título, embaixo do nome da empresa. Com a cor do tipo
+ * escolhida em Roteiros (27/11/2026, funcionalidade-845), o tipo vai numa
+ * etiqueta cheia daquela cor — a mesma da faixa do kanban —, com o nome escrito.
+ */
+function TipoDoProcesso({ linha: l }: { linha: Pick<LinhaDaFila, "tipoNome" | "tipoCor" | "titulo"> }) {
+  const cor = corDaCapa(l.tipoCor);
+  if (!cor) {
+    return (
+      <span className="block text-micro text-fg-muted truncate" title={l.titulo ?? l.tipoNome}>
+        {l.tipoNome}
+        {l.titulo ? ` · ${l.titulo}` : ""}
+      </span>
+    );
+  }
+  return (
+    <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-micro text-fg-muted">
+      <EtiquetaDaCor cor={cor} className="flex-shrink-0">
+        {l.tipoNome}
+      </EtiquetaDaCor>
+      {l.titulo && (
+        <span className="truncate" title={l.titulo}>
+          {l.titulo}
+        </span>
+      )}
     </span>
   );
 }
@@ -147,10 +178,14 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
           <Link key={l.id} href={enderecoDe("processo", { id: l.id, number: l.numero })} className="block">
             <Cartao className="hover:border-brand/40 transition-colors">
               <TopoDoCartao nome={l.empresaNome} />
-              <InfoDoCartao>
-                {l.tipoNome}
-                {l.titulo ? ` · ${l.titulo}` : ""}
-              </InfoDoCartao>
+              {corDaCapa(l.tipoCor) ? (
+                <TipoDoProcesso linha={l} />
+              ) : (
+                <InfoDoCartao>
+                  {l.tipoNome}
+                  {l.titulo ? ` · ${l.titulo}` : ""}
+                </InfoDoCartao>
+              )}
               <InfoDoCartao>{l.etapasAgora.length > 0 ? l.etapasAgora.join(" · ") : "Nada liberado no roteiro"}</InfoDoCartao>
               <div className="mt-1.5">{prazos(l)}</div>
               {/* Situação e prioridade em Selo: é a situação de uma linha ou
@@ -229,10 +264,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                     >
                       {l.empresaNome}
                     </Link>
-                    <span className="block text-micro text-fg-muted truncate" title={l.titulo ?? l.tipoNome}>
-                      {l.tipoNome}
-                      {l.titulo ? ` · ${l.titulo}` : ""}
-                    </span>
+                    <TipoDoProcesso linha={l} />
                     <span
                       className="block text-micro text-fg-muted truncate"
                       title={l.etapasAgora.join(" · ") || undefined}

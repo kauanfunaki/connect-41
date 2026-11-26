@@ -175,7 +175,7 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
     return (
       <button
         type="button"
-        aria-label={naFaixa ? (contagem ? `${label}, ${contagem}` : label) : undefined}
+        aria-label={naFaixa ? [label, contagem, contador > 0 ? `${contador} ${contador === 1 ? "nova" : "novas"}` : null].filter(Boolean).join(", ") : undefined}
         aria-haspopup="menu"
         aria-expanded={menu.aberto}
         aria-controls={menu.painelId}
@@ -186,7 +186,11 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
         className={naFaixa ? classeDoItemNaFaixa(active, area) : area !== undefined ? classeDoItemComArea(active, "w-[calc(100%+0.75rem)] text-label font-medium") : classeDoItem(active, "w-[calc(100%+0.75rem)] text-label font-medium")}
       >
         {naFaixa ? (
-          <IconeNaFaixa icon={icon} active={active} comTelas />
+          <>
+            <IconeNaFaixa icon={icon} active={active} comTelas />
+            {/* Na faixa, o ponto vermelho do item solto (26/11/2026, melhoria-871): o grupo também avisa. */}
+            {contador > 0 && <span aria-hidden className="absolute top-[5px] right-[5px] size-2 rounded-full bg-danger-solid ring-2 ring-surface" />}
+          </>
         ) : (
           <>
             {active && <BarraAtiva />}

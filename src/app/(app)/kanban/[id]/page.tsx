@@ -120,6 +120,7 @@ export default async function KanbanBoardPage({
       subtaskTotal: filhas.total,
       subtaskDone: filhas.concluidas,
       subtasks: i.filhas.map(subatividade),
+      coverColor: i.coverColor,
     };
   });
 

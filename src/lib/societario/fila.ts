@@ -23,6 +23,8 @@ export type LinhaDaFila = {
   /** O número do processo: o link vai pelo endereço curto, /processos/processo-12 (10/11/2026). */
   numero?: number;
   tipoNome: string;
+  /** A cor do tipo no quadro, a chave da paleta da capa (27/11/2026, funcionalidade-845); nula = sem cor. */
+  tipoCor?: string | null;
   empresaId: string;
   empresaNome: string;
   responsavelNome: string | null;
@@ -177,7 +179,7 @@ export async function listarFilaLeve(
       company: { select: { id: true, name: true, displayName: true } },
       owner: { select: { name: true } },
       type: {
-        select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
+        select: { name: true, color: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
       },
       protocols: { select: { organId: true, attempt: true, outcome: true } },
     },
@@ -191,6 +193,7 @@ export async function listarFilaLeve(
       id: p.id,
       numero: p.number,
       tipoNome: p.type.name,
+      tipoCor: p.type.color,
       empresaId: p.company.id,
       empresaNome: nomeExibicao(p.company),
       responsavelNome: p.owner?.name ?? null,

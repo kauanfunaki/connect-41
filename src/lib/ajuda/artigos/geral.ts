@@ -476,6 +476,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Em “Situação”, escolha a etapa em que a atividade está.",
           "Em “Responsáveis”, marque quem faz a atividade; em “Participantes”, quem acompanha.",
           "A atividade nova começa com os campos “Vazio”. Preencha “Datas”, “Prioridade” e “Etiquetas”; os outros campos entram por “Adicionar campo”. Embaixo da descrição, “Subatividade”, “Vínculo”, “Checklist” e “Anexo” abrem a seção de cada um.",
+          "Para pôr uma capa colorida no cartão do “Kanban”, como no Trello, clique em “Capa”, ao lado do código da atividade, e escolha a cor. “Sem capa” tira a cor. A troca fica no histórico da atividade.",
           "Em “Comentários e atividade”, escreva no campo de comentário, use @ para mencionar alguém e clique em “Comentar”.",
           "Quando terminar, clique em “Marcar como concluída”, ao lado da “Situação”. Se ainda houver subatividades abertas, marque “Concluir também as subatividades abertas” para fechar todas juntas, ou desmarque para concluir só esta.",
         ],
@@ -501,7 +502,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como achar as pastas de uma empresa",
         passos: [
-          "Abra “Arquivos” na barra lateral e digite na busca o nome ou o CNPJ da empresa. O resultado vem em dois grupos: “Empresas”, com as que batem com o texto, e “Arquivos”. Clique na empresa para abrir as pastas dela. Pela ficha da empresa, a aba “Arquivos” mostra as mesmas pastas.",
+          "Na barra lateral, clique em “Atendimento ao cliente” e escolha “Arquivos”. Digite na busca o nome ou o CNPJ da empresa. O resultado vem em dois grupos: “Empresas”, com as que batem com o texto, e “Arquivos”. Clique na empresa para abrir as pastas dela. Pela ficha da empresa, a aba “Arquivos” mostra as mesmas pastas.",
           "Na lista de empresas, o número à direita é quantos documentos a empresa tem (pastas e “Do Connect”). Âmbar com “!” é envio do cliente que ninguém da equipe abriu ainda: a empresa vem no topo, e o clique abre direto em “Enviados pelo cliente”.",
           "A lista mostra 12 empresas por página — primeiro as com envio novo, depois as com movimento mais recente. Use “Próxima” ou a busca para achar as outras.",
           "Clique numa pasta para abrir. A trilha no topo leva de volta a qualquer nível.",
@@ -577,7 +578,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como acompanhar a fila",
         passos: [
-          "Abra “Solicitações” na barra lateral. A aba “Recebidas” mostra as que estão em aberto.",
+          "Na barra lateral, clique em “Atendimento ao cliente” e escolha “Solicitações”. A aba “Recebidas” mostra as que estão em aberto.",
           "Use os cartões “Novas”, “Minhas”, “Resposta atrasada” e “Aguardando cliente” para abrir cada recorte.",
           "Clique em “Filtros” para escolher a “Situação”, o “Setor”, a “Empresa” ou só as com resposta atrasada.",
           "Em cada linha, confira a data em “Resposta até” e o selo do prazo: “No prazo”, “Responder hoje” ou “Resposta atrasada”.",

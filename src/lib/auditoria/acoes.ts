@@ -491,6 +491,11 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.ferias_excluidas": x("excluiu férias gravadas no DP 2"),
   "folha.contratos_alterados_em_lote": c("alterou contratos em lote no DP 2"),
   "folha.adiantamento_lancado": c("lançou o adiantamento salarial da competência no DP 2"),
+  "folha.diferencas_lancadas": c("lançou diferenças retroativas na competência do DP 2"),
+  "folha.diferencas_excluidas": x("excluiu diferenças retroativas da competência do DP 2"),
+  "folha.nivel_criado": c("cadastrou um nível salarial no DP 2"),
+  "folha.nivel_excluido": x("excluiu um nível salarial no DP 2"),
+  "folha.niveis_aplicados": c("aplicou os níveis salariais aos contratos no DP 2"),
   "folha.medico_criado": c("cadastrou um médico do ASO no DP 2"),
   "folha.medico_excluido": x("excluiu um médico do ASO no DP 2"),
   "folha.ambiente_criado": c("cadastrou um ambiente de trabalho no DP 2"),
@@ -582,6 +587,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "process.aviso_orgao_aplicado": e("aplicou um aviso do órgão ao processo"),
   // O editor de roteiro (09/11/2026): cada publicação é uma versão nova inteira.
   "societario.roteiro.publicado": e("publicou o roteiro"),
+  // A cor do tipo de processo no quadro (27/11/2026, funcionalidade-845).
+  "societario.tipo.cor": e("mudou a cor do tipo de processo"),
   "societario.processo.situacao": e("mudou a situação do processo"),
   "societario.processo.mensagem": o("mandou uma mensagem no processo"),
   "societario.processo.documento": c("anexou documentos ao processo"),
@@ -1008,6 +1015,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   TenantSocietarioConfig: "configuração do Societário",
   ProcessProtocol: "protocolo do processo",
   ProcessTemplate: "roteiro de processo",
+  ProcessType: "tipo de processo",
   PortalUser: "acesso ao portal",
   Process: "processo",
   RecurringObligation: "obrigação recorrente",

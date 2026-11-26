@@ -337,7 +337,7 @@ export async function listarConcluidosRecentes(
       dueAt: true,
       company: EMPRESA,
       owner: { select: { name: true } },
-      type: { select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true } },
+      type: { select: { name: true, color: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true } },
       protocols: { select: { organId: true, attempt: true, outcome: true } },
     },
     orderBy: { concludedAt: "desc" },
@@ -347,6 +347,7 @@ export async function listarConcluidosRecentes(
   return processos.map((p) => ({
     id: p.id,
     tipoNome: p.type.name,
+    tipoCor: p.type.color,
     empresaId: p.company.id,
     empresaNome: nomeExibicao(p.company),
     responsavelNome: p.owner?.name ?? null,
