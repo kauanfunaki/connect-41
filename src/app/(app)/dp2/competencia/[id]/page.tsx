@@ -28,7 +28,8 @@ import { TIPOS_DE_INFORMACAO, apurarCompetencia, ehTipoDeInformacao } from "@/li
 import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
 import { documentoFormatado } from "@/lib/dp2/outrasBasesInss";
-import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
+import { CATEGORIAS, ehDomestico, regimeDaCategoria } from "@/lib/dp2/categorias";
+import { daeDoDomestico } from "@/lib/dp2/domestico";
 import { camposAjustaveis, nomeDoCampo, type AjusteAplicado } from "@/lib/dp2/ajustesDoCalculo";
 import { totaisPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
 import { LancarPorRubrica } from "@/components/dp2/LancarPorRubrica";
@@ -161,6 +162,20 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const urlPublica = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"));
   const totais = (comp.totais ?? null) as TotaisDaCompetencia | null;
+  // DAE do Simples Doméstico (funcionalidade-777): os empregados domésticos (categoria 104) da competência.
+  const dosDomesticos = calculos.filter((c) => ehDomestico(pessoas.find((p) => p.id === c.personId)?.dp2Vinculo?.categoria));
+  const dae =
+    mensal && dosDomesticos.length > 0
+      ? daeDoDomestico(
+          dosDomesticos.map((c) => ({
+            nome: c.person.name,
+            inss: n(c.inss),
+            irrf: n(c.irrf),
+            fgts: n(c.fgts),
+            encargos: c.encargos as { inssEmpresa: number; rat: number; indenizacaoCompensatoria?: number } | null,
+          }))
+        )
+      : null;
   const semContrato = pessoas.filter((p) => !p.dp2Vinculo);
   const lancaveis = rubricas.filter((r) => r.ativa && (r.papel ? ehPapel(r.papel) && PAPEIS_LANCAVEIS.has(r.papel) : r.tipo !== "INFORMATIVA"));
   // Lançar por rubrica e em grupo, e a consulta por rubrica (funcionalidade-767, 1.1).
@@ -950,6 +965,27 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                   </Aviso>
                 )}
               </div>
+            </div>
+          </Secao>
+        )}
+
+        {etapa === "conferir" && dae && (
+          <Secao titulo="DAE do Simples Doméstico" apoio={`${dosDomesticos.length} empregado(s) doméstico(s). O DAE sai do eSocial Doméstico com a folha fechada; confira o total da guia com o cálculo.`}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[420px] text-fs-3">
+                <tbody>
+                  {dae.linhas.map((l) => (
+                    <tr key={l.rotulo} className={TR}>
+                      <td className={TD}>{l.rotulo}</td>
+                      <td className={TD_NUM}>{brl(l.valor)}</td>
+                    </tr>
+                  ))}
+                  <tr className={`${TR} font-semibold`}>
+                    <td className={TD}>Total do DAE</td>
+                    <td className={TD_NUM}>{brl(dae.total)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </Secao>
         )}
