@@ -19,6 +19,8 @@ export default function LoadingTransferencias() {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-h-[52px] px-4 py-2.5 border-b border-border">
             <SkeletonLine w="w-full max-w-md flex-1" h="h-8" />
             <SkeletonLine w="w-24" h="h-8" />
+            {/* O botão "Legenda", ao lado do Filtros (26/11/2026, melhoria-811). */}
+            <SkeletonLine w="w-24" h="h-8" />
             <div className="ml-auto">
               <SkeletonLine w="w-28" h="h-3.5" />
             </div>
@@ -37,14 +39,14 @@ export default function LoadingTransferencias() {
           <div className="hidden md:block">
             <div className="flex items-center gap-6 px-4 py-3 bg-[var(--c41-table-header-bg)] border-b border-border">
               {["w-20", "w-20", "w-20", "w-24", "w-20", "w-20"].map((w, i) => (
-                <div key={i} className={i === 0 ? "flex-[2]" : "flex-1 flex justify-center"}>
+                <div key={i} className={i === 0 ? "flex-[2] flex justify-center" : "flex-1 flex justify-center"}>
                   <SkeletonLine w={w} h="h-3" />
                 </div>
               ))}
             </div>
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-6 px-4 py-3.5 border-b border-border last:border-0">
-                <div className="flex-[2]">
+                <div className="flex-[2] flex justify-center">
                   <SkeletonLine w={i % 2 === 0 ? "w-56" : "w-44"} h="h-3.5" />
                 </div>
                 <div className="flex-1 flex justify-center">
