@@ -36,7 +36,9 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS } from "@/lib/dp2/categorias";
-import { criarColaboradorDp2Action, salvarVinculoAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, importarSaldoInicialAction, salvarVinculoAction } from "../actions";
+import { FormularioDoDp2 } from "@/components/dp2/Formulario";
+import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
 
@@ -59,12 +61,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     );
   }
 
-  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios] = await Promise.all([
+  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios, centrosDeCusto] = await Promise.all([
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().company.findFirst({ where: { id: tela.empresa.id, tenantId: tela.tenantId }, select: { cnpj: true, kind: true } }),
     listarRubricas(tela.tenantId),
     // Horários de trabalho da empresa (funcionalidade-752).
     getPrisma().dp2Horario.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
+    // Centros de custo do BPO da empresa (funcionalidade-751).
+    getPrisma().costCenter.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
   ]);
   // As rubricas que podem ser fixas no contrato: as mesmas que o DP lança no mês (funcionalidade-767).
   const paraFixar = linhasDeRubrica
@@ -94,6 +98,19 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       </option>
     )),
   ];
+  // Saldo inicial das médias (funcionalidade-747): o histórico de antes do DP 2.
+  const saldoInicial = resumirSaldoInicial(
+    (
+      await getPrisma().dp2SaldoInicialMedia.findMany({
+        where: { tenantId: tela.tenantId, companyId: tela.empresa.id },
+        select: { personId: true, competencia: true, valor: true, conferidoEm: true },
+      })
+    ).map((l) => ({ personId: l.personId, competencia: l.competencia, valor: Number(l.valor), conferido: l.conferidoEm !== null }))
+  );
+  const empresaId = tela.empresa.id;
+  const nomeDe = new Map(pessoas.map((p) => [p.id, p.name]));
+  const mesDe = (c: string) => c.split("-").reverse().join("/");
+  const saldoPendente = saldoInicial.reduce((s, r) => s + r.pendentes, 0);
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
 
@@ -297,6 +314,25 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
         )}
       </BlocoDoContrato>
 
+      <BlocoDoContrato titulo="Centro de custo">
+        <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+          <CampoForm label="Centro de custo" htmlFor="costCenterId" dica="Os centros de custo do BPO da empresa. A contabilização e o resumo da folha saem por centro.">
+            <Select id="costCenterId" name="costCenterId" defaultValue={v?.costCenterId ?? ""}>
+              <option value="">Sem centro de custo</option>
+              {centrosDeCusto.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code ? `${c.code} · ${c.name}` : c.name}
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Departamento" htmlFor="departamento">
+            <Input id="departamento" name="departamento" maxLength={80} defaultValue={v?.departamento ?? ""} />
+          </CampoForm>
+        </div>
+        {centrosDeCusto.length === 0 && <p className="text-fs-2 text-fg-muted mt-2">A empresa ainda não tem centros de custo: cadastre no BPO para escolher aqui.</p>}
+      </BlocoDoContrato>
+
       <BlocoDoContrato titulo="Rubricas fixas">
         <RubricasFixasDoContrato
           key={aberta?.id ?? "novo"}
@@ -319,6 +355,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <Checkbox id="valeTransporte" name="valeTransporte" label="Vale-transporte (desconta 6% do salário)" defaultChecked={v?.valeTransporte ?? false} />
           <Checkbox id="aprendiz" name="aprendiz" label="Aprendiz (FGTS de 2%)" defaultChecked={v?.aprendiz ?? false} />
         </div>
+        <CampoForm
+          label="Custo diário do vale-transporte"
+          htmlFor="vtCustoDiario"
+          className="mt-4 max-w-xs"
+          dica="As tarifas de ida e volta somadas. O desconto de 6% fica limitado a este custo × os dias úteis trabalhados, e o pedido do mês sai daqui."
+        >
+          <Input id="vtCustoDiario" name="vtCustoDiario" inputMode="decimal" prefix="R$" placeholder="0,00" defaultValue={v?.vtCustoDiario != null ? reais(Number(v.vtCustoDiario)) : ""} />
+        </CampoForm>
         <CampoForm label="Observações" htmlFor="observacoes" className="mt-4">
           <Textarea id="observacoes" name="observacoes" rows={2} defaultValue={v?.observacoes ?? ""} />
         </CampoForm>
@@ -406,6 +450,95 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           </div>
         )}
       </Secao>
+
+      {pessoas.length > 0 && (
+        <Secao
+          titulo="Saldo inicial das médias"
+          apoio={
+            saldoInicial.length === 0
+              ? "O histórico de antes do DP 2, para a média de férias, 13º e rescisão: cole da Domínio (Utilitários › Lançamentos › Lançamento de Rubricas para Médias)."
+              : saldoPendente > 0
+                ? `${saldoPendente} linha(s) a conferir: só entram na média depois de conferidas.`
+                : "Conferido: entra na média dos meses sem competência fechada no DP 2."
+          }
+          acao={
+            tela.podeAgir && saldoPendente > 0 ? (
+              <FormularioDoDp2 acao={conferirSaldoInicialAction} rotulo="Conferir todos" rotuloEnviando="Conferindo…" tamanho="sm">
+                <input type="hidden" name="companyId" value={tela.empresa.id} />
+              </FormularioDoDp2>
+            ) : undefined
+          }
+        >
+          {saldoInicial.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Meses</th>
+                    <th className={TH_NUM}>Total das rubricas</th>
+                    <th className={TH}>Situação</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {saldoInicial.map((r) => (
+                    <tr key={r.personId} className={TR}>
+                      <td className={`${TD} align-middle`}>{nomeDe.get(r.personId) ?? "Fora desta empresa"}</td>
+                      <td className={`${TD} align-middle tabular-nums`}>
+                        {r.meses} ({mesDe(r.de)} a {mesDe(r.ate)})
+                      </td>
+                      <td className={`${TD_NUM} align-middle`}>{brl(r.total)}</td>
+                      <td className={`${TD} align-middle`}>{r.pendentes > 0 ? <Selo tom="atencao">{r.pendentes} a conferir</Selo> : <Selo tom="sucesso">Conferido</Selo>}</td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        {tela.podeAgir && (
+                          <span className="inline-flex gap-2">
+                            {r.pendentes > 0 && (
+                              <FormularioDoDp2 acao={conferirSaldoInicialAction} rotulo="Conferir" rotuloEnviando="Conferindo…" variante="secondary" tamanho="sm">
+                                <input type="hidden" name="companyId" value={empresaId} />
+                                <input type="hidden" name="personId" value={r.personId} />
+                              </FormularioDoDp2>
+                            )}
+                            <FormularioDoDp2
+                              acao={apagarSaldoInicialAction}
+                              rotulo="Apagar"
+                              rotuloEnviando="Apagando…"
+                              variante="secondary"
+                              tamanho="sm"
+                              confirmar={{
+                                titulo: "Apagar o saldo inicial?",
+                                texto: `O saldo inicial de ${nomeDe.get(r.personId) ?? "este colaborador"} sai, e a média volta a usar só as competências do DP 2.`,
+                                rotulo: "Apagar",
+                              }}
+                            >
+                              <input type="hidden" name="companyId" value={empresaId} />
+                              <input type="hidden" name="personId" value={r.personId} />
+                            </FormularioDoDp2>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={importarSaldoInicialAction} rotulo="Importar saldo inicial" rotuloEnviando="Lendo…" variante="secondary">
+              <input type="hidden" name="companyId" value={tela.empresa.id} />
+              <CampoForm
+                label="Linhas da Domínio"
+                htmlFor="saldo-inicial"
+                dica="Uma linha por rubrica e mês: CPF; competência (MM/AAAA); código da rubrica no DP 2; valor. Vale ; ou tabulação (colado de planilha). Importar de novo troca o da mesma pessoa, mês e rubrica."
+              >
+                <Textarea id="saldo-inicial" name="texto" rows={5} required placeholder={"123.456.789-09;03/2026;150;412,30\n123.456.789-09;04/2026;150;380,00"} className="font-mono" />
+              </CampoForm>
+            </FormularioDoDp2>
+          )}
+        </Secao>
+      )}
 
       {params.novo === "1" && !aberta && tela.podeAgir && (
         <ModalDoDp2

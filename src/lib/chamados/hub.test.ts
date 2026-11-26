@@ -21,7 +21,7 @@ describe("configDoHub", () => {
 describe("montarEnvio", () => {
   const base = {
     id: "uuid-1",
-    protocolo: "chamado-45",
+    protocolo: "CHA-45",
     titulo: "Impressora do Fiscal",
     descricao: "Não imprime desde ontem.",
     categoria: "Equipamentos",
@@ -29,13 +29,13 @@ describe("montarEnvio", () => {
     setorQueAtende: "Tech",
     prioridade: "ALTA" as const,
     solicitante: { nome: "Ana", email: "ana@exemplo.com" },
-    connectUrl: "https://app.exemplo.com/chamados/chamado-45",
+    connectUrl: "https://app.exemplo.com/chamados/cha-45",
   };
 
   it("leva o que o Hub precisa para abrir, com o link de volta", () => {
     expect(montarEnvio(base)).toEqual({
       connectTicketId: "uuid-1",
-      protocolo: "chamado-45",
+      protocolo: "CHA-45",
       titulo: "Impressora do Fiscal",
       descricao: "Não imprime desde ontem.",
       categoria: "Equipamentos",
@@ -43,7 +43,7 @@ describe("montarEnvio", () => {
       setorQueAtende: "Tech",
       prioridade: "ALTA",
       solicitante: { nome: "Ana", email: "ana@exemplo.com" },
-      connectUrl: "https://app.exemplo.com/chamados/chamado-45",
+      connectUrl: "https://app.exemplo.com/chamados/cha-45",
     });
   });
 
@@ -56,7 +56,7 @@ describe("montarEnvio", () => {
 
   it("corta no tamanho que o Hub aceita e não manda título vazio", () => {
     const envio = montarEnvio({ ...base, titulo: "  ", descricao: "x".repeat(30000) });
-    expect(envio.titulo).toBe("chamado-45");
+    expect(envio.titulo).toBe("CHA-45");
     expect(envio.descricao).toHaveLength(20000);
   });
 });
