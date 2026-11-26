@@ -37,7 +37,8 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, reajusteColetivoAction, registrarOcorrenciaAction, salvarVinculoAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, reajusteColetivoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
 
@@ -140,6 +141,25 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
   const historicoSalarial = await getPrisma().dp2HistoricoSalarial.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: [{ data: "desc" }, { createdAt: "desc" }], take: 30 });
   const nomeNoHistorico = new Map(pessoas.map((p) => [p.id, p.name]));
   const empresaDoReajuste = tela.empresa.id;
+  // Transferência entre empresas (funcionalidade-771): o destino e as últimas transferências.
+  const empresaAtual = tela.empresa.id;
+  const daEmpresa = await getPrisma().company.findFirst({ where: { id: empresaAtual, tenantId: tela.tenantId }, select: { parentCompanyId: true } });
+  const grupoDaEmpresa = { matriz: daEmpresa?.parentCompanyId ?? empresaAtual };
+  const [outrasEmpresas, transferencias] = await Promise.all([
+    getPrisma().company.findMany({
+      // Só o grupo da empresa (matriz e filiais): o DP 2 trabalha no foco, e a gravação respeita o grupo dele.
+      where: { tenantId: tela.tenantId, id: { not: empresaAtual }, status: "ACTIVE", OR: [{ id: grupoDaEmpresa.matriz }, { parentCompanyId: grupoDaEmpresa.matriz }] },
+      select: { id: true, name: true, tradeName: true, displayName: true },
+      orderBy: { name: "asc" },
+    }),
+    getPrisma().dp2Transferencia.findMany({
+      where: { tenantId: tela.tenantId, OR: [{ companyId: empresaAtual }, { deCompanyId: empresaAtual }] },
+      include: { person: { select: { name: true } } },
+      orderBy: { data: "desc" },
+      take: 20,
+    }),
+  ]);
+  const nomeDaEmpresaOutra = new Map(outrasEmpresas.map((c) => [c.id, nomeExibicao(c)]));
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
 
@@ -855,6 +875,65 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                 </tbody>
               </table>
             </div>
+          )}
+        </Secao>
+      )}
+
+      {tela.podeAgir && pessoas.some((p) => p.dp2Vinculo && !p.dismissalDate) && outrasEmpresas.length > 0 && (
+        <Secao titulo="Transferir para outra empresa" apoio="O contrato passa para a matriz ou outra filial do grupo sem rescisão: admissão, férias, médias e histórico vão junto.">
+          <FormularioDoDp2
+            acao={transferirColaboradorAction}
+            rotulo="Transferir"
+            rotuloEnviando="Transferindo…"
+            variante="secondary"
+            confirmar={{ titulo: "Transferir o colaborador?", texto: "Ele sai desta empresa e passa para a escolhida, com o mesmo contrato. Os eventos do eSocial (S-2299 motivo 11 e S-2200 com sucessão) saem depois.", rotulo: "Transferir" }}
+          >
+            <input type="hidden" name="companyId" value={empresaAtual} />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CampoForm label="Colaborador" htmlFor="tr-personId">
+                <Select id="tr-personId" name="personId" defaultValue="" required>
+                  <option value="" disabled>
+                    Escolha…
+                  </option>
+                  {pessoas
+                    .filter((p) => p.dp2Vinculo && !p.dismissalDate)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </Select>
+              </CampoForm>
+              <CampoForm label="Para a empresa" htmlFor="tr-para">
+                <Select id="tr-para" name="paraCompanyId" defaultValue="" required>
+                  <option value="" disabled>
+                    Escolha…
+                  </option>
+                  {outrasEmpresas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {nomeExibicao(c)}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+              <CampoForm label="Data da transferência" htmlFor="tr-data">
+                <CampoData id="tr-data" name="data" required />
+              </CampoForm>
+              <CampoForm label="Motivo" htmlFor="tr-motivo">
+                <Input id="tr-motivo" name="motivo" maxLength={200} placeholder="Transferência entre empresas do grupo" />
+              </CampoForm>
+            </div>
+          </FormularioDoDp2>
+          {transferencias.length > 0 && (
+            <ul className="mt-4 flex flex-col gap-1 text-fs-3">
+              {transferencias.map((t) => (
+                <li key={t.id}>
+                  {formatCalendarDate(t.data)} · {t.person.name}:{" "}
+                  {t.deCompanyId === empresaAtual ? `foi para ${nomeDaEmpresaOutra.get(t.companyId) ?? "outra empresa"}` : `veio de ${nomeDaEmpresaOutra.get(t.deCompanyId) ?? "outra empresa"}`}
+                  <span className="text-fg-muted"> · {t.motivo}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </Secao>
       )}

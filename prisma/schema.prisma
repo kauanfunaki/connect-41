@@ -2796,6 +2796,7 @@ model Person {
   dp2Totalizadores     Dp2TotalizadorEsocial[]
   dp2Rescisoes         Dp2Rescisao[]
   dp2Ferias            Dp2Ferias[]
+  dp2Transferencias    Dp2Transferencia[]
   dp2HistoricoSalarial Dp2HistoricoSalarial[]
   dp2Ocorrencias       Dp2Ocorrencia[]
   dp2SaldoInicial      Dp2SaldoInicialMedia[]
@@ -7258,6 +7259,27 @@ model Dp2Ferias {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_ferias")
+}
+
+/// Transferência do colaborador para outra empresa do escritório, sem
+/// rescisão (26/11/2026, funcionalidade-771). companyId é a empresa de
+/// destino; deCompanyId, a de origem.
+model Dp2Transferencia {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  deCompanyId String
+  personId    String
+  data        DateTime @db.Date
+  motivo      String   @db.VarChar(200)
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([personId])
+  @@map("dp2_transferencias")
 }
 
 /// Histórico salarial do contrato (26/11/2026, funcionalidade-760): cada

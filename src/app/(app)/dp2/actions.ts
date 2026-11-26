@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { avisosDaTransferencia, lerTransferencia } from "@/lib/dp2/transferencia";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
@@ -28,6 +29,7 @@ import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { nomeExibicao } from "@/lib/companyName";
 import {
   calcularCompetencia,
   colaboradoresDaCompetencia,
@@ -1095,6 +1097,47 @@ export async function reajusteColetivoAction(_: EstadoDoDp2, fd: FormData): Prom
   });
   revalidatePath("/dp2/colaboradores");
   return { ok: true, texto: `Reajuste aplicado a ${previsao.length} colaborador(es) a partir de ${r.data.split("-").reverse().join("/")}. Gere o S-2206 de cada um em DP 2 › eSocial.` };
+}
+
+// ─── Transferência entre empresas (26/11/2026, funcionalidade-771) ─────────
+
+/**
+ * Passa o contrato do colaborador para outra empresa do escritório, sem
+ * rescisão: muda a empresa do cadastro e do contrato do DP 2; admissão,
+ * férias, médias e histórico ficam com a pessoa.
+ */
+export async function transferirColaboradorAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const deCompanyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, deCompanyId);
+  if (recusa) return erro(recusa);
+  const paraCompanyId = texto(fd, "paraCompanyId");
+  const recusaDestino = await empresaDoEscritorio(a, paraCompanyId);
+  if (recusaDestino) return erro(recusaDestino);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, deCompanyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2 nesta empresa.");
+  const lido = lerTransferencia(
+    { personId: pessoa.id, deCompanyId, paraCompanyId, data: texto(fd, "data"), motivo: texto(fd, "motivo") },
+    { admissao: pessoa.admissionDate ? pessoa.admissionDate.toISOString().slice(0, 10) : null, desligamento: pessoa.dismissalDate ? pessoa.dismissalDate.toISOString().slice(0, 10) : null }
+  );
+  if (!lido.ok) return erro(lido.erro);
+  const t = lido.transferencia;
+  const prisma = getPrisma();
+  const [de, para] = await Promise.all([
+    prisma.company.findFirst({ where: { id: deCompanyId, tenantId: a.tenantId }, select: { name: true, tradeName: true, displayName: true, cnpj: true } }),
+    prisma.company.findFirst({ where: { id: paraCompanyId, tenantId: a.tenantId }, select: { name: true, tradeName: true, displayName: true, cnpj: true } }),
+  ]);
+  if (!de || !para) return erro("Empresa não encontrada.");
+  await prisma.$transaction(async (tx) => {
+    await tx.person.update({ where: { id: pessoa.id }, data: { currentCompanyId: paraCompanyId } });
+    await tx.dp2Vinculo.update({ where: { personId: pessoa.id }, data: { companyId: paraCompanyId } });
+    await tx.dp2Transferencia.create({ data: { tenantId: a.tenantId, companyId: paraCompanyId, deCompanyId, personId: pessoa.id, data: new Date(`${t.data}T00:00:00Z`), motivo: t.motivo, criadoPorId: a.userId } });
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.colaborador_transferido", entityType: "Person", entityId: pessoa.id, metadata: { nome: pessoa.name, de: deCompanyId, para: paraCompanyId, data: t.data } });
+  revalidatePath("/dp2/colaboradores");
+  const avisos = avisosDaTransferencia({ nome: nomeExibicao(de), cnpj: de.cnpj }, { nome: nomeExibicao(para), cnpj: para.cnpj });
+  return { ok: true, texto: `${pessoa.name} transferido(a) para ${nomeExibicao(para)} em ${t.data.split("-").reverse().join("/")}. ${avisos.join(" ")}` };
 }
 
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────
