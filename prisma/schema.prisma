@@ -6998,6 +6998,9 @@ model Dp2Vinculo {
   insalubridade        String   @default("NENHUM") @db.VarChar(10)
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
+  /// Contribuição mensal do empregado à previdência complementar (PGBL, fundo de
+  /// pensão), 26/11/2026, funcionalidade-762: desconta na folha e deduz do IRRF.
+  previdenciaComplementar Decimal? @db.Decimal(12, 2)
   aprendiz             Boolean  @default(false)
   // eSocial (fase 3a, 12/11/2026).
   /// A matrícula do vínculo no eSocial (a mesma do S-2200).

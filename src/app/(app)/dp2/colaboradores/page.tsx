@@ -306,6 +306,21 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <Checkbox id="valeTransporte" name="valeTransporte" label="Vale-transporte (desconta 6% do salário)" defaultChecked={v?.valeTransporte ?? false} />
           <Checkbox id="aprendiz" name="aprendiz" label="Aprendiz (FGTS de 2%)" defaultChecked={v?.aprendiz ?? false} />
         </div>
+        <CampoForm
+          label="Previdência complementar (por mês)"
+          htmlFor="previdenciaComplementar"
+          className="mt-4 max-w-xs"
+          dica="A contribuição do empregado ao PGBL ou fundo de pensão: desconta na folha e deduz da base do IRRF."
+        >
+          <Input
+            id="previdenciaComplementar"
+            name="previdenciaComplementar"
+            inputMode="decimal"
+            prefix="R$"
+            placeholder="0,00"
+            defaultValue={v?.previdenciaComplementar != null ? reais(Number(v.previdenciaComplementar)) : ""}
+          />
+        </CampoForm>
         <CampoForm label="Observações" htmlFor="observacoes" className="mt-4">
           <Textarea id="observacoes" name="observacoes" rows={2} defaultValue={v?.observacoes ?? ""} />
         </CampoForm>

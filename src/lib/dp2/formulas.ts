@@ -73,6 +73,8 @@ export type ExemplosDoMotor = {
   /** O IRRF de um salário alto, para o exemplo mostrar imposto descontado. */
   irrfAlto: ResultadoIrrf;
   media: ReturnType<typeof mediaDeVariaveis>;
+  /** O mensalista que contribui para a previdência complementar (funcionalidade-762). */
+  previdencia: CalculoDaPessoa;
   ferias: CalculoDeFerias;
   /** A folha do mês das férias do exemplo (gozo de 20 dias a partir do dia 3). */
   feriasNaFolha: CalculoDaPessoa | null;
@@ -269,6 +271,7 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
     proLabore: semVinculo("723", 5000),
     autonomo: semVinculo("701", 2000),
     estagiario: semVinculo("901", 1500),
+    previdencia: calcularMesDaCategoria({ ...base, vinculo: { ...VINCULO, salarioBase: SALARIO_ALTO, previdenciaComplementar: 400 }, eventos: [] }),
   };
 }
 
@@ -420,6 +423,17 @@ export const FORMULAS: readonly Formula[] = [
     papeis: ["SALARIO_FAMILIA"],
     funcao: "calcularMes (mensal.ts)",
     exemplo: (x) => linha(x.proporcional, "SALARIO_FAMILIA"),
+  },
+  {
+    id: "previdencia-complementar",
+    tema: "MENSAL",
+    nome: "Previdência complementar do empregado",
+    conta: "A contribuição mensal do contrato sai como desconto e entra nas deduções legais da base do IRRF (com o INSS, os dependentes e a pensão).",
+    detalhe: "Quando as deduções legais passam do desconto simplificado, o IRRF usa as legais. O limite de 12% da renda tributável é do ajuste anual, não da folha.",
+    baseLegal: "Lei 9.250/1995, art. 4º, V; Lei 9.532/1997, art. 11",
+    papeis: ["PREVIDENCIA_COMPLEMENTAR"],
+    funcao: "calcularMes (mensal.ts) · calcularIrrf (impostos.ts)",
+    exemplo: (x) => [...linha(x.previdencia, "PREVIDENCIA_COMPLEMENTAR"), ...x.previdencia.irrf.memoria.slice(0, 2)],
   },
   {
     id: "vale-transporte",
