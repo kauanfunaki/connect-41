@@ -1675,6 +1675,7 @@ model Tenant {
   timeEntries               TimeEntry[]
   spaces                    Space[]
   folders                   Folder[]
+  aberturasAutomaticas      AberturaAutomatica[]
   pipelineItemLinks         PipelineItemLink[]
   manualDocuments           ManualDocument[]
   manualPages               ManualPage[]
@@ -2302,6 +2303,8 @@ model User {
   avaliacoesTributariasCriadas   AvaliacaoTributaria[]       @relation("AvaliacaoTributariaCriadaPor")
   avaliacoesTributariasAlteradas AvaliacaoTributaria[]       @relation("AvaliacaoTributariaAlteradaPor")
   versoesDeAvaliacaoTributaria   AvaliacaoTributariaVersao[] @relation("AvaliacaoTributariaVersaoAutor")
+  aberturasAutomaticasCriadas    AberturaAutomatica[]        @relation("AberturaAutomaticaCriadaPor")
+  aberturasAutomaticasAlteradas  AberturaAutomatica[]        @relation("AberturaAutomaticaAlteradaPor")
   ownedProcesses              Process[]                  @relation("ProcessOwner")
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
   whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
@@ -2863,6 +2866,10 @@ model Space {
   /// COMENTAR; os outros, como EDITAR, que é o que o colaborador já fazia.
   defaultPermission SpacePermission @default(EDITAR)
   order      Int      @default(0)
+  /// Preenchido = espaço criado pelo sistema (27/11/2026, funcionalidade-844):
+  /// "processos" é o espaço dos processos societários. Aparece em "Automáticos"
+  /// nos Quadros; pode ser renomeado, não excluído. Nulo = criado pela equipe.
+  systemKey  String?  @db.VarChar(60)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -2871,6 +2878,7 @@ model Space {
   pipelines Pipeline[]
 
   @@unique([tenantId, sectorCode, name])
+  @@unique([tenantId, sectorCode, systemKey])
   @@index([tenantId, sectorCode])
   @@map("spaces")
 }
@@ -2907,6 +2915,10 @@ model Pipeline {
   endDate     DateTime?
   entityType  PipelineEntityType
   active      Boolean            @default(true)
+  /// Preenchido = lista criada pelo sistema (27/11/2026, funcionalidade-844):
+  /// "processos_societarios" é a lista padrão onde o processo vira cartão.
+  /// Nulo = criada pela equipe.
+  systemKey   String?            @db.VarChar(60)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -2919,7 +2931,10 @@ model Pipeline {
   modelosDeObrigacao   ModeloDeObrigacao[]
   /// Os assuntos das solicitações que viram cartão nesta lista (09/11/2026).
   assuntosDeSolicitacao ServiceRequestSubject[]
+  /// A abertura automática que escolheu esta lista como destino (27/11/2026).
+  aberturasAutomaticas AberturaAutomatica[]
 
+  @@unique([tenantId, sectorCode, systemKey])
   @@index([tenantId, sectorCode])
   @@index([spaceId])
   @@index([folderId])
@@ -2934,6 +2949,11 @@ model PipelineStage {
   color      String?   @db.VarChar(7) // hex, ex: #1A5FA8
   isTerminal Boolean   @default(false)
   type       StageType @default(NOT_STARTED)
+  /// A situação que esta coluna representa, na lista criada pelo sistema
+  /// (27/11/2026, funcionalidade-844): a chave da coluna do processo
+  /// (`COLUNAS_DO_PROCESSO`, src/lib/kanban/cartaoDoProcesso.ts). Nula na
+  /// coluna criada pela equipe.
+  systemKey  String?   @db.VarChar(40)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -2941,7 +2961,43 @@ model PipelineStage {
   items    PipelineItem[]
 
   @@unique([pipelineId, order])
+  @@unique([pipelineId, systemKey])
   @@map("pipeline_stages")
+}
+
+/// De onde vêm as tarefas que nascem sozinhas no quadro de um setor
+/// (27/11/2026, funcionalidade-872). Por ora só o processo societário; as
+/// solicitações (por assunto) e as obrigações têm configuração própria e só
+/// aparecem na mesma tela.
+enum OrigemDaAbertura {
+  PROCESSO_SOCIETARIO
+}
+
+/// A abertura automática de tarefas de um setor, por origem (27/11/2026,
+/// funcionalidade-872): em qual lista a origem vira cartão e se está ligada.
+/// Sem linha = o padrão da origem (para o processo, ligada, na lista criada pelo
+/// sistema). Regra em src/lib/kanban/aberturaAutomatica.ts.
+model AberturaAutomatica {
+  id         String           @id @default(uuid())
+  tenantId   String
+  sectorCode String           @db.VarChar(40)
+  origem     OrigemDaAbertura
+  /// A lista escolhida pelo setor. Nula = a lista padrão criada pelo sistema.
+  pipelineId String?
+  ativo      Boolean          @default(true)
+  criadoPorId     String?
+  atualizadoPorId String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  pipeline      Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  criadoPor     User?     @relation("AberturaAutomaticaCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor User?     @relation("AberturaAutomaticaAlteradaPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, sectorCode, origem])
+  @@index([pipelineId])
+  @@map("aberturas_automaticas")
 }
 
 model PipelineItem {
@@ -2992,12 +3048,19 @@ model PipelineItem {
   /// a chave de uma cor da paleta fixa (`CORES_DA_CAPA`, src/lib/kanban/capa.ts),
   /// nunca o hex. Nula = sem capa.
   coverColor           String?             @db.VarChar(20)
+  /// O processo societário que este cartão acompanha (27/11/2026,
+  /// funcionalidade-844). Único: um cartão por processo, e é o banco que barra
+  /// o segundo. O processo manda na coluna, no título, no responsável e na
+  /// prioridade (ver src/lib/kanban/cartaoDoProcesso.ts). Cartão com processo
+  /// não conta na Gestão, no Meu dia nem nos alertas: o processo já conta.
+  processId            String?             @unique
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
   tenant      Tenant                 @relation(fields: [tenantId], references: [id])
   pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
   serviceRequest ServiceRequest?     @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  processo    Process?               @relation(fields: [processId], references: [id], onDelete: SetNull)
   stage       PipelineStage          @relation(fields: [stageId], references: [id])
   parent      PipelineItem?          @relation("SubTasks", fields: [parentItemId], references: [id], onDelete: Cascade)
   subtasks    PipelineItem[]         @relation("SubTasks")
@@ -9501,6 +9564,8 @@ model Process {
   timeEntries TimeEntry[]
   avisos    AvisoDeOrgao[]
   documents ProcessDocument[]
+  /// O cartão do processo nos Quadros (27/11/2026, funcionalidade-844).
+  cartao    PipelineItem?
 
   @@unique([tenantId, number])
   @@index([tenantId, status])

@@ -343,6 +343,10 @@ const USUARIO: Ligacao[] = [
   { modelo: "HandoffSectorTask", campo: "doneBy", fk: "doneById", tratamento: "desligar" },
   // O caso revisado do histórico de chamados fica, sem quem revisou (17/11/2026).
   { modelo: "HelpdeskHistoricCase", campo: "reviewedBy", fk: "reviewedById", tratamento: "desligar" },
+  // A configuração da abertura automática do setor fica, sem quem configurou
+  // (27/11/2026, funcionalidade-872) — o rastro está na auditoria.
+  { modelo: "AberturaAutomatica", campo: "criadoPor", fk: "criadoPorId", tratamento: "desligar" },
+  { modelo: "AberturaAutomatica", campo: "atualizadoPor", fk: "atualizadoPorId", tratamento: "desligar" },
 
   // Responsável por algo — fica sem responsável.
   { modelo: "Person", campo: "linkedUser", fk: "linkedUserId", tratamento: "desligar", rotulo: ["ficha em Pessoas ligada à conta", "fichas em Pessoas ligadas à conta"] },

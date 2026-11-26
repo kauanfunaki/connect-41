@@ -15,9 +15,13 @@ import type { FaixaDaTarefa } from "@/lib/home/paineis";
 
 const COR_PADRAO = "#586577";
 
-/** Os cards em aberto do alcance — a mesma condição de antes. */
+/**
+ * Os cards em aberto do alcance — a mesma condição de antes, sem o cartão que
+ * acompanha um processo societário (27/11/2026, funcionalidade-844): o processo
+ * já conta, e o cartão contaria o mesmo trabalho duas vezes.
+ */
 function emAberto(ctx: AuthContext) {
-  return { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } } satisfies Prisma.PipelineItemWhereInput;
+  return { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false }, processId: null } satisfies Prisma.PipelineItemWhereInput;
 }
 
 export type ColunaDoGrafico = { key: string; label: string; sublabel: string; value: number; color: string };
