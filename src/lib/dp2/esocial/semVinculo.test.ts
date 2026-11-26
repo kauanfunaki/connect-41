@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { eventoS1200, eventoS1210, geradorDeId, type EmpregadorEsocial, type TrabalhadorEsocial } from "./eventos";
-import { eventoS2300, eventoS2399 } from "./semVinculo";
+import { eventoS2300, eventoS2306, eventoS2399, natAtividadeDoTsve } from "./semVinculo";
 import { DADOS_VAZIOS, lerDadosEsocial } from "./cadastro";
 import type { TrabalhadorCompleto } from "./naoPeriodicos";
 
@@ -59,9 +59,11 @@ describe("S-2300 início sem vínculo", () => {
     expect(ev.pendencias).toEqual([]);
     expect(ev.xml).toContain('xmlns="http://www.esocial.gov.br/schema/evt/evtTSVInicio/v_S_01_03_00"');
     expect(ev.xml).toContain("<trabalhador><cpfTrab>52998224725</cpfTrab><nmTrab>Lucas Prado</nmTrab>");
-    expect(ev.xml).toContain("<infoTSVInicio><cadIni>N</cadIni><matricula>EST001</matricula><codCateg>901</codCateg><dtInicio>2026-11-03</dtInicio><natAtividade>1</natAtividade>");
+    expect(ev.xml).toContain("<infoTSVInicio><cadIni>N</cadIni><matricula>EST001</matricula><codCateg>901</codCateg><dtInicio>2026-11-03</dtInicio><infoComplementares>");
+    // Estagiário (901) não leva natAtividade (leiaute S-1.3).
+    expect(ev.xml).not.toContain("natAtividade");
     expect(ev.xml).toContain(
-      "<infoEstagiario><natEstagio>N</natEstagio><nivEstagio>4</nivEstagio><areaAtuacao>Administração</areaAtuacao><dtPrevTerm>2027-11-02</dtPrevTerm><instEnsino><cnpjInstEnsino>11222333000181</cnpjInstEnsino></instEnsino><cpfSupervisor>15350946056</cpfSupervisor></infoEstagiario>"
+      "<infoEstagiario><natEstagio>N</natEstagio><nivEstagio>4</nivEstagio><areaAtuacao>Administração</areaAtuacao><dtPrevTerm>2027-11-02</dtPrevTerm><instEnsino><cnpjInstEnsino>11222333000181</cnpjInstEnsino></instEnsino><supervisorEstagio><cpfSupervisor>15350946056</cpfSupervisor></supervisorEstagio></infoEstagiario>"
     );
     expect(ev.xml).not.toContain("cargoFuncao");
   });
@@ -85,6 +87,31 @@ describe("S-2300 início sem vínculo", () => {
   it("empregado não vai no S-2300", () => {
     const ev = eventoS2300(empregador, pessoa({ categoria: "101", dados: estagio }), id());
     expect(ev.pendencias.map((p) => p.texto).join(" ")).toContain("S-2200");
+  });
+});
+
+describe("S-2306 alteração sem vínculo", () => {
+  it("estagiário: data, matrícula e o estágio como está no contrato", () => {
+    const ev = eventoS2306(empregador, pessoa({ dados: estagio }), "2027-03-01", id());
+    expect(ev.pendencias).toEqual([]);
+    expect(ev.xml).toContain('xmlns="http://www.esocial.gov.br/schema/evt/evtTSVAltContr/v_S_01_03_00"');
+    expect(ev.xml).toContain("<ideTrabSemVinculo><cpfTrab>52998224725</cpfTrab><matricula>EST001</matricula></ideTrabSemVinculo><infoTSVAlteracao><dtAlteracao>2027-03-01</dtAlteracao><infoComplementares>");
+    expect(ev.xml).toContain("<supervisorEstagio><cpfSupervisor>15350946056</cpfSupervisor></supervisorEstagio>");
+    expect(ev.referencia).toBe("52998224725 · 2027-03-01");
+  });
+
+  it("autônomo sem matrícula vai pela categoria, com natureza urbana; empregado aponta o S-2206", () => {
+    const rpa = eventoS2306(empregador, pessoa({ categoria: "701", matricula: null, salario: 2000 }), "2027-03-01", id());
+    expect(rpa.xml).toContain("<codCateg>701</codCateg></ideTrabSemVinculo><infoTSVAlteracao><dtAlteracao>2027-03-01</dtAlteracao><natAtividade>1</natAtividade>");
+    expect(rpa.xml).toContain("<remuneracao><vrSalFx>2000.00</vrSalFx><undSalFixo>5</undSalFixo></remuneracao>");
+    const clt = eventoS2306(empregador, pessoa({ categoria: "101" }), "2027-03-01", id());
+    expect(clt.pendencias.map((p) => p.texto).join(" ")).toContain("S-2206");
+  });
+
+  it("natAtividade só nas categorias em que o leiaute deixa", () => {
+    expect(["721", "722", "771", "901"].map(natAtividadeDoTsve)).toEqual([null, null, null, null]);
+    expect(natAtividadeDoTsve("701")).toBe("1");
+    expect(natAtividadeDoTsve("723")).toBe("1");
   });
 });
 

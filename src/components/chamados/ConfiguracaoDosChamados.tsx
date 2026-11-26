@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
-import { Checkbox } from "@/components/ui/Checkbox";
+import { SeletorDeSetores } from "@/components/ui/SeletorDeSetores";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -17,7 +17,7 @@ import { SLA_PADRAO } from "@/lib/chamados/sla";
 // existem continuam nos chamados, e a lista padrão nasce no primeiro rascunho.
 // Saíram também (05/11/2026) a IA alternativa (Groq), porque a triagem é sempre
 // a da Ceci, e a lista de setores que abrem chamado: todos abrem.
-type Setor = { code: string; label: string };
+type Setor = { code: string; label: string; cor?: string };
 export type SetoresDaConfiguracao = { todos: Setor[]; administram: string[]; padrao: string; editavel: boolean };
 export function ConfiguracaoDosChamados({ politicas, setores }: { politicas: { priority: string; firstResponseMinutes: number; resolutionMinutes: number }[]; setores: SetoresDaConfiguracao }) {
   return <div className="space-y-6">
@@ -44,9 +44,8 @@ function SetoresQueAdministram({ todos, administram, padrao: padraoInicial, edit
   const [marcados, setMarcados] = useState(administram), [padrao, setPadrao] = useState(padraoInicial);
   const [busy, setBusy] = useState(false), [erro, setErro] = useState(""), [ok, setOk] = useState(false);
   const nome = (code: string) => todos.find(s => s.code === code)?.label ?? code;
-  function alternar(code: string, ligado: boolean) {
+  function mudarSetores(novos: string[]) {
     setOk(false);
-    const novos = ligado ? [...marcados, code] : marcados.filter(m => m !== code);
     setMarcados(novos);
     if (!novos.includes(padrao)) setPadrao(novos[0] ?? "");
   }
@@ -57,9 +56,8 @@ function SetoresQueAdministram({ todos, administram, padrao: padraoInicial, edit
       e.preventDefault(); setBusy(true); setErro(""); setOk(false);
       void setoresQueAdministram({ setores: marcados, padrao }).then(r => { if (!r.ok) setErro(r.error); else { setOk(true); router.refresh(); } }).catch(() => setErro("Falha ao salvar.")).finally(() => setBusy(false));
     }}><fieldset disabled={busy} className="space-y-4">
-      <div role="group" aria-label="Setores" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{todos.map(s => <label key={s.code} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-ui text-fg hover:bg-surface-hover">
-        <Checkbox checked={marcados.includes(s.code)} onChange={e => alternar(s.code, e.target.checked)} />{s.label}
-      </label>)}</div>
+      {/* O seletor de setores padrão (25/11/2026, melhoria-812); era uma grade de caixas sem a cor. */}
+      <SeletorDeSetores rotulo="Setores" required opcoes={todos.map(s => ({ value: s.code, label: s.label, cor: s.cor }))} valor={marcados} onChange={mudarSetores} className="max-w-md" />
       {marcados.length > 1 && <Campo label="Setor padrão (recebe quando quem abre não escolhe)"><Select value={padrao} onChange={e => { setPadrao(e.target.value); setOk(false); }}>{marcados.map(code => <option key={code} value={code}>{nome(code)}</option>)}</Select></Campo>}
       <Button type="submit" variant="secondary" size="sm" disabled={!marcados.length}>Salvar setores</Button>
     </fieldset>

@@ -109,8 +109,18 @@ export function Popover({ trigger, children, align = "left", width = 240, "aria-
   );
 }
 
-const FOCAVEL =
-  "a[href], button:not([disabled]), input:not([disabled]):not([type='hidden']), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex^='-'])";
+// Fora do Tab (`tabindex="-1"`) não conta (25/11/2026, melhoria-812): a lista do
+// `SeletorDeSetores` tem um ponto de parada só, e o Tab no último fechava errado.
+const FOCAVEL = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]",
+]
+  .map((s) => `${s}:not([tabindex^='-'])`)
+  .join(", ");
 
 function focaveis(raiz: HTMLElement | null): HTMLElement[] {
   if (!raiz) return [];

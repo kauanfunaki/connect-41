@@ -1574,6 +1574,7 @@ model Tenant {
   techInternalAttachments TechInternalAttachment[]
   techInternalAcceptanceChecks TechInternalAcceptanceCheck[]
   techInternalSavedFilters TechInternalSavedFilter[]
+  bpoModelosDaTabela      BpoModeloDaTabela[]
   opsWatchers             OpsWatcher[]
   opsSites                OpsSite[]
   opsApps                 OpsApp[]
@@ -2180,6 +2181,7 @@ model Subscription {
 model User {
   techInternalAssignments TechInternalItem[]
   techInternalSavedFilters TechInternalSavedFilter[]
+  bpoModelosDaTabela      BpoModeloDaTabela[]
   personalApiTokens       PersonalApiToken[]
   academiaSessoes         AcademiaSessao[]
   academiaResultados      AcademiaResultado[]
@@ -2791,8 +2793,11 @@ model Person {
   dp2Vinculo           Dp2Vinculo?
   dp2Eventos           Dp2Evento[]
   dp2RubricasFixas     Dp2RubricaFixa[]
+  dp2Totalizadores     Dp2TotalizadorEsocial[]
+  dp2Rescisoes         Dp2Rescisao[]
   dp2Ferias            Dp2Ferias[]
   dp2Ocorrencias       Dp2Ocorrencia[]
+  dp2SaldoInicial      Dp2SaldoInicialMedia[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
   dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
   dp2Calculos          Dp2Calculo[]
@@ -6996,6 +7001,16 @@ model Dp2Vinculo {
   insalubridade        String   @default("NENHUM") @db.VarChar(10)
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
+  /// Horário de trabalho (Dp2Horario), 25/11/2026, funcionalidade-752: dá as
+  /// horas por mês e a jornada do eSocial.
+  horarioId            String?
+  /// Centro de custo do BPO da empresa (CostCenter) e departamento, 25/11/2026,
+  /// funcionalidade-751: a contabilização e o resumo da folha saem por centro.
+  costCenterId         String?
+  departamento         String?  @db.VarChar(80)
+  /// Custo diário do vale-transporte (tarifas × viagens por dia), 25/11/2026,
+  /// funcionalidade-753: limita o desconto de 6% e dá o pedido do mês.
+  vtCustoDiario        Decimal? @db.Decimal(10, 2)
   aprendiz             Boolean  @default(false)
   // eSocial (fase 3a, 12/11/2026).
   /// A matrícula do vínculo no eSocial (a mesma do S-2200).
@@ -7057,6 +7072,7 @@ model Dp2Competencia {
   ajustes    Dp2AjusteDeCalculo[]
   informacoesDaApuracao Dp2InformacaoDaApuracao[]
   outrasBasesInss Dp2OutraBaseInss[]
+  totalizadores Dp2TotalizadorEsocial[]
 
   @@unique([companyId, ano, mes, tipo])
   @@index([tenantId, ano, mes])
@@ -7153,6 +7169,45 @@ model Dp2Calculo {
   @@map("dp2_calculos")
 }
 
+/// Rescisão gravada (25/11/2026, funcionalidade-746, entrega 2.3): as entradas
+/// e o resultado do cálculo de rescisão do DP 2, ligados ao desligamento da
+/// pessoa (Termination, quando houver um em andamento) e ao S-2299 gerado a
+/// partir dela. Quem tem rescisão no mês sai da folha mensal desse mês.
+model Dp2Rescisao {
+  id               String    @id @default(uuid())
+  tenantId         String
+  companyId        String
+  personId         String
+  /// O desligamento em andamento da pessoa (tela Desligamentos), se havia.
+  terminationId    String?
+  desligamento     DateTime  @db.Date
+  motivo           String    @db.VarChar(40)
+  /// INDENIZADO, TRABALHADO ou DISPENSADO.
+  aviso            String    @db.VarChar(12)
+  periodosVencidos Int       @default(0)
+  faltas           Int       @default(0)
+  saldoFgts        Decimal?  @db.Decimal(12, 2)
+  decimoAdiantado  Decimal   @default(0) @db.Decimal(12, 2)
+  proventos        Decimal   @db.Decimal(12, 2)
+  descontos        Decimal   @db.Decimal(12, 2)
+  liquido          Decimal   @db.Decimal(12, 2)
+  fgts             Decimal   @db.Decimal(12, 2)
+  multaFgts        Decimal?  @db.Decimal(12, 2)
+  /// As linhas do cálculo (verba, valor, memória) e os alertas.
+  linhas           Json
+  alertas          Json
+  /// O S-2299 gerado a partir desta rescisão (Dp2EventoEsocial).
+  eventoEsocialId  String?
+  criadoPorId      String?
+  createdAt        DateTime  @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, desligamento])
+  @@index([tenantId, companyId])
+  @@map("dp2_rescisoes")
+}
+
 /// Férias gravadas (25/11/2026, funcionalidade-745, entrega 2.1): o recibo de
 /// férias de uma pessoa, ligado ao período aquisitivo, com os valores do
 /// cálculo no dia em que se gravou. A folha mensal dos meses do gozo lança a
@@ -7214,6 +7269,55 @@ model Dp2Ocorrencia {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_ocorrencias")
+}
+
+/// Horário de trabalho da empresa (25/11/2026, funcionalidade-752): dias da
+/// semana, entrada, saída e intervalo. O contrato (Dp2Vinculo.horarioId) liga
+/// o colaborador; as horas e a jornada saem de src/lib/dp2/horarios.ts.
+model Dp2Horario {
+  id               String   @id @default(uuid())
+  tenantId         String
+  companyId        String
+  nome             String   @db.VarChar(80)
+  /// Segunda a domingo, "1" = trabalha ("1111100" = segunda a sexta).
+  dias             String   @db.VarChar(7)
+  /// "HH:MM".
+  entrada          String   @db.VarChar(5)
+  saida            String   @db.VarChar(5)
+  intervaloMinutos Int      @default(60)
+  /// Tipo de jornada do eSocial: 2 12x36, 3 folga fixa no domingo, 9 demais.
+  tipoJornada      String   @default("9") @db.VarChar(1)
+  criadoPorId      String?
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, companyId])
+  @@map("dp2_horarios")
+}
+
+/// Saldo inicial das médias (25/11/2026, funcionalidade-747, entrega 1.3): as
+/// rubricas variáveis de cada mês anterior ao DP 2, trazidas da Domínio
+/// ("Lançamento de Rubricas para Médias"). Entram na média de férias, 13º e
+/// rescisão (mediaDaPessoa) nos meses sem competência fechada no DP 2, depois
+/// de conferidas na tela.
+model Dp2SaldoInicialMedia {
+  id          String    @id @default(uuid())
+  tenantId    String
+  companyId   String
+  personId    String
+  /// "AAAA-MM".
+  competencia String    @db.VarChar(7)
+  rubricaId   String
+  valor       Decimal   @db.Decimal(12, 2)
+  /// Conferido na tela: só então entra na média.
+  conferidoEm DateTime?
+  criadoPorId String?
+  createdAt   DateTime  @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, competencia, rubricaId])
+  @@index([tenantId, companyId])
+  @@map("dp2_saldo_inicial_medias")
 }
 
 /// Ajuste manual do cálculo (25/11/2026, funcionalidade-768): o DP corrige um
@@ -7295,6 +7399,41 @@ model Dp2OutraBaseInss {
   @@map("dp2_outras_bases_inss")
 }
 
+/// Totalizador do eSocial (26/11/2026, funcionalidade-755): o que o eSocial
+/// devolveu calculado dos periódicos — S-5001 (INSS), S-5002 (IRRF) e S-5003
+/// (FGTS) por trabalhador; S-5011 (INSS) e S-5013 (FGTS) da empresa. Lido dos
+/// XML de retorno e comparado com o cálculo da competência. Importar de novo
+/// troca o do mesmo tipo, período e CPF.
+model Dp2TotalizadorEsocial {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  competenciaId String?
+  personId      String?
+  /// "S-5001", "S-5002", "S-5003", "S-5011" ou "S-5013".
+  tipo          String   @db.VarChar(6)
+  /// "AAAA-MM" ou "AAAA" (13º).
+  perApur       String   @db.VarChar(7)
+  /// CPF do trabalhador; nulo nos da empresa.
+  cpf           String?  @db.VarChar(11)
+  /// Recibo do evento de origem (S-1200, S-1210 ou S-1299) e o evento da fila com esse recibo.
+  reciboBase    String?  @db.VarChar(40)
+  eventoId      String?  @db.VarChar(36)
+  /// Os valores lidos (INSS calculado e descontado, IRRF, base e depósito do FGTS, contribuições por código).
+  valores       Json
+  arquivo       String?  @db.VarChar(255)
+  importadoPorId String?
+  createdAt     DateTime @default(now())
+
+  competencia Dp2Competencia? @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person?         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, perApur])
+  @@index([competenciaId])
+  @@index([personId])
+  @@map("dp2_totalizadores_esocial")
+}
+
 /// Os valores da Domínio para a mesma pessoa e competência, enquanto o DP 2
 /// roda em paralelo: o comparativo mostra a diferença linha a linha.
 model Dp2Comparativo {
@@ -7335,11 +7474,16 @@ model Dp2EventoEsocial {
   referencia    String   @db.VarChar(80)
   idEvento      String   @unique @db.VarChar(36)
   /// "PENDENCIA" (falta cadastro), "PRONTO" (para assinar e enviar), "ENVIADO",
-  /// "ACEITO" ou "REJEITADO".
+  /// "ACEITO" ou "REJEITADO"; e, depois de outro evento aceito sobre este,
+  /// "RETIFICADO", "EXCLUIDO" ou "REABERTO" (funcionalidade-754).
   situacao      String   @db.VarChar(10)
   xml           String   @db.LongText
   pendencias    Json
   recibo        String?  @db.VarChar(40)
+  /// O evento que este retifica (S-1200/S-1210 com indRetif 2), exclui (S-3000)
+  /// ou reabre (S-1298 → S-1299). Funcionalidade-754. Quando este é aceito, o
+  /// alvo passa a RETIFICADO, EXCLUIDO ou REABERTO.
+  alvoId        String?  @db.VarChar(36)
   geradoPorId   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -8680,6 +8824,34 @@ model BpoCredential {
   @@index([tenantId, companyId])
   @@index([tenantId, sectorCode])
   @@map("bpo_credentials")
+}
+
+/// Os modelos da Tabela dinâmica do BPO (25/11/2026, funcionalidade-816): a
+/// configuração da tabela salva com um nome. `setor` nulo é o modelo pessoal
+/// (só quem criou vê); com o código do setor, todo o setor vê. Os parâmetros
+/// são os do endereço da tela e passam pela mesma leitura dele ao aplicar.
+/// `periodo`: "relativo" (os últimos 6 meses, andando com o calendário) ou
+/// "fixo" (o de/até guardado nos parâmetros).
+model BpoModeloDaTabela {
+  id          String   @id @default(uuid())
+  tenantId    String
+  criadoPorId String
+  /// Código de `Sector`, sem FK; nulo = pessoal.
+  setor       String?  @db.VarChar(40)
+  nome        String   @db.VarChar(80)
+  parametros  Json
+  periodo     String   @db.VarChar(10)
+  comFiltros  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  criadoPor User   @relation(fields: [criadoPorId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, criadoPorId])
+  @@index([tenantId, setor])
+  @@index([criadoPorId])
+  @@map("bpo_modelos_da_tabela")
 }
 
 // Preferências pessoais do usuário — uma linha por usuário, criada sob demanda

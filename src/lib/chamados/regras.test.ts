@@ -146,6 +146,9 @@ describe("trocas de situação oferecidas na tela (melhoria-782)", () => {
 describe("busca pelo número do chamado (bug-819)", () => {
   it("lê o id curto do cartão, o #45 e o número sozinho", async () => {
     const { numeroDaBusca } = await import("./regras");
+    // A sigla de três letras (melhoria-818) e o id curto antigo, por extenso.
+    expect(numeroDaBusca("CHA-45")).toBe(45);
+    expect(numeroDaBusca(" cha-45 ")).toBe(45);
     expect(numeroDaBusca("chamado-45")).toBe(45);
     expect(numeroDaBusca(" Chamado-45 ")).toBe(45);
     expect(numeroDaBusca("#45")).toBe(45);
@@ -156,6 +159,8 @@ describe("busca pelo número do chamado (bug-819)", () => {
     const { numeroDaBusca } = await import("./regras");
     expect(numeroDaBusca("impressora")).toBeNull();
     expect(numeroDaBusca("chamado 45")).toBeNull();
+    expect(numeroDaBusca("pro-45")).toBeNull();
+    expect(numeroDaBusca("CHA-0")).toBeNull();
     expect(numeroDaBusca("045")).toBeNull();
     expect(numeroDaBusca("0")).toBeNull();
     expect(numeroDaBusca("99999999999")).toBeNull();
