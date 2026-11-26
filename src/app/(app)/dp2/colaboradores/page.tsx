@@ -396,7 +396,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
 
       {pessoas.some((p) => p.dp2Vinculo) && (
         <Secao titulo="Termo de quitação anual" apoio="O termo do art. 507-B da CLT, com o que as competências fechadas do ano pagaram a cada colaborador, para assinar com o sindicato da categoria.">
-          <form action="/api/dp2/quitacao" method="get" className="flex flex-wrap items-end gap-4">
+          <form action="/api/dp2/quitacao" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
             <CampoForm label="Colaborador" htmlFor="quit-pessoa">
               <Select id="quit-pessoa" name="pessoa" defaultValue="" required>
                 <option value="" disabled>
