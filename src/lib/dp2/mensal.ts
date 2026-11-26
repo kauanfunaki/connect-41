@@ -145,6 +145,8 @@ export type EntradaMensal = {
    * o INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases.
    */
   outrasBasesInss?: number;
+  /** Dias de suspensão disciplinar no mês (funcionalidade-763): saem do salário. */
+  diasDeSuspensao?: number;
   /**
    * Afastamentos (S-2230) que caem no mês (funcionalidade-749): os dias pagos
    * pelo INSS saem do salário; os avisos vão para os alertas.
@@ -313,7 +315,9 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   const afastamentosDoMes = e.afastamentos ?? [];
   const diasDeAfastamento = Math.min(dias - diasDeFerias, diasPeloInss(afastamentosDoMes));
   for (const a of afastamentosDoMes) if (a.alerta) alertas.push(a.alerta);
-  const diasDeSalario = dias - diasDeFerias - diasDeAfastamento;
+  // Suspensão disciplinar (funcionalidade-763): os dias não são remunerados.
+  const diasSuspenso = Math.min(dias - diasDeFerias - diasDeAfastamento, Math.max(0, e.diasDeSuspensao ?? 0));
+  const diasDeSalario = dias - diasDeFerias - diasDeAfastamento - diasSuspenso;
   const cheio = salarioMensalCheio(v);
   const { insalubridade, periculosidade } = adicionaisFixos(v, salarioMinimo);
   const horaNormal = v.tipoSalario === "HORISTA" ? v.salarioBase : cheio / v.horasMensais;
@@ -323,7 +327,9 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   // ── Salário e adicionais fixos ──
   const salario = (cheio * diasDeSalario) / 30;
   const deFerias =
-    (diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "") + (diasDeAfastamento > 0 ? ` (${diasDeAfastamento} dia(s) de afastamento pagos pelo INSS)` : "");
+    (diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "") +
+    (diasDeAfastamento > 0 ? ` (${diasDeAfastamento} dia(s) de afastamento pagos pelo INSS)` : "") +
+    (diasSuspenso > 0 ? ` (${diasSuspenso} dia(s) de suspensão)` : "");
   itens.push(
     itemDaRubrica(
       R("SALARIO"),

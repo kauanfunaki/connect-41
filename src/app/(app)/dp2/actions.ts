@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
 import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
 import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -750,6 +751,48 @@ export async function retirarInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: Form
   });
   revalidarCompetencia(info.competenciaId);
   return { ok: true, texto: `${nome} retirada da apuração.` };
+}
+
+// ─── Advertências e suspensões (25/11/2026, funcionalidade-763) ────────────
+
+export async function registrarOcorrenciaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2.");
+  const lido = lerOcorrencia({ tipo: texto(fd, "tipo"), data: texto(fd, "data"), dias: texto(fd, "dias"), motivo: texto(fd, "motivo") });
+  if (!lido.ok) return erro(lido.erro);
+  const o = lido.ocorrencia;
+  const criada = await getPrisma().dp2Ocorrencia.create({
+    data: { tenantId: a.tenantId, companyId, personId: pessoa.id, tipo: o.tipo, data: new Date(`${o.data}T00:00:00Z`), dias: o.dias, motivo: o.motivo, criadoPorId: a.userId },
+    select: { id: true },
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ocorrencia_registrada", entityType: "Person", entityId: pessoa.id, metadata: { ocorrencia: criada.id, tipo: o.tipo, data: o.data, dias: o.dias } });
+  revalidatePath("/dp2/colaboradores");
+  return {
+    ok: true,
+    texto:
+      o.tipo === "SUSPENSAO"
+        ? `Suspensão de ${pessoa.name} registrada (${o.dias} dia(s)). Imprima o documento para assinatura; os dias saem do salário ao calcular a folha do mês.`
+        : `Advertência de ${pessoa.name} registrada. Imprima o documento para assinatura.`,
+  };
+}
+
+export async function excluirOcorrenciaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const o = await prisma.dp2Ocorrencia.findFirst({ where: { id: texto(fd, "ocorrenciaId"), tenantId: a.tenantId }, select: { id: true, companyId: true, personId: true, tipo: true } });
+  if (!o) return erro("Ocorrência não encontrada.");
+  const recusa = await empresaDoEscritorio(a, o.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2Ocorrencia.delete({ where: { id: o.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ocorrencia_excluida", entityType: "Person", entityId: o.personId, metadata: { ocorrencia: o.id, tipo: o.tipo } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: "Ocorrência excluída. Se era suspensão de um mês já calculado, calcule a folha de novo." };
 }
 
 // ─── Horários de trabalho (25/11/2026, funcionalidade-752) ──────────────────

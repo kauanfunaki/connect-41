@@ -6,6 +6,7 @@ import { avisosDeVencimento } from "./avisos";
 import { lerDadosEsocial } from "./esocial/cadastro";
 import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
+import { diasDeSuspensaoNoMes } from "./ocorrencias";
 import { afastamentosDosXml, afastamentosNoMes, type AfastamentoNoMes } from "./afastamentos";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
@@ -405,6 +406,20 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const { diasUteis, diasDeDescanso } = diasDoMes(comp.ano, comp.mes);
   // Férias gravadas que caem no mês (funcionalidade-745).
   const feriasDe = comp.tipo === "MENSAL" ? await feriasDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, FeriasNoMes[]>();
+  // Suspensões disciplinares do mês (funcionalidade-763).
+  const suspensoes =
+    comp.tipo === "MENSAL"
+      ? await getPrisma().dp2Ocorrencia.findMany({
+          where: { tenantId, personId: { in: pessoas.map((p) => p.id) }, tipo: "SUSPENSAO", data: { gte: new Date(Date.UTC(comp.ano, comp.mes - 2, 1)), lte: new Date(Date.UTC(comp.ano, comp.mes, 0)) } },
+          select: { personId: true, data: true, dias: true },
+        })
+      : [];
+  const suspensaoDe = (personId: string) =>
+    diasDeSuspensaoNoMes(
+      suspensoes.filter((s) => s.personId === personId).map((s) => ({ tipo: "SUSPENSAO" as const, data: s.data.toISOString().slice(0, 10), dias: s.dias })),
+      comp.ano,
+      comp.mes
+    );
   // Afastamentos do mês, dos S-2230 (funcionalidade-749).
   const afastamentosDe = comp.tipo === "MENSAL" ? await afastamentosDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, AfastamentoNoMes[]>();
 
@@ -459,6 +474,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         diasUteis,
         diasDeDescanso,
         ferias: feriasDe.get(p.id),
+        diasDeSuspensao: suspensaoDe(p.id),
         afastamentos: afastamentosDe.get(p.id),
         outrasBasesInss: outrasDe(p.id),
       });
