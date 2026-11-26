@@ -6,6 +6,8 @@ import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatCpf, formatDocumento } from "@/lib/format";
 import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
+import { responsaveisDeSst } from "@/lib/dp2/esocial/servidor";
+import { historicoDoPpp, pdfDoPpp } from "@/lib/dp2/ppp";
 import { faltasDoDocumento, pdfDaFichaDeRegistro, pdfDoContratoDeExperiencia, type DadosDoDocumento } from "@/lib/dp2/documentosDoDp";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +25,13 @@ const endereco = (e: { addressStreet: string | null; addressNumber: string | nul
     .filter(Boolean)
     .join(", ") || null;
 
-// Documentos do DP em PDF (25/11/2026, funcionalidade-776): ficha de registro e contrato de experiência.
+// Documentos do DP em PDF (25/11/2026, funcionalidade-776): ficha de registro e contrato de experiência;
+// e o histórico PPP (26/11/2026, funcionalidade-761).
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const personId = url.searchParams.get("pessoa") ?? "";
-  const tipo = url.searchParams.get("tipo") === "EXPERIENCIA" ? "EXPERIENCIA" : "FICHA";
+  const pedido = url.searchParams.get("tipo");
+  const tipo = pedido === "EXPERIENCIA" ? "EXPERIENCIA" : pedido === "PPP" ? "PPP" : "FICHA";
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   if (!(await podeNoModulo(ctx, "dp2_colaboradores", "ver"))) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
@@ -44,6 +48,28 @@ export async function GET(req: Request) {
   const v = p.dp2Vinculo;
   const es = lerDadosEsocial(v.dadosEsocial);
   const dia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  // Histórico PPP (funcionalidade-761, entrega 3): dos S-2240 e S-2220 gerados para a pessoa.
+  if (tipo === "PPP") {
+    const [eventos, resp] = await Promise.all([
+      prisma.dp2EventoEsocial.findMany({ where: { tenantId: ctx.tenantId, personId: p.id, tipo: { in: ["S-2240", "S-2220"] } }, select: { tipo: true, xml: true, situacao: true, createdAt: true } }),
+      responsaveisDeSst(ctx.tenantId, p.currentCompanyId),
+    ]);
+    const pdf = await pdfDoPpp(historicoDoPpp(eventos, dia(p.dismissalDate)), {
+      empresa: nomeExibicao(empresa),
+      documentoDaEmpresa: formatDocumento(empresa.kind, empresa.cnpj, empresa.cpf) || null,
+      colaborador: p.name,
+      cpf: p.cpf ? formatCpf(p.cpf) : null,
+      pis: p.pis,
+      admissao: dia(p.admissionDate),
+      cargo: p.cargo?.name ?? null,
+      cbo: es.cbo,
+      responsavelAmbiental: resp.ambientalNome ? `${resp.ambientalNome}${resp.ambientalNumero ? ` · registro ${resp.ambientalNumero}${resp.ambientalUf ? `/${resp.ambientalUf}` : ""}` : ""}` : null,
+      medicoDoPcmso: resp.medicoNome ? `${resp.medicoNome}${resp.medicoCrm ? ` · CRM ${resp.medicoCrm}${resp.medicoUf ? `/${resp.medicoUf}` : ""}` : ""}` : null,
+    });
+    return new NextResponse(new Uint8Array(pdf), {
+      headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(`Historico PPP ${p.name}.pdf`)}`, "Cache-Control": "no-store" },
+    });
+  }
   const dados: DadosDoDocumento = {
     empresa: nomeExibicao(empresa),
     documentoDaEmpresa: formatDocumento(empresa.kind, empresa.cnpj, empresa.cpf) || null,
