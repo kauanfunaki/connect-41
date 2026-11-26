@@ -1048,6 +1048,11 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
   const filhosSalarioFamilia = lerInteiro(texto(fd, "filhosSalarioFamilia")) ?? 0;
   if (dependentesIrrf < 0 || dependentesIrrf > 30 || filhosSalarioFamilia < 0 || filhosSalarioFamilia > 30) return erro("Confira dependentes e filhos.");
   const insalubridade = INSALUBRIDADES.includes(texto(fd, "insalubridade")) ? texto(fd, "insalubridade") : "NENHUM";
+  // Centro de custo (funcionalidade-751): um dos centros do BPO da mesma empresa.
+  const costCenterId = texto(fd, "costCenterId") || null;
+  if (costCenterId && !(await prisma.costCenter.findFirst({ where: { id: costCenterId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId }, select: { id: true } }))) {
+    return erro("Centro de custo não encontrado nesta empresa.");
+  }
 
   const dados = {
     companyId: pessoa.currentCompanyId,
@@ -1059,6 +1064,8 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     insalubridade,
     periculosidade: marcado(fd, "periculosidade"),
     valeTransporte: marcado(fd, "valeTransporte"),
+    costCenterId,
+    departamento: texto(fd, "departamento").slice(0, 80) || null,
     vtCustoDiario: lerNumero(texto(fd, "vtCustoDiario")),
     aprendiz: marcado(fd, "aprendiz"),
     observacoes: texto(fd, "observacoes") || null,

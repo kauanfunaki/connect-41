@@ -188,20 +188,36 @@ export async function contasDaFolha(tenantId: string): Promise<ContasDaFolha> {
   return lerContasDaFolha(linha?.contas);
 }
 
+/**
+ * O centro de custo do contrato de cada pessoa (funcionalidade-751), pelo
+ * código do BPO quando há, senão pelo nome. Sem centro, a pessoa fica de fora do mapa.
+ */
+export async function centrosDeCustoDasPessoas(tenantId: string, companyId: string, personIds: readonly string[]): Promise<Map<string, string>> {
+  if (personIds.length === 0) return new Map();
+  const prisma = getPrisma();
+  const vinculos = await prisma.dp2Vinculo.findMany({ where: { tenantId, personId: { in: [...personIds] }, costCenterId: { not: null } }, select: { personId: true, costCenterId: true } });
+  if (vinculos.length === 0) return new Map();
+  const centros = await prisma.costCenter.findMany({ where: { tenantId, companyId, id: { in: vinculos.map((v) => v.costCenterId!) } }, select: { id: true, name: true, code: true } });
+  const nome = new Map(centros.map((c) => [c.id, c.code?.trim() ? `${c.code.trim()} · ${c.name}` : c.name]));
+  return new Map(vinculos.flatMap((v) => (nome.has(v.costCenterId!) ? [[v.personId, nome.get(v.costCenterId!)!] as const] : [])));
+}
+
 export async function lancamentosDaCompetencia(tenantId: string, competenciaId: string) {
   const prisma = getPrisma();
   const comp = await prisma.dp2Competencia.findFirst({ where: { id: competenciaId, tenantId } });
   if (!comp) return null;
   const [calculos, rubricas, contas] = await Promise.all([
-    prisma.dp2Calculo.findMany({ where: { tenantId, competenciaId }, select: { itens: true, encargos: true, provisoes: true } }),
+    prisma.dp2Calculo.findMany({ where: { tenantId, competenciaId }, select: { personId: true, itens: true, encargos: true, provisoes: true } }),
     prisma.dp2Rubrica.findMany({ where: { tenantId }, select: { codigo: true, nome: true, contaDebito: true, contaCredito: true } }),
     contasDaFolha(tenantId),
   ]);
+  const centroDe = await centrosDeCustoDasPessoas(tenantId, comp.companyId, calculos.map((c) => c.personId));
   const mapa = new Map<string, RubricaContabil>(rubricas.map((r) => [r.codigo, r]));
   const entrada: CalculoContabil[] = calculos.map((c) => {
     const e = (c.encargos ?? {}) as Record<string, number>;
     const p = (c.provisoes ?? {}) as Record<string, number>;
     return {
+      centro: centroDe.get(c.personId) ?? null,
       itens: ((c.itens as unknown as ItemDoHolerite[]) ?? []).map((i) => ({ codigo: i.codigo, nome: i.nome, tipo: i.tipo, valor: i.valor })),
       encargos: { inssEmpresa: n(e.inssEmpresa), rat: n(e.rat), terceiros: n(e.terceiros) },
       provisoes: { ferias: n(p.ferias), tercoFerias: n(p.tercoFerias), decimo: n(p.decimo), encargosFerias: n(p.encargosFerias), encargosDecimo: n(p.encargosDecimo) },
