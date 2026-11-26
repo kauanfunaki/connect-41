@@ -7,7 +7,7 @@ import type { Escopo } from "@/lib/tokens-pessoais/regras";
 
 export const ID_ITEM = "11111111-2222-4333-8444-555555555555";
 /** O id curto do mesmo item (10/11/2026): o bug número 7 do escritório. */
-export const ID_CURTO = "bug-7";
+export const ID_CURTO = "BUG-7";
 export const LEITOR = `c41_${"0a".repeat(32)}`;
 export const ESCRITOR = `c41_${"0b".repeat(32)}`;
 

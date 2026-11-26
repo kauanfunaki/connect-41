@@ -4,7 +4,7 @@ import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { ExternalLink, History, MessageSquare, Paperclip, PencilLine, Plus } from "lucide-react";
 import {
   MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, PRIORIDADES, TAMANHOS, EM_ABERTO,
-  chaveDoSistema, nomeDoSistema, hojeEmSaoPaulo, enderecoDoItem, idCurtoDoItem, type Alteracao,
+  chaveDoSistema, nomeDoSistema, hojeEmSaoPaulo, enderecoDoItem, ehOEnderecoDeAgora, idCurtoDoItem, type Alteracao,
 } from "@/lib/tech-interno/regras";
 import { CORES_DO_TIPO } from "@/lib/tech-interno/cores";
 import { lerCriterioDeAceite, marcasQueValem } from "@/lib/tech-interno/criterioDeAceite";
@@ -43,9 +43,11 @@ type Item = NonNullable<Awaited<ReturnType<typeof detalheItem>>>;
  * No celular, uma coluna na ordem de leitura: critério, detalhes (com a
  * situação), comentários, histórico e, por fim, a descrição e os anexos.
  *
- * O endereço é o curto (10/11/2026): /controle-interno/bug-123. O antigo, com
- * o uuid (e o `?voltar=` que ia junto), e o de um tipo anterior do item
- * continuam abrindo e passam para o de agora; o `?editar=1` vai junto. A
+ * O endereço é o curto (10/11/2026): /controle-interno/bug-123 — desde
+ * 25/11/2026 com a sigla do tipo (fun-816, melhoria-818). O antigo, com o
+ * uuid (e o `?voltar=` que ia junto), o de um tipo anterior do item e o do
+ * prefixo por extenso (funcionalidade-816) continuam abrindo e passam para o
+ * de agora; o `?editar=1` vai junto. A
  * volta para a lista não viaja mais no endereço (`VoltarParaALista`).
  */
 export default async function DetalheTechPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -56,7 +58,7 @@ export default async function DetalheTechPage({ params, searchParams }: { params
   ]);
   if (!item) notFound();
   const verHref = enderecoDoItem(item), editarHref = `${verHref}?editar=1`;
-  if (`${ROTA_TECH_INTERNO}/${id}` !== verHref || busca.voltar !== undefined) redirect(querEditar ? editarHref : verHref);
+  if (!ehOEnderecoDeAgora(id, item) || busca.voltar !== undefined) redirect(querEditar ? editarHref : verHref);
   const editando = podeEditar && !!opcoes;
 
   const voltarParaLista = <VoltarParaALista />;

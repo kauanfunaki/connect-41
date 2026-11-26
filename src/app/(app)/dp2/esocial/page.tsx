@@ -23,19 +23,44 @@ import type { Pendencia } from "@/lib/dp2/esocial/eventos";
 import { Input } from "@/components/ui/Input";
 import { FormulariosDeSst } from "@/components/dp2/FormulariosDeSst";
 import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
-import { MOTIVOS_DE_AFASTAMENTO } from "@/lib/dp2/esocial/naoPeriodicos";
+import { MOTIVOS_DE_AFASTAMENTO, TIPOS_DE_REINTEGRACAO } from "@/lib/dp2/esocial/naoPeriodicos";
 import {
   gerarAdmissaoAction,
   gerarAfastamentoAction,
   gerarAlteracaoAction,
+  gerarReintegracaoAction,
   gerarPeriodicosEsocialAction,
   gerarTabelasEsocialAction,
   gerarTerminoSemVinculoAction,
+  excluirNoEsocialAction,
+  registrarReciboEsocialAction,
 } from "../actions";
+import { podeExcluirPeloS3000 } from "@/lib/dp2/esocial/eventos";
 import { semVinculo } from "@/lib/dp2/categorias";
 
-const NOME_DA_SITUACAO: Record<string, string> = { PENDENCIA: "Com pendência", PRONTO: "Pronto", ENVIADO: "Enviado", ACEITO: "Aceito", REJEITADO: "Rejeitado" };
-const TOM: Record<string, "atencao" | "marca" | "sucesso" | "perigo" | "neutro"> = { PENDENCIA: "atencao", PRONTO: "marca", ENVIADO: "neutro", ACEITO: "sucesso", REJEITADO: "perigo" };
+const NOME_DA_SITUACAO: Record<string, string> = {
+  PENDENCIA: "Com pendência",
+  PRONTO: "Pronto",
+  ENVIADO: "Enviado",
+  ACEITO: "Aceito",
+  REJEITADO: "Rejeitado",
+  // Depois de outro evento aceito sobre este (funcionalidade-754).
+  RETIFICADO: "Retificado",
+  EXCLUIDO: "Excluído",
+  REABERTO: "Reaberto",
+};
+const TOM: Record<string, "atencao" | "marca" | "sucesso" | "perigo" | "neutro"> = {
+  PENDENCIA: "atencao",
+  PRONTO: "marca",
+  ENVIADO: "neutro",
+  ACEITO: "sucesso",
+  REJEITADO: "perigo",
+  RETIFICADO: "neutro",
+  EXCLUIDO: "neutro",
+  REABERTO: "neutro",
+};
+/** O que o evento faz com o alvo, para a fila dizer "retifica", "exclui" ou "reabre". */
+const VERBO_DO_ALVO: Record<string, string> = { "S-3000": "exclui", "S-1298": "reabre", "S-1200": "retifica", "S-1210": "retifica" };
 
 /**
  * eSocial do DP 2 (12/11/2026, fase 3a): os eventos da empresa em foco —
@@ -62,7 +87,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
     prisma.dp2EventoEsocial.findMany({
       where: { tenantId: tela.tenantId, companyId: tela.empresa.id },
       orderBy: [{ createdAt: "desc" }],
-      select: { id: true, tipo: true, referencia: true, situacao: true, pendencias: true, createdAt: true, personId: true, person: { select: { name: true } } },
+      select: { id: true, tipo: true, referencia: true, situacao: true, pendencias: true, createdAt: true, personId: true, recibo: true, alvoId: true, person: { select: { name: true } } },
       take: 300,
     }),
     prisma.dp2Competencia.findMany({
@@ -74,6 +99,8 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
   ]);
   const comContrato = pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate);
+  // Reintegração (S-2298, funcionalidade-756): empregados desligados.
+  const desligados = pessoas.filter((p) => p.dp2Vinculo && p.dismissalDate && !semVinculo(p.dp2Vinculo.categoria));
   const admissaoDe = new Map<string, string>();
   for (const e of eventos) if ((e.tipo === "S-2200" || e.tipo === "S-2300") && e.personId && !admissaoDe.has(e.personId)) admissaoDe.set(e.personId, e.situacao);
   // Sócio, autônomo e estagiário: início no S-2300 e término no S-2399 (o desligado também aparece no término).
@@ -81,6 +108,8 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
   const filtro = params.tipo && params.tipo in NOME_DO_EVENTO ? params.tipo : null;
   const visiveis = filtro ? eventos.filter((e) => e.tipo === filtro) : eventos;
   const conta = (s: string) => eventos.filter((e) => e.situacao === s).length;
+  // O evento que cada um retifica, exclui ou reabre, pelo tipo e a referência (funcionalidade-754).
+  const alvoDe = new Map(eventos.map((e) => [e.id, `${e.tipo} · ${e.person?.name ?? e.referencia}`]));
   const prontosNoGrupo = (g: "1" | "2" | "3") => eventos.filter((e) => e.situacao === "PRONTO" && GRUPO_DO_EVENTO[e.tipo as TipoDeEvento] === g).length;
 
   // As pendências que bloqueiam, sem repetir (a mesma rubrica sem natureza aparece uma vez).
@@ -220,8 +249,8 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
             {tela.podeAgir && (
               <div className="grid gap-5 lg:grid-cols-2">
                 <div>
-                  <h3 className="text-fs-3 font-semibold text-fg mb-2">Alteração contratual (S-2206)</h3>
-                  <FormularioDoDp2 acao={gerarAlteracaoAction} rotulo="Gerar S-2206" rotuloEnviando="Gerando…" variante="secondary">
+                  <h3 className="text-fs-3 font-semibold text-fg mb-2">Alteração contratual (S-2206; S-2306 para sócio, autônomo e estagiário)</h3>
+                  <FormularioDoDp2 acao={gerarAlteracaoAction} rotulo="Gerar alteração" rotuloEnviando="Gerando…" variante="secondary">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <CampoForm label="Colaborador" htmlFor="alt_personId">
                         <Select id="alt_personId" name="personId" required defaultValue="">
@@ -284,6 +313,48 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                     </div>
                   </FormularioDoDp2>
                 </div>
+                {desligados.length > 0 && (
+                  <div>
+                    <h3 className="text-fs-3 font-semibold text-fg mb-2">Reintegração (S-2298)</h3>
+                    <FormularioDoDp2 acao={gerarReintegracaoAction} rotulo="Gerar S-2298" rotuloEnviando="Gerando…" variante="secondary">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <CampoForm label="Colaborador desligado" htmlFor="rei_personId">
+                          <Select id="rei_personId" name="personId" required defaultValue="">
+                            <option value="" disabled>
+                              Escolha…
+                            </option>
+                            {desligados.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </CampoForm>
+                        <CampoForm label="Tipo" htmlFor="tipoReintegracao">
+                          <Select id="tipoReintegracao" name="tipoReintegracao" defaultValue="1">
+                            {TIPOS_DE_REINTEGRACAO.map(([k, r]) => (
+                              <option key={k} value={k}>
+                                {k} · {r}
+                              </option>
+                            ))}
+                          </Select>
+                        </CampoForm>
+                        <CampoForm label="Retorno ao trabalho" htmlFor="retorno">
+                          <CampoData id="retorno" name="retorno" required />
+                        </CampoForm>
+                        <CampoForm label="Início dos efeitos financeiros" htmlFor="efeito" dica="Em branco, o próprio retorno.">
+                          <CampoData id="efeito" name="efeito" />
+                        </CampoForm>
+                        <CampoForm label="Processo judicial" htmlFor="processo" dica="Na reintegração judicial: 20 algarismos.">
+                          <Input id="processo" name="processo" inputMode="numeric" maxLength={25} />
+                        </CampoForm>
+                        <CampoForm label="Lei de anistia" htmlFor="leiAnistia" dica="Na anistia: número e ano (ex.: 8878/1994).">
+                          <Input id="leiAnistia" name="leiAnistia" maxLength={13} />
+                        </CampoForm>
+                      </div>
+                    </FormularioDoDp2>
+                  </div>
+                )}
               </div>
             )}
             {tela.podeAgir && semVinculoComContrato.length > 0 && (
@@ -376,6 +447,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                   <th className={TH}>Situação</th>
                   <th className={TH}>Gerado em</th>
                   <th className={TH}>XML</th>
+                  {tela.podeAgir && <th className={TH}>Recibo e exclusão</th>}
                 </tr>
               </thead>
               <tbody>
@@ -390,6 +462,12 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                       <td className={TD}>
                         <Selo tom={TOM[e.situacao] ?? "neutro"}>{NOME_DA_SITUACAO[e.situacao] ?? e.situacao}</Selo>
                         {ps.filter((p) => p.bloqueia).length > 0 && <span className="block text-fs-2 text-warning-fg mt-1">{ps.filter((p) => p.bloqueia).map((p) => p.texto).join(" ")}</span>}
+                        {e.recibo && <span className="block text-fs-2 text-fg-muted mt-1 tabular-nums">Recibo {e.recibo}</span>}
+                        {e.alvoId && (
+                          <span className="block text-fs-2 text-fg-muted mt-1">
+                            {VERBO_DO_ALVO[e.tipo] ?? "aponta para"} {alvoDe.get(e.alvoId) ?? "um evento anterior"}
+                          </span>
+                        )}
                       </td>
                       <td className={`${TD} whitespace-nowrap text-fg-muted`}>{formatInstantDateTime(e.createdAt)}</td>
                       <td className={`${TD} whitespace-nowrap`}>
@@ -401,6 +479,32 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                           Baixar
                         </a>
                       </td>
+                      {tela.podeAgir && (
+                        <td className={TD}>
+                          {(e.situacao === "PRONTO" || e.situacao === "ENVIADO") && (
+                            <FormularioDoDp2 acao={registrarReciboEsocialAction} rotulo="Registrar recibo" rotuloEnviando="Registrando…" variante="ghost" tamanho="xs" className="flex flex-wrap items-center gap-2">
+                              <input type="hidden" name="eventoId" value={e.id} />
+                              <Input name="recibo" aria-label={`Recibo do ${e.tipo}`} placeholder="1.2.0000000000000000000" compact required className="w-52" />
+                            </FormularioDoDp2>
+                          )}
+                          {e.situacao === "ACEITO" && podeExcluirPeloS3000(e.tipo) && (
+                            <FormularioDoDp2
+                              acao={excluirNoEsocialAction}
+                              rotulo="Excluir no eSocial (S-3000)"
+                              rotuloEnviando="Gerando…"
+                              variante="ghost"
+                              tamanho="xs"
+                              confirmar={{
+                                titulo: `Excluir este ${e.tipo} no eSocial?`,
+                                texto: "Gera o S-3000 com o recibo deste evento, para assinar e enviar. Quando o S-3000 for aceito, este evento fica como excluído.",
+                                rotulo: "Gerar o S-3000",
+                              }}
+                            >
+                              <input type="hidden" name="eventoId" value={e.id} />
+                            </FormularioDoDp2>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

@@ -14,6 +14,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
 import { SectorChip } from "@/components/ui/SectorChip";
+import { SeletorDeSetores } from "@/components/ui/SeletorDeSetores";
 import { Stepper, type StepDef } from "@/components/ui/Stepper";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
@@ -249,9 +250,11 @@ export function HandoffForm({
     setEscolhida(id && opcao ? { id, name: opcao.label, cnpj: entityType === "COMPANY" ? (opcao.descricao ?? null) : null } : null);
   }
 
-  function alternarSetor(code: string) {
+  // O seletor devolve os destinos marcados; o que estava marcado fora deles (o
+  // setor que hoje é a origem) fica guardado, como nas pílulas de antes.
+  function escolherSetores(destinos: string[]) {
     limparErro("setores");
-    setSelectedSectors((atuais) => (atuais.includes(code) ? atuais.filter((c) => c !== code) : [...atuais, code]));
+    setSelectedSectors((atuais) => [...atuais.filter((c) => !destinationOptions.some((s) => s.value === c)), ...destinos]);
   }
 
   function acrescentarTarefa(code: string) {
@@ -530,37 +533,18 @@ export function HandoffForm({
                 </CampoForm>
               )}
 
-              <fieldset className="flex min-w-0 flex-col gap-2" aria-describedby={erroDe("setores") ? "setores-erro" : undefined}>
-                <legend className="mb-1.5 text-label font-medium leading-5 text-fg">
-                  Setores que recebem<span className="text-danger"> *</span>
-                </legend>
-                <div className="flex flex-wrap gap-2">
-                  {destinationOptions.map((s) => {
-                    const ativo = selectedSectors.includes(s.value);
-                    return (
-                      <button
-                        key={s.value}
-                        type="button"
-                        aria-pressed={ativo}
-                        onClick={() => alternarSetor(s.value)}
-                        className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-ui font-medium transition-colors sm:min-h-8 ${
-                          ativo ? "border-brand bg-brand-subtle text-fg" : "border-border bg-surface text-fg-secondary hover:border-border-strong hover:text-fg"
-                        }`}
-                      >
-                        <span aria-hidden className="size-[7px] flex-shrink-0 rounded-full" style={{ background: s.color }} />
-                        {s.label}
-                        {ativo && <Check size={13} aria-hidden className="text-brand" />}
-                      </button>
-                    );
-                  })}
-                  {destinationOptions.length === 0 && <p className="text-helper text-fg-muted">Nenhum setor disponível.</p>}
-                </div>
-                {erroDe("setores") && (
-                  <p id="setores-erro" className="text-helper font-medium text-danger">
-                    {erroDe("setores")}
-                  </p>
-                )}
-              </fieldset>
+              {/* O seletor de setores padrão (25/11/2026, melhoria-812); eram pílulas.
+                  O modelo continua marcando os setores dele, e os `toSectors` saem
+                  dos campos escondidos no fim do formulário, como antes. */}
+              <SeletorDeSetores
+                rotulo="Setores que recebem"
+                required
+                opcoes={destinationOptions.map((s) => ({ value: s.value, label: s.label, cor: s.color }))}
+                valor={selectedInOrder.map((s) => s.value)}
+                onChange={escolherSetores}
+                erro={erroDe("setores")}
+                className="sm:max-w-md"
+              />
 
               {campos.length > 0 && (
                 <fieldset className="flex min-w-0 flex-col gap-3">
