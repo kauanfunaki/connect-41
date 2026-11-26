@@ -1,4 +1,4 @@
-import { BookOpen, CreditCard, FileCheck, FileText, Inbox, Receipt, Scale, SlidersHorizontal, Tags, Users, Zap } from "lucide-react";
+import { BookOpen, CreditCard, FileCheck, FileText, Inbox, LayoutDashboard, Receipt, Scale, SlidersHorizontal, Tags, Users, Zap } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -22,6 +22,7 @@ import {
   AbaImportacoes,
   AbaNeo,
   AbaNotas,
+  AbaPainel,
   AbaRegistros,
   AbaRegras,
   type ContextoDaAba,
@@ -36,6 +37,7 @@ export const dynamic = "force-dynamic";
 type Busca = { empresa?: string; aba?: string; mes?: string; agencia?: string; busca?: string; pagina?: string; status?: string; vista?: string };
 
 const ROTULO_DA_ABA: Record<Aba, { rotulo: string; icone: React.ReactNode }> = {
+  painel: { rotulo: "Painel", icone: <LayoutDashboard size={16} aria-hidden /> },
   importacoes: { rotulo: "Importações", icone: <Inbox size={16} aria-hidden /> },
   extrato: { rotulo: "Extrato", icone: <FileText size={16} aria-hidden /> },
   neo: { rotulo: "NEO", icone: <Zap size={16} aria-hidden /> },
@@ -88,7 +90,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
   }
 
   const empresa = empresas.find((e) => ehUuid(q.empresa) && e.id === q.empresa.toLowerCase()) ?? empresas[0];
-  const aba: Aba = (ABAS as readonly string[]).includes(q.aba ?? "") ? (q.aba as Aba) : "importacoes";
+  const aba: Aba = (ABAS as readonly string[]).includes(q.aba ?? "") ? (q.aba as Aba) : "painel";
   const mes = q.mes && /^\d{4}-(0[1-9]|1[0-2])$/.test(q.mes) ? q.mes : null;
   const c: ContextoDaAba = {
     tenantId: ctx.tenantId,
@@ -101,7 +103,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
     pagina: Math.max(1, Number.parseInt(q.pagina ?? "1", 10) || 1),
     status: q.status ?? null,
     mesAtual: mesAtual(),
-    vista: q.vista === "financeiro" ? "financeiro" : null,
+    vista: q.vista === "financeiro" || q.vista === "conflitos" ? q.vista : null,
   };
 
 
@@ -127,6 +129,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
         ativa={aba}
         abas={ABAS.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
       />
+      {aba === "painel" && <AbaPainel c={c} />}
       {aba === "importacoes" && <AbaImportacoes c={c} />}
       {aba === "extrato" && <AbaExtrato c={c} />}
       {aba === "neo" && <AbaNeo c={c} />}

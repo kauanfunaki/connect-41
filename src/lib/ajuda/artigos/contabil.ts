@@ -94,11 +94,20 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Como gerar o arquivo do Domínio",
+        titulo: "Como gerar o arquivo do Domínio e as outras exportações",
         passos: [
-          "Abra a aba “Registros”, escolha a competência e, se quiser, a conta bancária.",
-          "Escolha TXT para importar no Domínio ou CSV para conferir, e clique em “Baixar arquivo”.",
+          "Abra a aba “Registros” e, em “Arquivo”, escolha o que exportar: os lançamentos para o Domínio, os lançamentos contábeis, uma baixa de NF-e ou NFS-e, ou a simples conferência (transação × nota × comprovante).",
+          "Escolha a competência e, se quiser, a conta bancária. No Domínio, escolha TXT para importar ou CSV e Excel para conferir; os outros saem em CSV ou Excel. Clique em “Baixar arquivo”.",
           "Leia os avisos: conta sem código reduzido não é importada pelo Domínio.",
+          "Para exportar o extrato, filtre a aba “Extrato” e clique em “Excel” ou “CSV”: o arquivo traz as mesmas linhas da tela, sem a paginação.",
+        ],
+      },
+      {
+        titulo: "Como acompanhar o trabalho das empresas",
+        passos: [
+          "A aba “Painel” mostra a carteira do escritório na competência: em cada empresa, as transações importadas, as classificadas, as pendências, os erros e o valor pendente, com as de mais pendências primeiro. Clique na empresa para abri-la.",
+          "Abaixo, os números da empresa aberta: as transações com e sem lançamento, a classificação por conta bancária e a atividade dos últimos meses.",
+          "Na aba “NEO”, em “Conflitos e qualidade”, veja quantas classificações por regra tiveram a conta diferente da que a contraparte daria, os pares de contas e os maiores casos.",
         ],
       },
       {

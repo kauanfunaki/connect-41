@@ -15,6 +15,7 @@ export function Filtros({
   agencias,
   busca,
   status,
+  vista,
 }: {
   empresaId: string;
   aba: string;
@@ -24,11 +25,14 @@ export function Filtros({
   busca?: string | null;
   /** Mostra o filtro de situação da transação (aba Extrato). */
   status?: string | null;
+  /** A vista da aba que o filtro mantém (Fase D1: "conflitos" na aba NEO). */
+  vista?: string | null;
 }) {
   return (
     <FormularioDeFiltro role="search" className="mb-3 flex flex-wrap items-end gap-2 text-sm">
       <input type="hidden" name="empresa" value={empresaId} />
       <input type="hidden" name="aba" value={aba} />
+      {vista && <input type="hidden" name="vista" value={vista} />}
       {mes !== undefined && (
         <label className="flex flex-col gap-1">
           <span className="text-micro text-fg-muted">Competência</span>

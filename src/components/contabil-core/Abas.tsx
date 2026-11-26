@@ -13,7 +13,7 @@ import { AlternarAgencia, AlternarIaParaDocumentos, AlternarRegra, CancelarClass
 import { CorrigirContaDoRazao } from "./CorrigirContaDoRazao";
 import { EnvioDeExtrato } from "./EnvioDeExtrato";
 import { ImportarCadastro } from "./ImportarCadastro";
-import { Exportar } from "./Exportar";
+import { Exportar, ExportarExtrato } from "./Exportar";
 import { Conciliacao } from "./Conciliacao";
 import { ConciliacaoFinanceiro } from "./ConciliacaoFinanceiro";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -25,6 +25,9 @@ import { Notas } from "./Notas";
 import { Comprovantes } from "./Comprovantes";
 import { Cartoes } from "./Cartoes";
 import { iaLiberadaParaDocumentos } from "@/lib/contabil-core/servidor/notas";
+import { carteiraDoEscritorio, consultarDivergencias, estatisticasDaEmpresa } from "@/lib/contabil-core/servidor/painel";
+import { ConflitosQualidade } from "./ConflitosQualidade";
+import { CarteiraDoEscritorio, NumerosDaEmpresa } from "./Painel";
 
 // As abas do Contábil Core (Fase 2, 09/11/2026). Componentes de servidor: leem pelo serviço (que
 // confere tenant e empresa) e passam para o navegador só o que a tela mostra.
@@ -40,7 +43,7 @@ export type ContextoDaAba = {
   pagina: number;
   status: string | null;
   mesAtual: string;
-  /** Dentro da aba Conciliação: "financeiro" abre a conferência do financeiro (Fase B4). */
+  /** Dentro da aba Conciliação: "financeiro" abre a conferência do financeiro (Fase B4); na aba NEO, "conflitos" abre "Conflitos e qualidade" (Fase D1). */
   vista: string | null;
 };
 
@@ -78,6 +81,30 @@ function Paginacao({ c, aba, total }: { c: ContextoDaAba; aba: string; total: nu
       </span>
       {c.pagina < paginas && <Link href={href(c.pagina + 1)} className="text-brand hover:underline">Próxima</Link>}
     </nav>
+  );
+}
+
+// ─── Painel ───────────────────────────────────────────────────────────────
+
+// Bloco D, Fase D1 (26/11/2026): o `Dashboard` do original. A carteira do escritório na competência (todas as
+// empresas do Contábil Core, como o seletor de empresa) e os números da empresa aberta. Só lê: aparece para quem
+// vê o módulo (o `stats.read` do original).
+export async function AbaPainel({ c }: { c: ContextoDaAba }) {
+  const competencia = c.mes ?? c.mesAtual;
+  const [carteira, estatisticas] = await Promise.all([carteiraDoEscritorio(c.tenantId, competencia), estatisticasDaEmpresa(c.tenantId, c.empresaId)]);
+  return (
+    <div className="flex flex-col gap-8">
+      <section>
+        <h2 className="text-base font-semibold">Carteira do escritório</h2>
+        <p className="mb-2 text-sm text-fg-muted">O trabalho da competência em cada empresa, com as de mais pendências primeiro.</p>
+        <Filtros empresaId={c.empresaId} aba="painel" mes={competencia} />
+        <CarteiraDoEscritorio mes={competencia} itens={carteira.itens} atual={c.empresaId} />
+      </section>
+      <section>
+        <h2 className="mb-3 text-base font-semibold">Esta empresa</h2>
+        {estatisticas.ok ? <NumerosDaEmpresa e={estatisticas.valor} /> : <Aviso tom="atencao">{estatisticas.erro}</Aviso>}
+      </section>
+    </div>
   );
 }
 
@@ -161,15 +188,21 @@ export async function AbaExtrato({ c }: { c: ContextoDaAba }) {
   ]);
   return (
     <div>
-      <Filtros
-        empresaId={c.empresaId}
-        aba="extrato"
-        mes={c.mes}
-        agenciaId={c.agenciaId}
-        agencias={opcoesDeAgencia}
-        busca={c.busca}
-        status={c.status}
-      />
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <Filtros
+          empresaId={c.empresaId}
+          aba="extrato"
+          mes={c.mes}
+          agenciaId={c.agenciaId}
+          agencias={opcoesDeAgencia}
+          busca={c.busca}
+          status={c.status}
+        />
+        {/* Fase D1: o arquivo traz as MESMAS linhas da tela (os filtros vão junto), sem a paginação. */}
+        {c.podeAgir && total > 0 && (
+          <ExportarExtrato empresaId={c.empresaId} mes={c.mes} agenciaId={c.agenciaId} busca={c.busca} status={c.status} />
+        )}
+      </div>
       {itens.length === 0 ? (
         <p className="text-sm text-fg-muted">Nenhuma transação nesta seleção.</p>
       ) : (
@@ -217,6 +250,37 @@ export async function AbaExtrato({ c }: { c: ContextoDaAba }) {
 // ─── NEO ──────────────────────────────────────────────────────────────────
 
 export async function AbaNeo({ c }: { c: ContextoDaAba }) {
+  // "Conflitos e qualidade" (Fase D1) era a terceira aba da página Classificação do original; aqui é a segunda
+  // vista da aba NEO, porque mede o que o NEO decidiu (a conta da regra × a da contraparte). Na URL, para voltar.
+  const conflitos = c.vista === "conflitos";
+  const href = (vista: string | null) => `/contabil-core?${new URLSearchParams({ empresa: c.empresaId, aba: "neo", ...(vista ? { vista } : {}) })}`;
+  const vistas = (
+    <SegmentedControl
+      label="O que ver no NEO"
+      tocavel
+      active={conflitos ? "conflitos" : "pendencias"}
+      items={[
+        { key: "pendencias", label: "Pendências", href: href(null) },
+        { key: "conflitos", label: "Conflitos e qualidade", href: href("conflitos") },
+      ]}
+    />
+  );
+  if (conflitos) {
+    const [{ opcoesDeAgencia }, divergencias] = await Promise.all([opcoes(c), consultarDivergencias(c.tenantId, c.empresaId, { mes: c.mes, agenciaId: c.agenciaId })]);
+    return (
+      <div className="flex flex-col gap-4">
+        {vistas}
+        <div>
+          <Filtros empresaId={c.empresaId} aba="neo" vista="conflitos" mes={c.mes} agenciaId={c.agenciaId} agencias={opcoesDeAgencia} />
+          {divergencias.ok ? <ConflitosQualidade d={divergencias.valor} /> : <Aviso tom="atencao">{divergencias.erro}</Aviso>}
+        </div>
+      </div>
+    );
+  }
+  return <PendenciasDoNeo c={c} vistas={vistas} />;
+}
+
+async function PendenciasDoNeo({ c, vistas }: { c: ContextoDaAba; vistas: React.ReactNode }) {
   const [{ opcoesDeAgencia, opcoesDeConta }, pendencias, fila] = await Promise.all([
     opcoes(c),
     listarPendencias(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes, busca: c.busca }),
@@ -226,6 +290,7 @@ export async function AbaNeo({ c }: { c: ContextoDaAba }) {
   const naTela = new Set(pendencias.map((p) => p.id));
   return (
     <div className="flex flex-col gap-4">
+      {vistas}
       <Filtros empresaId={c.empresaId} aba="neo" mes={c.mes} agenciaId={c.agenciaId} agencias={opcoesDeAgencia} busca={c.busca} />
       {c.podeAgir && <ProcessarNeo empresaId={c.empresaId} agenciaId={c.agenciaId} mes={c.mes} />}
       <FilaDoNeo

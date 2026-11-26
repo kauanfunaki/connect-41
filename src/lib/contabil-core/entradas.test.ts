@@ -56,9 +56,17 @@ describe("entradas das telas do Contábil Core", () => {
     expect(classificacaoManualSchema.safeParse({ transacaoIds: muitos, contaId: ID, descricao: "ALUGUEL" }).success).toBe(false);
   });
 
-  test("exportação: competência AAAA-MM com mês válido e formato fechado", () => {
+  test("exportação: competência AAAA-MM com mês válido; sem tipo é o Domínio; só o extrato sai sem competência", () => {
     expect(exportacaoSchema.safeParse({ mes: "2026-13", formato: "txt" }).success).toBe(false);
-    expect(exportacaoSchema.safeParse({ mes: "2026-01", formato: "xlsx" }).success).toBe(false);
-    expect(exportacaoSchema.parse({ mes: "2026-01", formato: "txt" })).toMatchObject({ usarHistoricoExtrato: false, incluirContasInativas: false });
+    // O formato e o tipo são conferidos depois, com as frases do original (`conferirPedido`).
+    expect(exportacaoSchema.safeParse({ mes: "2026-01", formato: "xlsx" }).success).toBe(true);
+    expect(exportacaoSchema.parse({ mes: "2026-01", formato: "txt" })).toMatchObject({
+      tipo: "lancamentos_importacao", usarHistoricoExtrato: false, incluirContasInativas: false, dc: null, valorMin: null,
+    });
+    expect(exportacaoSchema.safeParse({ formato: "csv", tipo: "conferencia" }).success).toBe(false);
+    expect(exportacaoSchema.safeParse({ formato: "csv", tipo: "extrato", mes: "" }).success).toBe(true);
+    expect(exportacaoSchema.safeParse({ formato: "csv", tipo: "extrato", dc: "d" }).success).toBe(false);
+    expect(exportacaoSchema.safeParse({ formato: "csv", tipo: "extrato", valorMin: "-1" }).success).toBe(false);
+    expect(exportacaoSchema.parse({ formato: "csv", tipo: "extrato", valorMax: " 10.50 ", busca: "  tarifa " })).toMatchObject({ valorMax: "10.50", busca: "tarifa" });
   });
 });
