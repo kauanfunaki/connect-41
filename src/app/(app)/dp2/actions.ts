@@ -7,6 +7,7 @@
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
+import { lerTotalizadores } from "@/lib/dp2/esocial/totalizadores";
 import { calcularRescisaoDaPessoa, dadosDaRescisao, type AvisoDaRescisao } from "@/lib/dp2/rescisaoServidor";
 import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
 import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
@@ -54,7 +55,10 @@ import {
   gerarCat,
   gerarCondicaoAmbiental,
   gerarDesligamento,
+  gerarExclusao,
   gerarPeriodicos,
+  gerarReabertura,
+  registrarRecibo,
   gerarTabelas,
   gerarTerminoSemVinculo,
   SITUACOES_ABERTAS,
@@ -216,16 +220,20 @@ export async function reabrirCompetenciaAction(_: EstadoDoDp2, fd: FormData): Pr
   const motivo = texto(fd, "motivo");
   if (motivo.length < 5) return erro("Diga por que está reabrindo.");
   await getPrisma().dp2Competencia.update({ where: { id }, data: { situacao: "CALCULADA", fechadaEm: null, fechadaPorId: null } });
+  // Período fechado também no eSocial (S-1299 aceito): o S-1298 sai junto, se o eSocial do DP 2 está ligado (funcionalidade-754).
+  const comEsocial = await podeNoModulo(a.ctx, "dp2_esocial", "agir");
+  const reabertura = comEsocial ? await gerarReabertura(a.tenantId, id, a.userId) : null;
   await logAudit({
     tenantId: a.tenantId,
     userId: a.userId,
     action: "folha.competencia_reaberta",
     entityType: "Dp2Competencia",
     entityId: id,
-    metadata: { motivo },
+    metadata: { motivo, s1298: reabertura?.ok ?? false },
   });
   revalidarCompetencia(id);
-  return { ok: true, texto: "Competência reaberta." };
+  if (reabertura?.ok) revalidatePath("/dp2/esocial");
+  return { ok: true, texto: reabertura?.ok ? "Competência reaberta, com o S-1298 pronto na fila do eSocial." : "Competência reaberta." };
 }
 
 // ─── Eventos do mês ─────────────────────────────────────────────────────────
@@ -781,6 +789,90 @@ export async function reajusteColetivoAction(_: EstadoDoDp2, fd: FormData): Prom
   });
   revalidatePath("/dp2/colaboradores");
   return { ok: true, texto: `Reajuste aplicado a ${previsao.length} colaborador(es) a partir de ${r.data.split("-").reverse().join("/")}. Gere o S-2206 de cada um em DP 2 › eSocial.` };
+// ─── Totalizadores do eSocial (26/11/2026, funcionalidade-755) ─────────────
+
+/**
+ * Importa os totalizadores do eSocial (S-5001, S-5002, S-5003, S-5011, S-5013)
+ * da competência a partir dos XML de retorno (soltos ou .zip). Só entra o que
+ * é do período e do empregador da competência; importar de novo troca o do
+ * mesmo tipo, período e CPF. Liga cada um ao evento da fila pelo recibo de
+ * origem, quando ele está registrado.
+ */
+export async function importarTotalizadoresAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  if (comp.tipo !== "MENSAL" && comp.tipo !== "DECIMO_2") return erro("Os totalizadores são da folha mensal e do 13º (2ª parcela).");
+  const prisma = getPrisma();
+  const empresa = await prisma.company.findFirst({ where: { id: comp.companyId, tenantId: a.tenantId }, select: { cnpj: true } });
+  const raiz = (empresa?.cnpj ?? "").replace(/\D/g, "").slice(0, 8);
+  const arquivos = fd.getAll("arquivo").filter((f): f is File => typeof f !== "string" && f.size > 0);
+  if (arquivos.length === 0) return erro("Escolha os .xml de retorno ou o .zip do eSocial.");
+  const conteudos = await Promise.all(arquivos.map(async (f) => ({ nome: f.name, conteudo: new Uint8Array(await f.arrayBuffer()) })));
+  const leitura = lerTotalizadores(conteudos);
+  const perApur = comp.tipo === "DECIMO_2" ? String(comp.ano) : `${comp.ano}-${String(comp.mes).padStart(2, "0")}`;
+  const doPeriodo = leitura.lidos.filter((l) => l.perApur === perApur);
+  const deOutraEmpresa = doPeriodo.filter((l) => raiz && l.empregador.slice(0, 8) !== raiz);
+  const validos = doPeriodo.filter((l) => !raiz || l.empregador.slice(0, 8) === raiz);
+  if (validos.length === 0) {
+    const fora = leitura.lidos.length - doPeriodo.length;
+    return erro(
+      [
+        "Nenhum totalizador desta competência e desta empresa nos arquivos.",
+        fora ? `${fora} é(são) de outro período.` : "",
+        deOutraEmpresa.length ? `${deOutraEmpresa.length} é(são) de outro empregador.` : "",
+        ...leitura.problemas,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+  }
+  const cpfs = [...new Set(validos.map((v) => v.cpf).filter((c): c is string => !!c))];
+  const recibos = [...new Set(validos.map((v) => v.reciboBase).filter((r): r is string => !!r))];
+  const [pessoas, eventos] = await Promise.all([
+    cpfs.length ? prisma.person.findMany({ where: { tenantId: a.tenantId, currentCompanyId: comp.companyId }, select: { id: true, cpf: true } }) : [],
+    recibos.length ? prisma.dp2EventoEsocial.findMany({ where: { tenantId: a.tenantId, companyId: comp.companyId, recibo: { in: recibos } }, select: { id: true, recibo: true } }) : [],
+  ]);
+  const pessoaDoCpf = new Map(pessoas.map((p) => [(p.cpf ?? "").replace(/\D/g, ""), p.id]));
+  const eventoDoRecibo = new Map(eventos.map((e) => [e.recibo, e.id]));
+  await prisma.$transaction([
+    ...validos.map((v) => prisma.dp2TotalizadorEsocial.deleteMany({ where: { tenantId: a.tenantId, companyId: comp.companyId, tipo: v.tipo, perApur: v.perApur, cpf: v.cpf } })),
+    prisma.dp2TotalizadorEsocial.createMany({
+      data: validos.map((v) => ({
+        tenantId: a.tenantId,
+        companyId: comp.companyId,
+        competenciaId,
+        personId: v.cpf ? (pessoaDoCpf.get(v.cpf) ?? null) : null,
+        tipo: v.tipo,
+        perApur: v.perApur,
+        cpf: v.cpf,
+        reciboBase: v.reciboBase,
+        eventoId: v.reciboBase ? (eventoDoRecibo.get(v.reciboBase) ?? null) : null,
+        valores: v.valores,
+        arquivo: v.arquivo.slice(0, 255),
+        importadoPorId: a.userId,
+      })),
+    }),
+  ]);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_totalizadores_importados",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { perApur, lidos: validos.length, outroPeriodo: leitura.lidos.length - doPeriodo.length, outraEmpresa: deOutraEmpresa.length },
+  });
+  revalidarCompetencia(competenciaId);
+  const contagem = (["S-5001", "S-5002", "S-5003", "S-5011", "S-5013"] as const)
+    .map((t) => [t, validos.filter((v) => v.tipo === t).length] as const)
+    .filter(([, q]) => q > 0)
+    .map(([t, q]) => `${q} ${t}`)
+    .join(", ");
+  const avisos = [deOutraEmpresa.length ? `${deOutraEmpresa.length} de outro empregador ficaram de fora.` : "", ...leitura.problemas].filter(Boolean).join(" ");
+  return { ok: true, texto: `Totalizadores importados: ${contagem}.${avisos ? ` ${avisos}` : ""}` };
 }
 
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────
@@ -1450,6 +1542,78 @@ async function pessoaDoEvento(a: Acesso, personId: string): Promise<{ id: string
   const recusa = await recusaDoFoco(a.ctx, [p.currentCompanyId]);
   if (recusa) return recusa;
   return { id: p.id, name: p.name, companyId: p.currentCompanyId };
+}
+
+// ─── Recibo, exclusão e reabertura no eSocial (25/11/2026, funcionalidade-754) ─
+
+/** O evento da fila na empresa em foco. */
+async function eventoDaFila(a: Acesso, eventoId: string) {
+  const ev = await getPrisma().dp2EventoEsocial.findFirst({ where: { id: eventoId, tenantId: a.tenantId }, select: { id: true, tipo: true, referencia: true, companyId: true } });
+  if (!ev) return "Evento não encontrado.";
+  const recusa = await recusaDoFoco(a.ctx, [ev.companyId]);
+  return recusa ?? ev;
+}
+
+/**
+ * Registra o recibo de um evento enviado por fora do Connect (enquanto o envio
+ * pelo Assinador não está ligado): o evento fica aceito, e o que ele
+ * retifica, exclui ou reabre muda de situação.
+ */
+export async function registrarReciboEsocialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const ev = await eventoDaFila(a, texto(fd, "eventoId"));
+  if (typeof ev === "string") return erro(ev);
+  const r = await registrarRecibo(a.tenantId, ev.id, texto(fd, "recibo"));
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_recibo_registrado",
+    entityType: "Dp2EventoEsocial",
+    entityId: ev.id,
+    metadata: { tipo: ev.tipo, referencia: ev.referencia, recibo: texto(fd, "recibo"), alvo: r.alvo },
+  });
+  revalidatePath("/dp2/esocial");
+  const doAlvo = r.alvo === "EXCLUIDO" ? " O evento excluído ficou marcado." : r.alvo === "RETIFICADO" ? " O evento retificado ficou marcado." : r.alvo === "REABERTO" ? " O fechamento ficou reaberto." : "";
+  return { ok: true, texto: `${ev.tipo} aceito com o recibo.${doAlvo}` };
+}
+
+/** S-3000 de um evento aceito, a partir da fila. */
+export async function excluirNoEsocialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const ev = await eventoDaFila(a, texto(fd, "eventoId"));
+  if (typeof ev === "string") return erro(ev);
+  const r = await gerarExclusao(a.tenantId, ev.id, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_exclusao",
+    entityType: "Dp2EventoEsocial",
+    entityId: ev.id,
+    metadata: { tipo: ev.tipo, referencia: ev.referencia },
+  });
+  revalidatePath("/dp2/esocial");
+  return { ok: true, texto: r.prontos ? `S-3000 do ${ev.tipo} pronto na fila.` : `S-3000 do ${ev.tipo} gerado com pendência: veja o que falta na fila.` };
+}
+
+/** S-1298 da competência (o período fechado no eSocial), para retificar os periódicos. */
+export async function reabrirNoEsocialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const comp = await getPrisma().dp2Competencia.findFirst({ where: { id: competenciaId, tenantId: a.tenantId }, select: { companyId: true } });
+  if (!comp) return erro("Competência não encontrada.");
+  const recusa = await recusaDoFoco(a.ctx, [comp.companyId]);
+  if (recusa) return erro(recusa);
+  const r = await gerarReabertura(a.tenantId, competenciaId, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.esocial_reabertura", entityType: "Dp2Competencia", entityId: competenciaId, metadata: {} });
+  revalidatePath("/dp2/esocial");
+  revalidarCompetencia(competenciaId);
+  return { ok: true, texto: "S-1298 (reabertura) pronto na fila do eSocial." };
 }
 
 function respostaDoEvento(evento: string, nome: string, r: { ok: true; prontos: number } | { ok: false; erro: string }): EstadoDoDp2 {
