@@ -39,7 +39,7 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, excluirAlocacaoAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, excluirAlocacaoAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -65,7 +65,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     );
   }
 
-  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios, centrosDeCusto, ambientesDeTrabalho] = await Promise.all([
+  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios, centrosDeCusto, ambientesDeTrabalho, niveisSalariais] = await Promise.all([
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().company.findFirst({ where: { id: tela.empresa.id, tenantId: tela.tenantId }, select: { cnpj: true, kind: true } }),
     listarRubricas(tela.tenantId),
@@ -75,6 +75,8 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     getPrisma().costCenter.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
     // Ambientes de trabalho da empresa (funcionalidade-761).
     getPrisma().dp2Ambiente.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
+    // Níveis salariais da empresa (funcionalidade-760).
+    getPrisma().dp2NivelSalarial.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
   ]);
   // As rubricas que podem ser fixas no contrato: as mesmas que o DP lança no mês (funcionalidade-767).
   const paraFixar = linhasDeRubrica
@@ -195,6 +197,21 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           </CampoForm>
           <CampoForm label="Motivo da mudança" htmlFor="motivoSalario">
             <Input id="motivoSalario" name="motivoSalario" maxLength={120} placeholder="Promoção, mérito, acordo…" />
+          </CampoForm>
+          {niveisSalariais.length > 0 && (
+            <CampoForm label="Nível salarial" htmlFor="nivelId" dica="Os níveis da Configuração da empresa. Aplicar níveis leva o salário para a faixa do tempo de casa.">
+              <Select id="nivelId" name="nivelId" defaultValue={v?.nivelId ?? ""}>
+                <option value="">Sem nível</option>
+                {niveisSalariais.map((nv) => (
+                  <option key={nv.id} value={nv.id}>
+                    {nv.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+          )}
+          <CampoForm label="Remuneração variável" htmlFor="esocial_remuneracaoVariavel" dica="Comissão, prêmio, produtividade… Vai na descrição do salário variável do eSocial (S-2200/S-2206).">
+            <Input id="esocial_remuneracaoVariavel" name="esocial_remuneracaoVariavel" maxLength={999} placeholder="Comissão de 3% sobre as vendas" defaultValue={es.remuneracaoVariavel ?? ""} />
           </CampoForm>
           <CampoForm label="Tipo" htmlFor="tipoSalario">
             <Select id="tipoSalario" name="tipoSalario" defaultValue={v?.tipoSalario ?? "MENSAL"}>
@@ -876,6 +893,9 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                   <Input id="reaj-motivo" name="motivo" maxLength={120} placeholder="Convenção coletiva 2027" />
                 </CampoForm>
               </div>
+              <div className="mt-3">
+                <Checkbox id="reaj-s2206" name="gerarS2206" label="Gerar o S-2206 de cada um (alteração salarial no eSocial)" defaultChecked />
+              </div>
             </FormularioDoDp2>
           )}
           {historicoSalarial.length > 0 && (
@@ -1148,6 +1168,26 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               </div>
             </FormularioDoDp2>
           )}
+        </Secao>
+      )}
+
+      {tela.podeAgir && pessoas.some((p) => p.dp2Vinculo?.nivelId && !p.dismissalDate) && (
+        <Secao titulo="Aplicar níveis salariais" apoio="Leva o salário de cada contrato com nível para a faixa do tempo de casa na data: grava no histórico salarial e gera o S-2206.">
+          <FormularioDoDp2
+            acao={aplicarNiveisAction}
+            rotulo="Aplicar níveis"
+            rotuloEnviando="Aplicando…"
+            variante="secondary"
+            confirmar={{ titulo: "Aplicar os níveis salariais?", texto: "Quem alcançou outra faixa pelo tempo de casa muda de salário a partir da data.", rotulo: "Aplicar" }}
+          >
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <div className="flex flex-wrap items-end gap-4">
+              <CampoForm label="Vale a partir de" htmlFor="nivel-data">
+                <CampoData id="nivel-data" name="data" required />
+              </CampoForm>
+              <Checkbox id="nivel-s2206" name="gerarS2206" label="Gerar o S-2206 de cada um" defaultChecked />
+            </div>
+          </FormularioDoDp2>
         </Secao>
       )}
 

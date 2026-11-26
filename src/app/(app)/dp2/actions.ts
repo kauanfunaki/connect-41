@@ -10,6 +10,9 @@ import { descreverAlteracao, lerAlteracao } from "@/lib/dp2/alteracaoEmLote";
 import { adiantamentoDoMes, lerParametrosDoAdiantamento } from "@/lib/dp2/adiantamento";
 import { avisosDaTransferencia, lerTransferencia } from "@/lib/dp2/transferencia";
 import { lerAlocacao, NOME_DA_ALOCACAO, rotuloDoTomador } from "@/lib/dp2/alocacao";
+import { lerPedidoDeDiferencas } from "@/lib/dp2/diferencasRetroativas";
+import { faixaDoTempo, lerFaixas, lerNivel, mesesDeCasa, rotuloDaFaixa, salarioDaFaixa } from "@/lib/dp2/niveis";
+import { lancarDiferencas } from "@/lib/dp2/diferencasServidor";
 import { lerAmbiente, lerEntregaDeEpi, lerEpi, lerMedico } from "@/lib/dp2/sst";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
@@ -1092,16 +1095,31 @@ export async function reajusteColetivoAction(_: EstadoDoDp2, fd: FormData): Prom
       });
     }
   });
+  // O S-2206 de cada um (funcionalidade-760): a alteração salarial vai ao eSocial com a data do reajuste.
+  let s2206 = 0;
+  if (marcado(fd, "gerarS2206")) {
+    for (const x of previsao) {
+      const g = await gerarAlteracao(a.tenantId, x.personId, r.data, `Reajuste salarial: ${r.motivo}`, a.userId);
+      if (g.ok) s2206++;
+    }
+    revalidatePath("/dp2/esocial");
+  }
   await logAudit({
     tenantId: a.tenantId,
     userId: a.userId,
     action: "folha.reajuste_coletivo",
     entityType: "Company",
     entityId: companyId,
-    metadata: { ...r, pessoas: previsao.length, peloPiso: previsao.filter((x) => x.pelo === "PISO").length },
+    metadata: { ...r, pessoas: previsao.length, peloPiso: previsao.filter((x) => x.pelo === "PISO").length, s2206 },
   });
   revalidatePath("/dp2/colaboradores");
-  return { ok: true, texto: `Reajuste aplicado a ${previsao.length} colaborador(es) a partir de ${r.data.split("-").reverse().join("/")}. Gere o S-2206 de cada um em DP 2 › eSocial.` };
+  const passado = r.data < new Date().toISOString().slice(0, 10);
+  return {
+    ok: true,
+    texto: `Reajuste aplicado a ${previsao.length} colaborador(es) a partir de ${r.data.split("-").reverse().join("/")}. ${
+      s2206 ? `${s2206} S-2206 gerado(s) em DP 2 › eSocial.` : "Gere o S-2206 de cada um em DP 2 › eSocial."
+    }${passado ? " Os meses já fechados desde a data pagaram o salário antigo: lance as diferenças na competência aberta (Diferenças retroativas)." : ""}`,
+  };
 }
 
 // ─── Transferência entre empresas (26/11/2026, funcionalidade-771) ─────────
@@ -1386,6 +1404,151 @@ export async function lancarAdiantamentoAction(_: EstadoDoDp2, fd: FormData): Pr
   return { ok: true, texto: `Adiantamento lançado para ${lancar.length} colaborador(es)${fora ? `; ${fora} ficaram de fora` : ""}.` };
 }
 
+// ─── Níveis salariais (26/11/2026, funcionalidade-760) ──────────────────────
+
+export async function criarNivelAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerNivel({ nome: texto(fd, "nome"), faixas: texto(fd, "faixas") });
+  if (!lido.ok) return erro(lido.erro);
+  const r = await getPrisma().dp2NivelSalarial.create({ data: { tenantId: a.tenantId, companyId, nome: lido.nivel.nome, faixas: lido.nivel.faixas, criadoPorId: a.userId }, select: { id: true } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.nivel_criado", entityType: "Company", entityId: companyId, metadata: { nivel: r.id, ...lido.nivel } });
+  revalidatePath("/dp2/configuracao");
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Nível "${lido.nivel.nome}" cadastrado com ${lido.nivel.faixas.length} faixa(s). Escolha o nível no contrato e aplique em DP 2 › Colaboradores.` };
+}
+
+export async function excluirNivelAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const nivel = await prisma.dp2NivelSalarial.findFirst({ where: { id: texto(fd, "nivelId"), tenantId: a.tenantId }, select: { id: true, companyId: true, nome: true } });
+  if (!nivel) return erro("Nível não encontrado.");
+  const recusa = await empresaDoEscritorio(a, nivel.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.$transaction([
+    prisma.dp2Vinculo.updateMany({ where: { tenantId: a.tenantId, nivelId: nivel.id }, data: { nivelId: null } }),
+    prisma.dp2NivelSalarial.delete({ where: { id: nivel.id } }),
+  ]);
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.nivel_excluido", entityType: "Company", entityId: nivel.companyId, metadata: { nivel: nivel.id, nome: nivel.nome } });
+  revalidatePath("/dp2/configuracao");
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Nível "${nivel.nome}" excluído; os contratos ligados a ele ficaram sem nível (o salário continua o mesmo).` };
+}
+
+/**
+ * Leva o salário de cada contrato com nível para a faixa do tempo de casa na
+ * data escolhida: grava no histórico salarial e, se pedido, gera o S-2206.
+ */
+export async function aplicarNiveisAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const data = texto(fd, "data");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("Informe a data em que o novo salário vale.");
+  const prisma = getPrisma();
+  const [niveis, pessoas] = await Promise.all([
+    prisma.dp2NivelSalarial.findMany({ where: { tenantId: a.tenantId, companyId } }),
+    colaboradoresDaEmpresa(a.tenantId, companyId),
+  ]);
+  const nivelDe = new Map(niveis.map((n) => [n.id, n]));
+  const mudancas: { personId: string; nome: string; antes: number; depois: number; motivo: string }[] = [];
+  for (const p of pessoas) {
+    const v = p.dp2Vinculo;
+    if (!v?.nivelId || !p.active || p.dismissalDate || !p.admissionDate) continue;
+    const nivel = nivelDe.get(v.nivelId);
+    if (!nivel) continue;
+    const faixa = faixaDoTempo(lerFaixas(nivel.faixas), mesesDeCasa(p.admissionDate.toISOString().slice(0, 10), data));
+    if (!faixa) continue;
+    const depois = salarioDaFaixa(faixa, v);
+    const antes = Number(v.salarioBase);
+    if (depois === antes) continue;
+    mudancas.push({ personId: p.id, nome: p.name, antes, depois, motivo: `Nível ${nivel.nome} · ${rotuloDaFaixa(faixa)}` });
+  }
+  if (mudancas.length === 0) return erro("Ninguém muda de salário: os contratos com nível já estão na faixa do tempo de casa.");
+  await prisma.$transaction(async (tx) => {
+    for (const m of mudancas) {
+      await tx.dp2Vinculo.update({ where: { personId: m.personId }, data: { salarioBase: m.depois } });
+      await tx.person.update({ where: { id: m.personId }, data: { currentSalary: m.depois } });
+      await tx.dp2HistoricoSalarial.create({ data: { tenantId: a.tenantId, companyId, personId: m.personId, data: new Date(`${data}T00:00:00Z`), salarioAnterior: m.antes, salario: m.depois, motivo: m.motivo, criadoPorId: a.userId } });
+    }
+  });
+  let s2206 = 0;
+  if (marcado(fd, "gerarS2206")) {
+    for (const m of mudancas) if ((await gerarAlteracao(a.tenantId, m.personId, data, `Alteração salarial: ${m.motivo}`, a.userId)).ok) s2206++;
+    revalidatePath("/dp2/esocial");
+  }
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.niveis_aplicados", entityType: "Company", entityId: companyId, metadata: { data, mudancas: mudancas.map((m) => ({ nome: m.nome, antes: m.antes, depois: m.depois, motivo: m.motivo })), s2206 } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Níveis aplicados: ${mudancas.map((m) => `${m.nome} (${m.motivo})`).join(", ")}.${s2206 ? ` ${s2206} S-2206 gerado(s).` : ""}` };
+}
+
+// ─── Diferenças retroativas (26/11/2026, funcionalidade-760) ────────────────
+
+/**
+ * Calcula as diferenças dos meses fechados do período (convenção, acordo ou
+ * dissídio retroativo, rubrica paga a menor ou salário-família) e lança na
+ * competência aberta. O INSS sai mês a mês; o S-1200 leva no infoPerAnt.
+ */
+export async function lancarDiferencasAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const lido = lerPedidoDeDiferencas({
+    tipo: texto(fd, "tipo"),
+    instrumento: texto(fd, "instrumento"),
+    dataInstrumento: texto(fd, "dataInstrumento"),
+    descricao: texto(fd, "descricao"),
+    de: texto(fd, "de"),
+    ate: texto(fd, "ate"),
+    percentual: texto(fd, "percentual"),
+    piso: texto(fd, "piso"),
+    rubrica: texto(fd, "rubrica"),
+    filhos: texto(fd, "filhos"),
+  });
+  if (!lido.ok) return erro(lido.erro);
+  const personId = texto(fd, "personId");
+  const r = await lancarDiferencas(a.tenantId, competenciaId, lido.pedido, personId ? [personId] : null, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.diferencas_lancadas",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { tipo: lido.pedido.tipo, de: lido.pedido.de, ate: lido.pedido.ate, pessoas: r.pessoas, meses: r.linhas, total: r.total, inss: r.inss },
+  });
+  revalidarCompetencia(competenciaId);
+  const br = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  return {
+    ok: true,
+    texto: `Diferenças lançadas: ${r.pessoas} pessoa(s), ${r.linhas} mês(es), ${br(r.total)}${r.inss ? ` (INSS ${br(r.inss)})` : ""}.${r.jaLancadas ? ` ${r.jaLancadas} mês(es) já estavam lançados e ficaram como estavam.` : ""} Calcule a folha de novo.`,
+  };
+}
+
+export async function excluirDiferencasAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const loteId = texto(fd, "loteId");
+  const linha = await prisma.dp2DiferencaRetroativa.findFirst({ where: { tenantId: a.tenantId, loteId }, select: { competenciaId: true } });
+  if (!linha) return erro("Lançamento não encontrado.");
+  const r0 = await competenciaEditavel(a, linha.competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (r0.comp.situacao === "FECHADA") return erro("Competência fechada: reabra para excluir.");
+  const { count } = await prisma.dp2DiferencaRetroativa.deleteMany({ where: { tenantId: a.tenantId, loteId } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.diferencas_excluidas", entityType: "Dp2Competencia", entityId: linha.competenciaId, metadata: { loteId, linhas: count } });
+  revalidarCompetencia(linha.competenciaId);
+  return { ok: true, texto: `Diferenças excluídas (${count} linha(s)). Calcule a folha de novo.` };
+}
+
 // ─── Alteração de contratos em lote (26/11/2026, funcionalidade-765) ───────
 
 /**
@@ -1541,6 +1704,11 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
   if (costCenterId && !(await prisma.costCenter.findFirst({ where: { id: costCenterId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId }, select: { id: true } }))) {
     return erro("Centro de custo não encontrado nesta empresa.");
   }
+  // Nível salarial (funcionalidade-760): um dos níveis da mesma empresa.
+  const nivelId = texto(fd, "nivelId") || null;
+  if (nivelId && !(await prisma.dp2NivelSalarial.findFirst({ where: { id: nivelId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId }, select: { id: true } }))) {
+    return erro("Nível salarial não encontrado nesta empresa.");
+  }
   // Ambiente de trabalho (funcionalidade-761): um dos ambientes da mesma empresa.
   const ambienteId = texto(fd, "ambienteId") || null;
   if (ambienteId && !(await prisma.dp2Ambiente.findFirst({ where: { id: ambienteId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId }, select: { id: true } }))) {
@@ -1563,6 +1731,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     horarioId,
     costCenterId,
     ambienteId,
+    nivelId,
     departamento: texto(fd, "departamento").slice(0, 80) || null,
     vtCustoDiario: lerNumero(texto(fd, "vtCustoDiario")),
     aprendiz: marcado(fd, "aprendiz"),
@@ -1579,6 +1748,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
       dataTermino: texto(fd, "esocial_dataTermino"),
       tipoJornada: horario?.tipoJornada ?? texto(fd, "esocial_tipoJornada"),
       descricaoJornada: doHorario?.descricao ?? texto(fd, "esocial_descricaoJornada"),
+      remuneracaoVariavel: texto(fd, "esocial_remuneracaoVariavel"),
       estagioNatureza: texto(fd, "esocial_estagioNatureza"),
       estagioNivel: texto(fd, "esocial_estagioNivel"),
       estagioArea: texto(fd, "esocial_estagioArea"),

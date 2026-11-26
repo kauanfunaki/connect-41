@@ -44,6 +44,7 @@ import {
   reciboValido,
   type EmpregadorEsocial,
   type EventoGerado,
+  type PeriodosAnteriores,
   type RubricaEsocial,
   type TrabalhadorEsocial,
 } from "./eventos";
@@ -180,11 +181,35 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
   const aceitoDe = (tipo: string, personId: string, periodo: string) => aceitos.find((a) => a.tipo === tipo && a.personId === personId && a.referencia.startsWith(`${periodo} · `) && a.recibo);
   // Outras bases de INSS (funcionalidade-769): vão no infoMV do S-1200, com o indMV do cálculo.
   const outrasBases = await prisma.dp2OutraBaseInss.findMany({ where: { tenantId, competenciaId }, orderBy: { createdAt: "asc" } });
+  // Diferenças de meses anteriores (funcionalidade-760): vão no infoPerAnt, não no mês.
+  const diferencas = anual ? [] : await prisma.dp2DiferencaRetroativa.findMany({ where: { tenantId, competenciaId, origem: { in: ["SALARIO", "RUBRICA"] } }, orderBy: { perRef: "asc" } });
   const novoId = geradorDeId(empregador.cnpj || "0", new Date());
   const eventos: EventoGerado[] = [];
   for (const c of calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"))) {
     const v = c.person.dp2Vinculo;
-    const itens = ((c.itens as unknown as ItemDoHolerite[]) ?? []).map((i) => ({
+    const doCalculo = (c.itens as unknown as ItemDoHolerite[]) ?? [];
+    const codigoDiferenca = doCalculo.find((i) => i.papel === "DIFERENCA_RETROATIVA")?.codigo ?? null;
+    const codigoInssDiferenca = doCalculo.find((i) => i.papel === "INSS_DIFERENCA")?.codigo ?? null;
+    const daPessoa = diferencas.filter((d) => d.personId === c.person.id);
+    const perAnt: PeriodosAnteriores[] = [];
+    if (codigoDiferenca && daPessoa.length) {
+      for (const d of daPessoa) {
+        const dataInstrumento = d.dataInstrumento ? isoDoDia(d.dataInstrumento) : null;
+        let a = perAnt.find((x) => x.instrumento === (d.instrumento ?? "J") && x.dataInstrumento === dataInstrumento && x.descricao === d.descricao);
+        if (!a) {
+          a = { instrumento: d.instrumento ?? "J", dataInstrumento, descricao: d.descricao, periodos: [] };
+          perAnt.push(a);
+        }
+        let p = a.periodos.find((x) => x.perRef === d.perRef);
+        if (!p) {
+          p = { perRef: d.perRef, itens: [] };
+          a.periodos.push(p);
+        }
+        p.itens.push({ codigo: codigoDiferenca, tipo: "PROVENTO", referencia: "", valor: n(d.valor), quantidade: null });
+        if (codigoInssDiferenca && n(d.inss) > 0) p.itens.push({ codigo: codigoInssDiferenca, tipo: "DESCONTO", referencia: "", valor: n(d.inss), quantidade: null });
+      }
+    }
+    const itens = doCalculo.filter((i) => !(perAnt.length && (i.papel === "DIFERENCA_RETROATIVA" || i.papel === "INSS_DIFERENCA"))).map((i) => ({
       codigo: i.codigo,
       tipo: i.tipo,
       referencia: i.referencia,
@@ -201,6 +226,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
       liquido: n(c.liquido),
       nascimento: isoDoDia(c.person.birthDate),
       infoMV: infoMVDoCalculo(c.memoria, outrasBases.filter((o) => o.personId === c.person.id)),
+      perAnt,
     };
     const r1200 = aceitoDe("S-1200", c.person.id, perApur);
     const r1210 = aceitoDe("S-1210", c.person.id, perApur);

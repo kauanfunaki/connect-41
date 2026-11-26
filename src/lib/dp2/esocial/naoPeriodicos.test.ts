@@ -155,3 +155,12 @@ describe("S-2206, S-2230 e S-2299", () => {
     expect(RUBRICAS_PADRAO.find((r) => r.papel === "AVISO_INDENIZADO")).toMatchObject({ incideInss: false, incideFgts: true, incideIrrf: false });
   });
 });
+
+describe("remuneração variável no contrato (funcionalidade-760)", () => {
+  it("vai no dscSalVar do S-2200", () => {
+    const t = trabalhador();
+    const ev = eventoS2200(empregador, { ...t, dados: { ...t.dados, remuneracaoVariavel: "Comissão de 3% sobre as vendas" } }, sindicato, geradorDeId(empregador.cnpj, quando));
+    expect(ev.xml).toContain("<undSalFixo>5</undSalFixo><dscSalVar>Comissão de 3% sobre as vendas</dscSalVar></remuneracao>");
+    expect(eventoS2200(empregador, trabalhador(), sindicato, geradorDeId(empregador.cnpj, quando)).xml).not.toContain("dscSalVar");
+  });
+});

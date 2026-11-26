@@ -16,8 +16,10 @@ import { configDaEmpresa } from "@/lib/dp2/servidor";
 import { responsaveisDeSst } from "@/lib/dp2/esocial/servidor";
 import { aliquotaPatronal } from "@/lib/dp2/mensal";
 import { abrirTelaDeEmpresaDoDp2 } from "@/lib/dp2/tela";
-import { criarAmbienteAction, criarEpiAction, criarHorarioAction, criarMedicoAction, excluirAmbienteAction, excluirEpiAction, excluirMedicoAction, excluirHorarioAction, salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
+import { criarAmbienteAction, criarEpiAction, criarHorarioAction, criarMedicoAction, criarNivelAction, excluirNivelAction, excluirAmbienteAction, excluirEpiAction, excluirMedicoAction, excluirHorarioAction, salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
 import { situacaoDoCa } from "@/lib/dp2/sst";
+import { lerFaixas } from "@/lib/dp2/niveis";
+import { Textarea } from "@/components/ui/Textarea";
 import { CampoData } from "@/components/ui/CampoData";
 import { Selo } from "@/components/ui/Selo";
 
@@ -59,6 +61,11 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
     getPrisma().dp2Medico.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
   ]);
   const hoje = new Date().toISOString().slice(0, 10);
+  // Níveis salariais (funcionalidade-760), com quantos contratos usam cada um.
+  const niveis = await getPrisma().dp2NivelSalarial.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } });
+  const usoDoNivel = new Map(
+    (await getPrisma().dp2Vinculo.groupBy({ by: ["nivelId"], where: { tenantId: tela.tenantId, nivelId: { in: niveis.map((nv) => nv.id) } }, _count: { _all: true } })).map((g) => [g.nivelId, g._count._all])
+  );
 
   return (
     <PageContainer>
@@ -300,6 +307,64 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
           <p className="text-fs-3 text-fg-muted">
             PCMSO: {sst.medicoNome ?? "não informado"} · Registros ambientais: {sst.ambientalNome ?? "não informado"}
           </p>
+        )}
+      </Secao>
+      <Secao titulo="Níveis salariais" className="mt-5" apoio="As faixas de classe e referência com o tempo de casa e o valor. O contrato escolhe o nível; em DP 2 › Colaboradores, Aplicar níveis leva o salário de cada um para a faixa do tempo de casa.">
+        {niveis.length > 0 && (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full min-w-[640px] text-fs-3">
+              <thead>
+                <tr>
+                  <th className={TH}>Nível</th>
+                  <th className={TH}>Faixas (tempo de casa → valor)</th>
+                  <th className={TH}>Contratos</th>
+                  <th className={TH}>
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {niveis.map((nv) => (
+                  <tr key={nv.id} className={TR}>
+                    <td className={`${TD} font-medium`}>{nv.nome}</td>
+                    <td className={`${TD} tabular-nums`}>
+                      {lerFaixas(nv.faixas)
+                        .map((f) => `${f.classe}${f.referencia}: ${f.meses} m → ${fmt(f.valor)}`)
+                        .join(" · ")}
+                    </td>
+                    <td className={`${TD} tabular-nums`}>{usoDoNivel.get(nv.id) ?? 0}</td>
+                    <td className={`${TD} text-right pr-0`}>
+                      {tela.podeAgir && (
+                        <FormularioDoDp2
+                          acao={excluirNivelAction}
+                          rotulo="Excluir"
+                          rotuloEnviando="Excluindo…"
+                          variante="secondary"
+                          tamanho="sm"
+                          confirmar={{ titulo: "Excluir o nível?", texto: `O nível "${nv.nome}" sai da lista e dos contratos ligados a ele (o salário de cada um continua o mesmo).`, rotulo: "Excluir" }}
+                        >
+                          <input type="hidden" name="nivelId" value={nv.id} />
+                        </FormularioDoDp2>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tela.podeAgir && (
+          <FormularioDoDp2 acao={criarNivelAction} rotulo="Cadastrar nível" rotuloEnviando="Cadastrando…" variante="secondary">
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <CampoForm label="Nome" htmlFor="nivel-nome">
+                <Input id="nivel-nome" name="nome" maxLength={80} placeholder="Operacional" required />
+              </CampoForm>
+              <CampoForm label="Faixas, uma por linha" htmlFor="nivel-faixas" className="sm:col-span-2" dica="classe; referência; meses de casa; valor. Ex.: A; 1; 0; 2.500,00 e, na linha de baixo, A; 2; 12; 2.700,00.">
+                <Textarea id="nivel-faixas" name="faixas" rows={4} placeholder={"A; 1; 0; 2.500,00\nA; 2; 12; 2.700,00\nB; 1; 36; 3.100,00"} required />
+              </CampoForm>
+            </div>
+          </FormularioDoDp2>
         )}
       </Secao>
       <Secao titulo="Médicos do ASO" className="mt-5" apoio="Os médicos que assinam os atestados de saúde ocupacional. No S-2220 (DP 2 › eSocial), escolha o médico em vez de digitar nome e CRM.">
