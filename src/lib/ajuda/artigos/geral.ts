@@ -482,7 +482,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Espaços automáticos e criados pela equipe",
+        titulo: "Automáticos e criados pela equipe, no Quadro de tarefas",
         passos: [
           "No Quadro de tarefas, o que o sistema criou sozinho fica em “Automáticos”, no topo, com o selo “Automático”. Embaixo, em “Criados pela equipe”, ficam os espaços que vocês criaram.",
           "O espaço automático pode ser renomeado e mexido à mão, como qualquer outro: colunas, etiquetas, cartões. Ele não se exclui; para parar de receber cartões, desligue a abertura automática.",
