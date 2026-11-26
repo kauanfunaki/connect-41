@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lerTotalizadores } from "@/lib/dp2/esocial/totalizadores";
 import { calcularRescisaoDaPessoa, dadosDaRescisao, type AvisoDaRescisao } from "@/lib/dp2/rescisaoServidor";
 import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
 import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
@@ -742,6 +743,92 @@ export async function retirarInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: Form
   });
   revalidarCompetencia(info.competenciaId);
   return { ok: true, texto: `${nome} retirada da apuração.` };
+}
+
+// ─── Totalizadores do eSocial (26/11/2026, funcionalidade-755) ─────────────
+
+/**
+ * Importa os totalizadores do eSocial (S-5001, S-5002, S-5003, S-5011, S-5013)
+ * da competência a partir dos XML de retorno (soltos ou .zip). Só entra o que
+ * é do período e do empregador da competência; importar de novo troca o do
+ * mesmo tipo, período e CPF. Liga cada um ao evento da fila pelo recibo de
+ * origem, quando ele está registrado.
+ */
+export async function importarTotalizadoresAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  if (comp.tipo !== "MENSAL" && comp.tipo !== "DECIMO_2") return erro("Os totalizadores são da folha mensal e do 13º (2ª parcela).");
+  const prisma = getPrisma();
+  const empresa = await prisma.company.findFirst({ where: { id: comp.companyId, tenantId: a.tenantId }, select: { cnpj: true } });
+  const raiz = (empresa?.cnpj ?? "").replace(/\D/g, "").slice(0, 8);
+  const arquivos = fd.getAll("arquivo").filter((f): f is File => typeof f !== "string" && f.size > 0);
+  if (arquivos.length === 0) return erro("Escolha os .xml de retorno ou o .zip do eSocial.");
+  const conteudos = await Promise.all(arquivos.map(async (f) => ({ nome: f.name, conteudo: new Uint8Array(await f.arrayBuffer()) })));
+  const leitura = lerTotalizadores(conteudos);
+  const perApur = comp.tipo === "DECIMO_2" ? String(comp.ano) : `${comp.ano}-${String(comp.mes).padStart(2, "0")}`;
+  const doPeriodo = leitura.lidos.filter((l) => l.perApur === perApur);
+  const deOutraEmpresa = doPeriodo.filter((l) => raiz && l.empregador.slice(0, 8) !== raiz);
+  const validos = doPeriodo.filter((l) => !raiz || l.empregador.slice(0, 8) === raiz);
+  if (validos.length === 0) {
+    const fora = leitura.lidos.length - doPeriodo.length;
+    return erro(
+      [
+        "Nenhum totalizador desta competência e desta empresa nos arquivos.",
+        fora ? `${fora} é(são) de outro período.` : "",
+        deOutraEmpresa.length ? `${deOutraEmpresa.length} é(são) de outro empregador.` : "",
+        ...leitura.problemas,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+  }
+  const cpfs = [...new Set(validos.map((v) => v.cpf).filter((c): c is string => !!c))];
+  const recibos = [...new Set(validos.map((v) => v.reciboBase).filter((r): r is string => !!r))];
+  const [pessoas, eventos] = await Promise.all([
+    cpfs.length ? prisma.person.findMany({ where: { tenantId: a.tenantId, currentCompanyId: comp.companyId }, select: { id: true, cpf: true } }) : [],
+    recibos.length ? prisma.dp2EventoEsocial.findMany({ where: { tenantId: a.tenantId, companyId: comp.companyId, recibo: { in: recibos } }, select: { id: true, recibo: true } }) : [],
+  ]);
+  const pessoaDoCpf = new Map(pessoas.map((p) => [(p.cpf ?? "").replace(/\D/g, ""), p.id]));
+  const eventoDoRecibo = new Map(eventos.map((e) => [e.recibo, e.id]));
+  await prisma.$transaction([
+    ...validos.map((v) => prisma.dp2TotalizadorEsocial.deleteMany({ where: { tenantId: a.tenantId, companyId: comp.companyId, tipo: v.tipo, perApur: v.perApur, cpf: v.cpf } })),
+    prisma.dp2TotalizadorEsocial.createMany({
+      data: validos.map((v) => ({
+        tenantId: a.tenantId,
+        companyId: comp.companyId,
+        competenciaId,
+        personId: v.cpf ? (pessoaDoCpf.get(v.cpf) ?? null) : null,
+        tipo: v.tipo,
+        perApur: v.perApur,
+        cpf: v.cpf,
+        reciboBase: v.reciboBase,
+        eventoId: v.reciboBase ? (eventoDoRecibo.get(v.reciboBase) ?? null) : null,
+        valores: v.valores,
+        arquivo: v.arquivo.slice(0, 255),
+        importadoPorId: a.userId,
+      })),
+    }),
+  ]);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_totalizadores_importados",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { perApur, lidos: validos.length, outroPeriodo: leitura.lidos.length - doPeriodo.length, outraEmpresa: deOutraEmpresa.length },
+  });
+  revalidarCompetencia(competenciaId);
+  const contagem = (["S-5001", "S-5002", "S-5003", "S-5011", "S-5013"] as const)
+    .map((t) => [t, validos.filter((v) => v.tipo === t).length] as const)
+    .filter(([, q]) => q > 0)
+    .map(([t, q]) => `${q} ${t}`)
+    .join(", ");
+  const avisos = [deOutraEmpresa.length ? `${deOutraEmpresa.length} de outro empregador ficaram de fora.` : "", ...leitura.problemas].filter(Boolean).join(" ");
+  return { ok: true, texto: `Totalizadores importados: ${contagem}.${avisos ? ` ${avisos}` : ""}` };
 }
 
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────

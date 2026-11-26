@@ -479,6 +479,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.evento_lancado": c("lançou um evento na competência do DP 2"),
   "folha.eventos_lancados_por_rubrica": c("lançou uma rubrica para vários colaboradores na competência do DP 2"),
   "folha.evento_removido": x("retirou um lançamento da competência do DP 2"),
+  "folha.esocial_totalizadores_importados": c("importou os totalizadores do eSocial da competência no DP 2"),
   "folha.esocial_recibo_registrado": e("registrou o recibo de um evento do eSocial no DP 2"),
   "folha.esocial_exclusao": c("gerou a exclusão (S-3000) de um evento do eSocial no DP 2"),
   "folha.esocial_reabertura": c("gerou a reabertura (S-1298) de um período no eSocial do DP 2"),
