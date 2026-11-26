@@ -305,6 +305,12 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <Checkbox id="periculosidade" name="periculosidade" label="Periculosidade (30% do salário)" defaultChecked={v?.periculosidade ?? false} />
           <Checkbox id="valeTransporte" name="valeTransporte" label="Vale-transporte (desconta 6% do salário)" defaultChecked={v?.valeTransporte ?? false} />
           <Checkbox id="aprendiz" name="aprendiz" label="Aprendiz (FGTS de 2%)" defaultChecked={v?.aprendiz ?? false} />
+          <Checkbox
+            id="contribuicaoSindical"
+            name="contribuicaoSindical"
+            label="Autorizou a contribuição sindical (desconta um dia no mês da convenção)"
+            defaultChecked={v?.contribuicaoSindical ?? false}
+          />
         </div>
         <CampoForm label="Observações" htmlFor="observacoes" className="mt-4">
           <Textarea id="observacoes" name="observacoes" rows={2} defaultValue={v?.observacoes ?? ""} />
