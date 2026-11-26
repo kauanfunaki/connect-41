@@ -545,7 +545,7 @@ Divergências da C3:
   |---|---|---|
   | D0 | `feat/contabil-core-ajustes-d0` | Ajustes do porte decididos nesta data: o número da nota no histórico, o reapontamento da conta sintética e a trava da leitura da fatura. Sem migration. Ver "Fase D0". |
   | D1 | | As exportações restantes (lançamentos em CSV, extrato, as quatro de notas e a conferência), "Conflitos e qualidade" do NEO, o painel e a carteira. |
-  | D2 | | Os relatórios (DRE, Balancete e Livro Caixa), portados como estão no original. |
+  | D2 | `feat/contabil-core-relatorios` | Os relatórios (DRE, Balancete e Livro Caixa), portados como estão no original. Sem migration. Ver "Fase D2". |
   | D3 | | O ConcilPro, mais a carga das tabelas dele. |
 
 - **Ficam fora, sem previsão:** Open Banking (Pluggy) e aplicações financeiras. Entram só se surgir necessidade.
@@ -1215,3 +1215,115 @@ Divergências da D1 (as que mudam a saída são contadas nos testes):
 - O Painel como aba inicial do módulo (antes era Importações).
 - A carteira mostra todas as empresas do escritório a quem vê o módulo.
 - Datas livres na exportação (o original aceitava `data_de` e `data_ate`), além da competência?
+
+## Fase D2: relatórios (DRE, Balancete e Livro Caixa)
+
+Branch `feat/contabil-core-relatorios` (26/11/2026), empilhada sobre a D1. Só lê o banco: **sem migration**. Decisão do Angelo: portar os relatórios do original **como estão**, dentro do módulo. O DRE próprio do Connect (`src/lib/dre`) calcula de outra forma e não foi usado nem alterado.
+
+| Onde | Porte de |
+|---|---|
+| `relatorios/relatorios.ts` (puro) | `RelatoriosService` (`src/domain/relatorios/service.py`) depois das somas: `dre`, `balancete` e `livro_caixa`, com o `nivel` de `PlanoConta` e a `descricao` de `AgenciaBancaria` (a mesma `descricaoDaAgencia` da D1) |
+| `relatorios/planilha.ts` | a planilha de cada relatório (novo no Connect), pela `gerarPlanilhaDeTabelas` das outras exportações em Excel do Connect |
+| `servidor/relatorios.ts` | as leituras: as somas das partidas e das transações no MySQL (`SUM` de `DECIMAL`, exato), as contas e as contas bancárias, sempre do tenant e da empresa |
+| `api/contabil-core/relatorios/[relatorio]` | `GET /relatorios/dre`, `/balancete` e `/livro-caixa` (`src/api/v1/relatorios.py`, `relatorios.read`), mais `formato=xlsx` |
+| aba "Relatórios" (`Relatorios.tsx`, `ImprimirRelatorio.tsx`) | a página `Relatorios.tsx` do original |
+
+**O que cada relatório faz (igual ao original):**
+
+- **DRE:** soma as partidas VIVAS da empresa no período por conta e D/C. Entram só as contas de tipo receita (saldo C − D), custo e despesa (D − C), também a conta apagada com movimento (o legado). Os grupos saem na ordem Receitas, Custos, Despesas, cada um pela ordem do código. Resultado líquido = receitas − custos − despesas. Ativo, passivo, patrimônio líquido, "resultado" e tipos fora da lista não entram.
+- **Balancete de Verificação:** toda conta viva do plano (com ou sem movimento) e a apagada que teve movimento no período, pela ordem do código, com débitos, créditos e o saldo devedor OU credor. Os totais somam só as linhas do relatório.
+- **Livro Caixa:** por conta bancária viva (ativa ou inativa), as TRANSAÇÕES vivas do extrato no período, classificadas ou não, na ordem da data e, no mesmo dia, do id da transação. O crédito soma e o débito subtrai. Com data inicial, o saldo inicial é a soma de tudo o que veio antes; sem ela, zero.
+- **Hierarquia:** o original NÃO soma as analíticas nas sintéticas. A sintética aparece no Balancete com o próprio movimento (zero, já que não recebe lançamento), e o `nivel` (o número de partes do código) só dá o recuo na tela. Portado assim.
+- **Partidas desfeitas:** o original filtra só `deleted_at` (a partida cancelada e as da importação desfeita saem). É o `_registros_vigentes` da exportação sem o filtro das contas bancárias inativas: DRE e Balancete não olham a conta bancária. Portado igual.
+- **Período:** datas, inclusivas e opcionais.
+  - Nas partidas, vai do começo de `de` ao último milissegundo de `ate`, em UTC (`instantesDoPeriodo`). É o que a tela do original mandava: `data_de` à meia-noite e `data_ate` às `23:59:59.999`, sem fuso. O asyncpg lê o instante sem fuso no fuso do processo, e o contêiner do original não define fuso (UTC).
+  - A partida é gravada na data da transação, à meia-noite UTC. Então o dia do relatório é o dia do extrato, e o fuso do escritório não entra.
+  - No Livro Caixa, são datas do extrato, como no original.
+
+**Gabarito** (`gabarito_relatorios.py`): **391 casos, todos iguais**, sem nenhuma divergência na saída.
+
+- 13 da suíte (`test_relatorios.py`): 6 da DRE, 4 do Balancete e 3 do Livro Caixa.
+- 378 inventados (semente 20261126, 14 mundos × 9 períodos × 3 relatórios):
+  - um plano com sintéticas e analíticas de ativo, passivo, patrimônio líquido, receita, custo, despesa, resultado e um tipo fora da lista; contas apagadas, com e sem movimento; o mesmo código numa conta viva e numa apagada; uma conta de outra empresa;
+  - partidas vivas e canceladas, em dias nas bordas do período e com horas diferentes da meia-noite UTC, e partidas de outra empresa;
+  - sete contas bancárias (ativa, inativa, apagada, sem dígito e com dígito vazio, de outra empresa) com transações vivas e desfeitas, várias no mesmo dia;
+  - valores de um centavo a 13 dígitos (somas de 16 dígitos) e zero;
+  - os períodos: sem datas, só a inicial, só a final, o mês, um dia, a virada do mês e do ano, um período vazio e o invertido;
+  - o último mundo sem movimento nenhum.
+- **Como a saída é gravada:** como na D1, o serviço original roda num SQLite montado só com a entrada, e o plugin confere que o banco montado repete a suíte de verdade. Onde o SQLite difere da produção:
+  - os instantes são comparados em UTC (o `_instalar_pg` da D1);
+  - o `SUM` é exato. O SQLite guarda `Numeric` como `REAL` e soma em ponto flutuante, o que perde centavos com valores de 13 dígitos. No banco montado, o `sum()` é trocado por uma soma em `Decimal`, como o `numeric` do PostgreSQL.
+- Os textos passam pelo sanitizador. O `GABARITO_NOMES` não foi preciso: a suíte só tem nomes de exemplo. A razão social não é gravada. A pasta tem `.gitattributes` com `* -text`.
+- **Empates exercitados:**
+  - 106 casos com o mesmo código em duas linhas (50 no Balancete, 56 na DRE);
+  - 117 com mais de uma conta bancária;
+  - 61 com mais de uma transação no mesmo dia.
+
+  O teste conta como divergências a ordem dos códigos empatados e a das contas bancárias: 0 e 0 (ver abaixo).
+- **Para gerar de novo,** a partir da raiz do contabil-core, com a pasta `scripts/contabil-core` do Connect no caminho e o `GABARITO_DIR` apontando para `src/lib/contabil-core/relatorios/gabarito`: `-p gabarito_relatorios tests/integration/test_relatorios.py`.
+- **Rota:** `relatorios/[relatorio]/route.test.ts` (5 testes):
+  - "ver" e os três relatórios, com o período repassado;
+  - sem datas e com uma ponta só;
+  - a planilha;
+  - as recusas: relatório desconhecido, data inválida, data com hora, ano zero, outro formato, empresa malformada, 403 e 401;
+  - a empresa de outro escritório (404).
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-relatorios.ts`, com 21 conferências, rodado 7 vezes seguidas, todas certas, sem sobra no banco.
+  - Cria duas empresas "Ensaio D2" e um plano com sintéticas e analíticas.
+  - Cadastra duas contas bancárias com OFX inventado e uma inativa sem extrato. O OFX tem um lançamento em fevereiro, outros nas bordas de março, um sem regra, um centavo, um valor de 98 milhões e um em abril. Roda o NEO.
+  - Confere a DRE, o Balancete (débitos = créditos) e o Livro Caixa de março contra o esperado; sem período, num período vazio e só com o fim; a planilha da DRE e a do Livro Caixa.
+  - Desfaz uma classificação: sai da DRE e do Balancete, e o Livro Caixa (que lê o extrato) não muda. Desfaz a importação de uma conta bancária: sai dos três.
+  - Confere o isolamento entre empresas e escritórios e, no fim, apaga tudo pela exclusão da empresa.
+
+  `node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-relatorios.ts`
+
+**Tela:** a aba "Relatórios", entre Conciliação e Configurações. Pede "ver" (o `relatorios.read`).
+
+- Os três relatórios são vistas da aba (`?vista=balancete` e `?vista=livro-caixa`; a DRE abre), com o filtro "Período" (`de` e `ate` na URL). A empresa é a do seletor do módulo, e o "Gerar Relatório" do original virou o "Filtrar".
+- O que cada vista mostra:
+  - a DRE: os quatro totais em cartões e uma tabela por grupo;
+  - o Balancete: a tabela, com o recuo pelo nível, e a linha de totais;
+  - o Livro Caixa: uma tabela por conta bancária, com o saldo inicial, o final e os totais do período.
+
+  As mensagens de vazio são as do original.
+- **Imprimir:** o `window.print` do original, com o cabeçalho que só aparece no papel (o relatório, a empresa e o período). O papel é desenhado num portal no `<body>`, como o relatório do Tributário.
+- **Excel (novo no Connect):** a página do original só imprimia.
+  - A planilha leva os mesmos números da tela: a DRE (as linhas e o resultado), o Balancete (as linhas e os totais) e o Livro Caixa (os lançamentos e os saldos por conta bancária), com o dinheiro como número e a aba "Filtros".
+  - Pede "ver", como a tela, e não vai para a auditoria, como a impressão. As exportações da D1 pedem "agir" e são auditadas.
+- O original não desenha gráfico nesta página.
+- O artigo de ajuda do módulo ganhou "Como gerar a DRE, o Balancete e o Livro Caixa".
+
+**Divergências da D2:**
+
+- **Empates de ordem:**
+  - o mesmo código em duas contas (a viva e a apagada do legado): o original ordena só pelo código, e o empate fica com a ordem do plano do banco; aqui, o id desempata;
+  - as contas bancárias do Livro Caixa: o original não ordena; aqui, banco, agência, número e id.
+
+  O teste conta as duas: 0 e 0 casos. No SQLite do gabarito, a ordem coincidiu com a do Connect: o `GROUP BY` sai pelo id da conta, e as contas bancárias saem pelo índice único de banco, agência e número. No PostgreSQL da produção, essas ordens não são garantidas.
+- **Período:** a rota recebe datas (`de` e `ate`, "AAAA-MM-DD"), como o Livro Caixa do original.
+  - Na DRE e no Balancete, o original aceitava também a hora (`datetime`). Aqui é sempre o dia inteiro, que é o que a tela do original mandava.
+  - Data inválida, data com hora e o ano zero são 400 (no original, 422).
+  - O período invertido é aceito e sai vazio, como lá.
+- **Resposta:** camelCase, o dinheiro como texto de duas casas (o `str` do `Decimal`), as datas do período como "AAAA-MM-DD" e sem o `empresa_id`. Uma rota só (`/relatorios/[relatorio]`) para os três.
+- **Planilha:** nova, ver acima.
+
+**Achados sobre o original (reproduzidos de propósito):**
+
+- **Sem hierarquia:** a sintética não soma as analíticas, nem na DRE nem no Balancete. O Balancete mostra a sintética zerada logo acima das filhas com movimento.
+- **O Livro Caixa é o extrato, não o razão:** traz a transação sem classificação, e desfazer a classificação não o muda.
+  - O saldo é calculado das transações importadas, a partir de zero. Não usa o saldo informado pelo banco (`saldoApos`) nem o saldo declarado do lote.
+  - Só é o saldo real da conta se o extrato foi importado desde a abertura.
+- **No mesmo dia, o Livro Caixa ordena pelo id da transação** (um UUID aleatório), e não pela ordem do extrato (`ordem`). O saldo do fim do dia é o certo, mas os acumulados no meio do dia não seguem o extrato.
+- **DRE e Balancete não olham a conta bancária:** a partida de conta bancária inativa ou apagada entra. A exportação de lançamentos, ao contrário, deixa a inativa de fora. O Livro Caixa mostra a conta inativa e deixa a apagada de fora, com as transações dela.
+- **A partida numa conta do plano de outra empresa** some do relatório, sem aviso, e também dos totais do Balancete. Nenhuma tela do Connect cria esse caso.
+- **O fim do período dependia do fuso do servidor:** a tela mandava `23:59:59.999` sem fuso, e o asyncpg lê no fuso do processo (UTC no contêiner do original).
+- **A ordem das contas bancárias e a dos empates de código** não são garantidas no PostgreSQL.
+- **`test_relatorio_contrapartes.py` e `test_relatorio_regras.py` não são destes relatórios:** são os leitores das planilhas de cadastro (a relação de clientes e fornecedores do sistema fiscal e o modelo de regras), já portados na Fase 3b.
+
+**Precisam de decisão:**
+
+- A hierarquia: as sintéticas devem somar as analíticas no Balancete (e a DRE ganhar os subtotais)?
+- O Livro Caixa: ordenar o dia pela ordem do extrato (`ordem`) em vez do id? Partir do saldo informado pelo banco, quando houver?
+- DRE e Balancete: deixar de fora a conta bancária inativa ou apagada, como a exportação de lançamentos?
+- A planilha dos relatórios: com "ver" e sem auditoria (como a impressão), ou com "agir" e auditada (como as exportações)?
+- O lugar da aba (entre Conciliação e Configurações).
+- O período invertido: recusar com uma frase, em vez de sair vazio?

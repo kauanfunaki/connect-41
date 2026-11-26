@@ -193,6 +193,38 @@ export const carteiraSchema = z.object({
   mes: competencia.nullish().or(z.literal("")).transform((v) => (v ? v : null)),
 });
 
+/** Data de calendário "AAAA-MM-DD" que existe (o `date` do pydantic: ano de 1 em diante). Vazia é "sem limite". */
+const diaOpcional = (nome: string) =>
+  z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => (v ? v : null))
+    .refine((v) => {
+      if (v === null) return true;
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+      if (!m || Number(m[1]) < 1) return false;
+      const d = new Date(Date.UTC(2000, Number(m[2]) - 1, Number(m[3])));
+      d.setUTCFullYear(Number(m[1]));
+      return d.getUTCMonth() === Number(m[2]) - 1 && d.getUTCDate() === Number(m[3]);
+    }, `${nome[0].toUpperCase()}${nome.slice(1)} deve ser uma data válida (AAAA-MM-DD).`);
+
+/**
+ * Os relatórios (Fase D2): o período em datas, inclusivas e opcionais, como o `data_de`/`data_ate` do original
+ * (que na DRE e no Balancete aceitava também a hora; aqui é sempre o dia inteiro). O formato `xlsx` baixa a
+ * planilha do relatório.
+ */
+export const relatorioSchema = z.object({
+  de: diaOpcional("a data inicial"),
+  ate: diaOpcional("a data final"),
+  formato: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => v || null)
+    .refine((v) => v === null || v === "xlsx", "Formato deve ser 'xlsx'."),
+});
+
 export const processarNeoSchema = z.object({
   agenciaId: idOpcional("a conta bancária"),
   mes: competencia.nullish().or(z.literal("")).transform((v) => (v ? v : null)),
