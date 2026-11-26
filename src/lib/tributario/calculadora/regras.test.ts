@@ -29,8 +29,10 @@ import {
   itemVazio,
   lerAliquotaDeReferencia,
   lerResposta,
+  contaDoTributo,
   memoriaFormatada,
   montarPedido,
+  nomeDaUf,
   percentual,
   resumirClassificacoes,
   resumirMunicipios,
@@ -364,5 +366,37 @@ describe("serviço e exibição", () => {
       const semNumero = "Operação de consumo com enquadramento legal em Art. 125, tributada conforme Alíquota zero. A base de cálculo utilizada é de R$ 100.00000000, com alíquota de zero.";
       expect(legivel(semNumero)).toBe(semNumero.replace("R$ 100.00000000", "R$ 100,00"));
     });
+  });
+
+  // melhoria-808 (26/11/2026): a tabela de itens mostra a memória como conta.
+  it("a conta do tributo lê base × alíquota × (1 − redução), com o valor da Receita", () => {
+    const legivel = (o: { conta: string; efetiva: string | null; valor: string }) => ({
+      conta: o.conta.replace(/ /g, " "),
+      efetiva: o.efetiva,
+      valor: o.valor.replace(/ /g, " "),
+    });
+    expect(legivel(contaDoTributo(1200, { aliquota: 0.9, reducao: 60, aliquotaEfetiva: 0.36, valor: 4.32 }))).toEqual({
+      conta: "R$ 1.200,00 × 0,90% × (1 − 60,00%)",
+      efetiva: "0,36%",
+      valor: "R$ 4,32",
+    });
+    expect(legivel(contaDoTributo(1000, { aliquota: 0.9, reducao: null, aliquotaEfetiva: 0.9, valor: 9 }))).toEqual({
+      conta: "R$ 1.000,00 × 0,90%",
+      efetiva: null,
+      valor: "R$ 9,00",
+    });
+    expect(contaDoTributo(null, { aliquota: null, reducao: null, aliquotaEfetiva: null, valor: null })).toEqual({
+      conta: "— × —",
+      efetiva: null,
+      valor: "—",
+    });
+  });
+
+  it("o nome da UF sai como se escreve, e não “São paulo”", () => {
+    expect(nomeDaUf("SÃO PAULO")).toBe("São Paulo");
+    expect(nomeDaUf("RIO GRANDE DO SUL")).toBe("Rio Grande do Sul");
+    expect(nomeDaUf("ESPÍRITO SANTO")).toBe("Espírito Santo");
+    expect(nomeDaUf(" mato grosso do sul ")).toBe("Mato Grosso do Sul");
+    expect(resumirUfs(ufs).map((u) => nomeDaUf(u.nome))).toContain("Rio de Janeiro");
   });
 });

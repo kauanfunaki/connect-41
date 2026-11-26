@@ -374,20 +374,23 @@ const ESTADOS: readonly EstadoDoItem[] = ["CALCULADO", "CALCULO_SIMULADO", "INCO
 
 export type TomDoEstado = "sucesso" | "atencao" | "perigo" | "neutro";
 
-export const ROTULO_DO_ESTADO: Record<EstadoDoItem, { rotulo: string; tom: TomDoEstado; explicacao: string }> = {
-  CALCULADO: { rotulo: "Calculado", tom: "sucesso", explicacao: "Calculado com as alíquotas que a Receita publicou para a data." },
+/** `curto` é o selo da coluna Situação da tabela de itens (26/11/2026, melhoria-808); o `rotulo` inteiro vai na dica e no detalhe. */
+export const ROTULO_DO_ESTADO: Record<EstadoDoItem, { rotulo: string; curto: string; tom: TomDoEstado; explicacao: string }> = {
+  CALCULADO: { rotulo: "Calculado", curto: "Calculado", tom: "sucesso", explicacao: "Calculado com as alíquotas que a Receita publicou para a data." },
   CALCULO_SIMULADO: {
     rotulo: "Simulado",
+    curto: "Simulado",
     tom: "atencao",
     explicacao: "Calculado com as alíquotas informadas no pedido: a Receita ainda não publicou as definitivas para a data.",
   },
-  INCONSISTENCIA_ENTRADA: { rotulo: "Corrigir a entrada", tom: "perigo", explicacao: "A calculadora não aceitou os dados do item." },
+  INCONSISTENCIA_ENTRADA: { rotulo: "Corrigir a entrada", curto: "Corrigir", tom: "perigo", explicacao: "A calculadora não aceitou os dados do item." },
   NAO_IMPLEMENTADO: {
     rotulo: "Sem cálculo da Receita",
+    curto: "Sem cálculo",
     tom: "neutro",
     explicacao: "A Receita ainda não implementou o cálculo desta classificação na calculadora oficial.",
   },
-  FALHA_TECNICA: { rotulo: "Falha na calculadora", tom: "perigo", explicacao: "A calculadora falhou ao calcular o item." },
+  FALHA_TECNICA: { rotulo: "Falha na calculadora", curto: "Falha", tom: "perigo", explicacao: "A calculadora falhou ao calcular o item." },
 };
 
 export type ParcelaDoTributo = {
@@ -818,6 +821,40 @@ export function memoriaFormatada(memoria: string): string {
   return memoria
     .replace(REAIS_CRUS, (_, n: string) => formatarReais(Number(n)))
     .replace(PERCENTUAL_CRU, (_, n: string) => percentual(Number(n), "duasCasas"));
+}
+
+/**
+ * A conta de um tributo, para a memória de cálculo ler como conta (26/11/2026,
+ * melhoria-808): "R$ 1.200,00 × 0,90% × (1 − 60,00%)", a alíquota efetiva
+ * quando houve redução e o valor. Só exibição: os números são os que a Receita
+ * devolveu, e o valor é o dela — nada é recalculado aqui.
+ */
+export function contaDoTributo(
+  base: number | null | undefined,
+  parcela: Pick<ParcelaDoTributo, "aliquota" | "reducao" | "aliquotaEfetiva" | "valor">
+): { conta: string; efetiva: string | null; valor: string } {
+  const comReducao = parcela.reducao !== null;
+  return {
+    conta: `${formatarReais(base)} × ${percentual(parcela.aliquota, "duasCasas")}${comReducao ? ` × (1 − ${percentual(parcela.reducao, "duasCasas")})` : ""}`,
+    efetiva: comReducao ? percentual(parcela.aliquotaEfetiva, "duasCasas") : null,
+    valor: formatarReais(parcela.valor),
+  };
+}
+
+const MINUSCULAS_NO_NOME = new Set(["de", "do", "da", "dos", "das", "e"]);
+
+/**
+ * O nome da UF como se escreve: a base da Receita manda em maiúsculas
+ * ("SÃO PAULO", "RIO GRANDE DO SUL"), e a tela deixava tudo depois da primeira
+ * letra em minúscula — saía "São paulo" (26/11/2026, melhoria-808).
+ */
+export function nomeDaUf(nome: string): string {
+  return nome
+    .trim()
+    .toLocaleLowerCase("pt-BR")
+    .split(/\s+/)
+    .map((p, i) => (i > 0 && MINUSCULAS_NO_NOME.has(p) ? p : p.charAt(0).toLocaleUpperCase("pt-BR") + p.slice(1)))
+    .join(" ");
 }
 
 /** O ano da data, para a tela dizer "alíquotas de 2026". */
