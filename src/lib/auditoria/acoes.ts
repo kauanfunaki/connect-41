@@ -304,6 +304,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "contabil.core.agencia.editada": e("editou no Contábil Core a conta bancária"),
   "contabil.core.agencia.inativada": e("inativou no Contábil Core a conta bancária"),
   "contabil.core.agencia.reativada": e("reativou no Contábil Core a conta bancária"),
+  "contabil.core.contas_sinteticas.reapontadas": e("moveu para a conta contábil vinculada os lançamentos da conta bancária sintética na empresa"),
   "contabil.core.contraparte.criada": c("cadastrou no Contábil Core a contraparte"),
   "contabil.core.contraparte.editada": e("editou no Contábil Core a contraparte"),
   "contabil.core.regra.criada": c("criou a regra do NEO"),

@@ -13,7 +13,10 @@ import "server-only";
 //   não havia), a não ser que a classificação tenha mudado no NEO depois: aí só com "preservar a atual".
 // - O hash da classificação bancária (`hashDaClassificacao`) é o do original byte a byte.
 // - Toda escrita trava a fatura (`FOR UPDATE`, o `_get_fatura_or_404(..., for_update=True)`) e avança a
-//   versão da distribuição por `updateMany` condicionado à versão vista (`_avancar`).
+//   versão da distribuição por `updateMany` condicionado à versão vista (`_avancar`). A consulta
+//   (`obterDistribuicao`) NÃO trava (divergência deliberada da D0, decisão do Angelo em 26/11/2026): a tela
+//   a repete a cada 2 s enquanto um documento é lido, e o original, que travava, fazia essa consulta
+//   esperar pelas escritas e segurá-las. Ela lê numa transação só, para ver um retrato consistente.
 // - Documento: o PDF vai para o disco (`originaisFaturas.ts`), a linha nasce "processando" e a leitura
 //   (`lerDocumentoFatura`) roda depois da resposta (`after`), como a `BackgroundTask` do original. Uma leitura
 //   presa há mais que o prazo da imagem mais 60 s aparece como falha e pode ser reenviada
@@ -134,10 +137,10 @@ async function lerGastos(tx: Tx, c: Contexto): Promise<GastoDaFatura[]> {
   return linhas.map((l) => ({ id: l.id, dataCompra: dia(l.dataCompra), descricao: l.descricao, valor: reescala(decDoBanco(l.valor), -2) }));
 }
 
-/** `_pagamento`: a transação viva que pagou a fatura, travada. */
-async function lerPagamento(tx: Tx, c: Contexto, transacaoId: string | null): Promise<PagamentoDaFatura | null> {
+/** `_pagamento`: a transação viva que pagou a fatura, travada (a consulta da D0 lê sem travar). */
+async function lerPagamento(tx: Tx, c: Contexto, transacaoId: string | null, travar = true): Promise<PagamentoDaFatura | null> {
   if (!transacaoId) return null;
-  await tx.$queryRaw`SELECT id FROM core_transacoes WHERE id = ${transacaoId} FOR UPDATE`;
+  if (travar) await tx.$queryRaw`SELECT id FROM core_transacoes WHERE id = ${transacaoId} FOR UPDATE`;
   const t = await tx.coreTransacao.findFirst({
     where: { id: transacaoId, empresaId: c.empresaId, deletedAt: null },
     select: { id: true, valor: true, data: true, dc: true, status: true, agenciaId: true, historico: true },
@@ -169,21 +172,24 @@ async function lerDocumentos(tx: Tx, c: Contexto): Promise<DocumentoDaFatura[]> 
   return linhas.map((d) => ({ id: d.id, nome: d.nome, status: d.status, resultado: d.resultado, erro: d.erro, atualizadoEm: d.updatedAt, temArquivo: d.storageKey !== null }));
 }
 
-/** `obter`, dentro da transação de quem chama. */
-async function vista(tx: Tx, c: Contexto, f: Fatura): Promise<VistaDaDistribuicao> {
+/** `obter`, dentro da transação de quem chama. Sem `travar`, o pagamento é lido sem `FOR UPDATE` (a consulta). */
+async function vista(tx: Tx, c: Contexto, f: Fatura, travar = true): Promise<VistaDaDistribuicao> {
   const estado = await lerEstado(tx, c, false);
   const itens = await lerGastos(tx, c);
-  const pagamento = await lerPagamento(tx, c, f.transacaoId);
+  const pagamento = await lerPagamento(tx, c, f.transacaoId, travar);
   const hash = await hashAtual(tx, c, f.transacaoId, pagamento);
   return vistaDaDistribuicao(estado, itens, hash, f.transacaoId, await lerDocumentos(tx, c));
 }
 
-/** Roda `passo` com a fatura travada, numa transação; a `Recusada` desfaz tudo e vira a recusa. */
-async function naFatura<T>(c: Contexto, passo: (tx: Tx, f: Fatura) => Promise<T>): Promise<ResultadoCartao<T>> {
+/**
+ * Roda `passo` com a fatura travada, numa transação; a `Recusada` desfaz tudo e vira a recusa. Toda escrita
+ * passa por aqui travando; só a consulta (`obterDistribuicao`) pede `travar` falso.
+ */
+async function naFatura<T>(c: Contexto, passo: (tx: Tx, f: Fatura) => Promise<T>, travar = true): Promise<ResultadoCartao<T>> {
   if (!(await empresaDoTenant(c.tenantId, c.empresaId))) return naoEncontrado(NAO_ENCONTRADA);
   try {
     const valor = await getPrisma().$transaction(async (tx) => {
-      const f = await lerFatura(tx, c.tenantId, c.empresaId, c.cartaoId, c.faturaId, true);
+      const f = await lerFatura(tx, c.tenantId, c.empresaId, c.cartaoId, c.faturaId, travar);
       if (!f) recusar(naoEncontrado(FATURA_NAO_ENCONTRADA));
       return passo(tx, f!);
     }, TEMPO_DA_TRANSACAO);
@@ -203,9 +209,13 @@ const auditoriaDaFatura = (c: Contexto, f: Fatura, acao: string, dados: Record<s
 
 // ─── Obter e salvar ─────────────────────────────────────────────────────────
 
-/** `obter` (o original também travava a fatura para ler). */
+/**
+ * `obter`. O original travava a fatura (e o pagamento) para ler; aqui a consulta só lê, sem `FOR UPDATE`
+ * (divergência deliberada da D0). Nada é gravado: `lerEstado` não cria a linha e a leitura expirada é
+ * calculada na vista.
+ */
 export function obterDistribuicao(c: Contexto): Promise<ResultadoCartao<VistaDaDistribuicao>> {
-  return naFatura(c, (tx, f) => vista(tx, c, f));
+  return naFatura(c, (tx, f) => vista(tx, c, f, false), false);
 }
 
 /** As contas analíticas, vivas, desta empresa, entre as pedidas. */
