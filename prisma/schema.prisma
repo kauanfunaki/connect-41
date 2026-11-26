@@ -6928,6 +6928,10 @@ model Dp2Convencao {
   he50           Decimal  @default(50) @db.Decimal(6, 2)
   he100          Decimal  @default(100) @db.Decimal(6, 2)
   noturno        Decimal  @default(20) @db.Decimal(6, 2)
+  /// Contribuição sindical do empregado (funcionalidade-774): o mês do desconto
+  /// (nulo = março) e o percentual do salário (nulo = um dia de trabalho).
+  contribuicaoMes        Int?
+  contribuicaoPercentual Decimal? @db.Decimal(6, 2)
   observacoes    String?  @db.Text
   ativa          Boolean  @default(true)
   createdAt      DateTime @default(now())
@@ -7002,6 +7006,9 @@ model Dp2Vinculo {
   insalubridade        String   @default("NENHUM") @db.VarChar(10)
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
+  /// O empregado autorizou por escrito o desconto da contribuição sindical
+  /// (CLT arts. 545 e 578), 26/11/2026, funcionalidade-774.
+  contribuicaoSindical Boolean  @default(false)
   /// Horário de trabalho (Dp2Horario), 25/11/2026, funcionalidade-752: dá as
   /// horas por mês e a jornada do eSocial.
   horarioId            String?
