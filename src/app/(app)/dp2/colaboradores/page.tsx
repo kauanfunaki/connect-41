@@ -455,6 +455,37 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       </Secao>
 
       {pessoas.some((p) => p.dp2Vinculo) && (
+        <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado e o contrato de experiência em PDF, do cadastro e do contrato do DP 2. O que faltar no cadastro sai com um traço.">
+          <form action="/api/dp2/documentos" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
+            <CampoForm label="Colaborador" htmlFor="doc-pessoa">
+              <Select id="doc-pessoa" name="pessoa" defaultValue="" required>
+                <option value="" disabled>
+                  Escolha…
+                </option>
+                {pessoas
+                  .filter((p) => p.dp2Vinculo)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </Select>
+            </CampoForm>
+            <CampoForm label="Documento" htmlFor="doc-tipo">
+              <Select id="doc-tipo" name="tipo" defaultValue="FICHA">
+                <option value="FICHA">Ficha de registro de empregado</option>
+                <option value="EXPERIENCIA">Contrato de experiência</option>
+              </Select>
+            </CampoForm>
+            <Button type="submit" variant="secondary">
+              Baixar (PDF)
+            </Button>
+          </form>
+          <p className="mt-2 text-fs-2 text-fg-muted">O contrato de experiência sai do contrato por prazo determinado (tipo 2 e data de término nos dados do eSocial), com o termo de prorrogação no fim.</p>
+        </Secao>
+      )}
+
+      {pessoas.some((p) => p.dp2Vinculo) && (
         <Secao titulo="Termo de quitação anual" apoio="O termo do art. 507-B da CLT, com o que as competências fechadas do ano pagaram a cada colaborador, para assinar com o sindicato da categoria.">
           <form action="/api/dp2/quitacao" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
             <CampoForm label="Colaborador" htmlFor="quit-pessoa">
