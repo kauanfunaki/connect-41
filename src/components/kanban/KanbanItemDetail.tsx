@@ -386,7 +386,7 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
         </div>
         {/* "Ver ficha completa" era link azul (30/09): botão não é link. O nome
             da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
-        {/* A linha fica sempre: o id curto da tarefa (tarefa-77), discreto, vem
+        {/* A linha fica sempre: o id curto da tarefa (TAR-77), discreto, vem
             primeiro, como no Controle interno (10/11/2026, pedido do Kauan). */}
         <div className="flex flex-wrap items-center gap-2 mt-1">
           <span className="text-fs-2 text-fg-muted tnum">{idCurto("tarefa", item.number)}</span>
