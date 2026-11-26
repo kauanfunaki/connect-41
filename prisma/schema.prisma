@@ -2796,6 +2796,7 @@ model Person {
   dp2Totalizadores     Dp2TotalizadorEsocial[]
   dp2Rescisoes         Dp2Rescisao[]
   dp2Ferias            Dp2Ferias[]
+  dp2HistoricoSalarial Dp2HistoricoSalarial[]
   dp2Ocorrencias       Dp2Ocorrencia[]
   dp2SaldoInicial      Dp2SaldoInicialMedia[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
@@ -7244,6 +7245,29 @@ model Dp2Ferias {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_ferias")
+}
+
+/// Histórico salarial do contrato (26/11/2026, funcionalidade-760): cada
+/// mudança do salário (no contrato ou no reajuste coletivo), com a data, de
+/// quanto para quanto e o motivo.
+model Dp2HistoricoSalarial {
+  id              String   @id @default(uuid())
+  tenantId        String
+  companyId       String
+  personId        String
+  /// Desde quando vale.
+  data            DateTime @db.Date
+  salarioAnterior Decimal? @db.Decimal(12, 2)
+  salario         Decimal  @db.Decimal(12, 2)
+  motivo          String   @db.VarChar(120)
+  criadoPorId     String?
+  createdAt       DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([personId])
+  @@map("dp2_historico_salarial")
 }
 
 /// Ocorrência do contrato (25/11/2026, funcionalidade-763): advertência ou
