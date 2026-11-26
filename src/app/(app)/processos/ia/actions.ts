@@ -18,6 +18,7 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { nomeExibicao } from "@/lib/companyName";
 import { concluirProposta, propostaDoSetor } from "@/lib/ia/propostas";
 import { prioridadeDepois } from "@/lib/societario/varredura";
+import { sincronizarCartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
 import { lerContrato, planejarContrato, type SocioLido } from "@/lib/societario/contratoSocial";
 import {
   AGENTE_CONTRATO,
@@ -111,6 +112,8 @@ export async function aplicarVarredura(propostaId: string, chavesMarcadas: strin
       const nova = prioridadeDepois(processo.priority);
       if (nova !== processo.priority) {
         await prisma.process.update({ where: { id: processo.id }, data: { priority: nova } });
+        // A prioridade é do processo; o cartão nos Quadros espelha (27/11/2026).
+        await sincronizarCartaoDoProcesso(processo.id, { userId: ctx.userId });
         processosSubiram++;
       }
       // Leva quem aprovou a proposta da varredura — a foto no sino (05/10/2026).
