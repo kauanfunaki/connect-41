@@ -45,7 +45,8 @@ export async function getActiveSectors(tenantId: string): Promise<SectorRow[]> {
 export type SectorMaps = {
   labels: Record<string, string>;
   colors: Record<string, string>;
-  options: { value: string; label: string }[];
+  /** Os ativos, com a cor do setor (25/11/2026, melhoria-812: a bolinha do `SeletorDeSetores`). */
+  options: { value: string; label: string; color: string }[];
 };
 
 export async function getSectorMaps(tenantId: string): Promise<SectorMaps> {
@@ -56,7 +57,7 @@ export async function getSectorMaps(tenantId: string): Promise<SectorMaps> {
     labels[s.code] = s.label;
     colors[s.code] = s.color;
   }
-  const options = all.filter((s) => s.active).map((s) => ({ value: s.code, label: s.label }));
+  const options = all.filter((s) => s.active).map((s) => ({ value: s.code, label: s.label, color: s.color }));
   return { labels, colors, options };
 }
 
