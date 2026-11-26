@@ -37,7 +37,7 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, reajusteColetivoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, reajusteColetivoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -935,6 +935,62 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               ))}
             </ul>
           )}
+        </Secao>
+      )}
+
+      {tela.podeAgir && pessoas.some((p) => p.dp2Vinculo) && (
+        <Secao titulo="Alterar contratos em lote" apoio="A mesma mudança em vários contratos: horário (com as horas e a jornada do eSocial), centro de custo, vale-transporte ou contribuição sindical.">
+          <FormularioDoDp2
+            acao={alterarEmLoteAction}
+            rotulo="Aplicar aos marcados"
+            rotuloEnviando="Aplicando…"
+            variante="secondary"
+            confirmar={{ titulo: "Alterar os contratos marcados?", texto: "A mudança vale para todos os colaboradores marcados. Recalcule as competências abertas depois.", rotulo: "Alterar" }}
+          >
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <CampoForm label="Mudança" htmlFor="lote-alteracao" className="max-w-md">
+              <Select id="lote-alteracao" name="alteracao" defaultValue="" required>
+                <option value="" disabled>
+                  Escolha…
+                </option>
+                {horarios.length > 0 && (
+                  <optgroup label="Horário de trabalho">
+                    {horarios.map((h) => (
+                      <option key={h.id} value={`HORARIO:${h.id}`}>
+                        {h.nome}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Centro de custo">
+                  <option value="CENTRO:">Sem centro de custo</option>
+                  {centrosDeCusto.map((c) => (
+                    <option key={c.id} value={`CENTRO:${c.id}`}>
+                      {c.code ? `${c.code} · ${c.name}` : c.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Vale-transporte">
+                  <option value="VALE_TRANSPORTE:sim">Com vale-transporte</option>
+                  <option value="VALE_TRANSPORTE:nao">Sem vale-transporte</option>
+                </optgroup>
+                <optgroup label="Contribuição sindical">
+                  <option value="CONTRIBUICAO_SINDICAL:sim">Autorizou a contribuição</option>
+                  <option value="CONTRIBUICAO_SINDICAL:nao">Não autorizou</option>
+                </optgroup>
+              </Select>
+            </CampoForm>
+            <fieldset className="mt-4">
+              <legend className="text-label text-fg-secondary mb-2">Colaboradores</legend>
+              <div className="grid gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+                {pessoas
+                  .filter((p) => p.dp2Vinculo && !p.dismissalDate)
+                  .map((p) => (
+                    <Checkbox key={p.id} id={`lote-${p.id}`} name="personId" value={p.id} label={p.name} />
+                  ))}
+              </div>
+            </fieldset>
+          </FormularioDoDp2>
         </Secao>
       )}
 

@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { descreverAlteracao, lerAlteracao } from "@/lib/dp2/alteracaoEmLote";
 import { adiantamentoDoMes, lerParametrosDoAdiantamento } from "@/lib/dp2/adiantamento";
 import { avisosDaTransferencia, lerTransferencia } from "@/lib/dp2/transferencia";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
@@ -1201,6 +1202,64 @@ export async function lancarAdiantamentoAction(_: EstadoDoDp2, fd: FormData): Pr
   revalidarCompetencia(competenciaId);
   const fora = linhas.filter((l) => l.fora).length;
   return { ok: true, texto: `Adiantamento lançado para ${lancar.length} colaborador(es)${fora ? `; ${fora} ficaram de fora` : ""}.` };
+}
+
+// ─── Alteração de contratos em lote (26/11/2026, funcionalidade-765) ───────
+
+/**
+ * Muda o mesmo campo do contrato de vários colaboradores de uma vez: horário
+ * (com as horas e a jornada do eSocial que vêm dele), centro de custo,
+ * vale-transporte ou contribuição sindical autorizada.
+ */
+export async function alterarEmLoteAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerAlteracao(texto(fd, "alteracao"));
+  if (!lido.ok) return erro(lido.erro);
+  const alt = lido.alteracao;
+  const escolhidos = new Set(fd.getAll("personId").map(String));
+  if (escolhidos.size === 0) return erro("Marque os colaboradores.");
+  const pessoas = (await colaboradoresDaEmpresa(a.tenantId, companyId)).filter((p) => p.dp2Vinculo && escolhidos.has(p.id));
+  if (pessoas.length !== escolhidos.size) return erro("Há colaborador marcado que não tem contrato nesta empresa. Recarregue a tela.");
+  const prisma = getPrisma();
+  let nomeDoValor: string | null = null;
+  let horario: Awaited<ReturnType<typeof prisma.dp2Horario.findFirst>> = null;
+  if (alt.campo === "HORARIO") {
+    horario = await prisma.dp2Horario.findFirst({ where: { id: alt.horarioId, tenantId: a.tenantId, companyId } });
+    if (!horario) return erro("Horário não encontrado nesta empresa.");
+    nomeDoValor = horario.nome;
+  }
+  if (alt.campo === "CENTRO" && alt.costCenterId) {
+    const centro = await prisma.costCenter.findFirst({ where: { id: alt.costCenterId, tenantId: a.tenantId, companyId }, select: { name: true } });
+    if (!centro) return erro("Centro de custo não encontrado nesta empresa.");
+    nomeDoValor = centro.name;
+  }
+  await prisma.$transaction(async (tx) => {
+    for (const p of pessoas) {
+      const v = p.dp2Vinculo!;
+      if (alt.campo === "HORARIO" && horario) {
+        const horas = horasDoHorario(horario);
+        const dados = lerDadosEsocial(v.dadosEsocial);
+        await tx.dp2Vinculo.update({
+          where: { personId: p.id },
+          data: { horarioId: horario.id, horasMensais: horas.mensais, dadosEsocial: { ...dados, tipoJornada: horario.tipoJornada, descricaoJornada: horas.descricao } },
+        });
+      } else if (alt.campo === "CENTRO") {
+        await tx.dp2Vinculo.update({ where: { personId: p.id }, data: { costCenterId: alt.costCenterId } });
+      } else if (alt.campo === "VALE_TRANSPORTE") {
+        await tx.dp2Vinculo.update({ where: { personId: p.id }, data: { valeTransporte: alt.ligado } });
+      } else if (alt.campo === "CONTRIBUICAO_SINDICAL") {
+        await tx.dp2Vinculo.update({ where: { personId: p.id }, data: { contribuicaoSindical: alt.ligado } });
+      }
+    }
+  });
+  const descricao = descreverAlteracao(alt, () => nomeDoValor);
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.contratos_alterados_em_lote", entityType: "Company", entityId: companyId, metadata: { alteracao: descricao, pessoas: pessoas.map((p) => p.name) } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `${descricao} em ${pessoas.length} contrato(s). Recalcule as competências abertas; mudanças que vão ao eSocial pedem o S-2206.` };
 }
 
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────
