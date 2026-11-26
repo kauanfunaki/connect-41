@@ -28,6 +28,12 @@ import { iaLiberadaParaDocumentos } from "@/lib/contabil-core/servidor/notas";
 import { carteiraDoEscritorio, consultarDivergencias, estatisticasDaEmpresa } from "@/lib/contabil-core/servidor/painel";
 import { ConflitosQualidade } from "./ConflitosQualidade";
 import { CarteiraDoEscritorio, NumerosDaEmpresa } from "./Painel";
+import { empresaDoTenant } from "@/lib/contabil-core/servidor/base";
+import { relatorioDaEmpresa } from "@/lib/contabil-core/servidor/relatorios";
+import { RELATORIOS, rotuloDoPeriodo, TITULO_DO_RELATORIO, type QualRelatorio } from "@/lib/contabil-core/relatorios/planilha";
+import type { Balancete, Dre, LivroCaixa } from "@/lib/contabil-core/relatorios/relatorios";
+import { BalanceteDaEmpresa, DreDaEmpresa, LivroCaixaDaEmpresa } from "./Relatorios";
+import { ImprimirRelatorio } from "./ImprimirRelatorio";
 
 // As abas do Contábil Core (Fase 2, 09/11/2026). Componentes de servidor: leem pelo serviço (que
 // confere tenant e empresa) e passam para o navegador só o que a tela mostra.
@@ -45,6 +51,9 @@ export type ContextoDaAba = {
   mesAtual: string;
   /** Dentro da aba Conciliação: "financeiro" abre a conferência do financeiro (Fase B4); na aba NEO, "conflitos" abre "Conflitos e qualidade" (Fase D1). */
   vista: string | null;
+  /** O período dos relatórios (Fase D2), em datas "AAAA-MM-DD" já conferidas; nula é "sem limite". */
+  de: string | null;
+  ate: string | null;
 };
 
 const TH = "py-2 pr-3 font-medium";
@@ -552,6 +561,46 @@ export async function AbaConciliacao({ c }: { c: ContextoDaAba }) {
       ) : (
         <Conciliacao key={c.empresaId} empresaId={c.empresaId} agencias={opcoesDeConta} podeAgir={c.podeAgir} />
       )}
+    </div>
+  );
+}
+
+// ─── Relatórios ───────────────────────────────────────────────────────────
+
+// Bloco D, Fase D2 (26/11/2026): a página Relatórios do original, com os três relatórios como vistas da aba (a
+// DRE abre) e o período em datas, na URL. Só lê: aparece para quem vê o módulo (o `relatorios.read`).
+export async function AbaRelatorios({ c }: { c: ContextoDaAba }) {
+  const qual: QualRelatorio = c.vista === "balancete" || c.vista === "livro-caixa" ? c.vista : "dre";
+  const periodo = { de: c.de, ate: c.ate };
+  const href = (vista: QualRelatorio) =>
+    `/contabil-core?${new URLSearchParams({ empresa: c.empresaId, aba: "relatorios", ...(vista === "dre" ? {} : { vista }), ...(c.de ? { de: c.de } : {}), ...(c.ate ? { ate: c.ate } : {}) })}`;
+  const [empresa, r] = await Promise.all([empresaDoTenant(c.tenantId, c.empresaId), relatorioDaEmpresa(qual, c.tenantId, c.empresaId, periodo)]);
+  const planilha = `/api/contabil-core/relatorios/${qual}?${new URLSearchParams({ empresa: c.empresaId, formato: "xlsx", ...(c.de ? { de: c.de } : {}), ...(c.ate ? { ate: c.ate } : {}) })}`;
+  return (
+    <div className="flex flex-col gap-4">
+      <SegmentedControl
+        label="Qual relatório"
+        tocavel
+        active={qual}
+        items={RELATORIOS.map((k) => ({ key: k, label: TITULO_DO_RELATORIO[k], href: href(k) }))}
+      />
+      <div>
+        <Filtros empresaId={c.empresaId} aba="relatorios" vista={qual === "dre" ? null : qual} periodo={periodo} />
+        <p className="mb-3 text-micro text-fg-muted">
+          {qual === "livro-caixa"
+            ? "As transações do extrato de cada conta bancária, classificadas ou não, com o saldo acumulado. O saldo inicial é o que veio antes do período."
+            : "As partidas vivas do razão no período (a classificação desfeita não entra), por conta. A conta sintética mostra só o próprio movimento: não soma as analíticas."}
+        </p>
+        {!r.ok || !empresa ? (
+          <Aviso tom="atencao">{r.ok ? "Empresa não encontrada no Contábil Core." : r.erro}</Aviso>
+        ) : (
+          <ImprimirRelatorio titulo={TITULO_DO_RELATORIO[qual]} empresa={`${empresa.razaoSocial} · ${formatCnpj(empresa.cnpj)}`} periodo={rotuloDoPeriodo(periodo)} planilha={planilha}>
+            {qual === "dre" && <DreDaEmpresa r={r.valor as Dre} />}
+            {qual === "balancete" && <BalanceteDaEmpresa r={r.valor as Balancete} />}
+            {qual === "livro-caixa" && <LivroCaixaDaEmpresa r={r.valor as LivroCaixa} />}
+          </ImprimirRelatorio>
+        )}
+      </div>
     </div>
   );
 }

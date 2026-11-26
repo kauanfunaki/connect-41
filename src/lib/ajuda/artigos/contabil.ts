@@ -111,6 +111,15 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Como gerar a DRE, o Balancete e o Livro Caixa",
+        passos: [
+          "Abra a aba “Relatórios” e escolha o relatório: “DRE”, “Balancete de Verificação” ou “Livro Caixa”.",
+          "Escolha o período (as duas datas entram; sem datas, é todo o histórico) e clique em “Filtrar”.",
+          "A DRE e o Balancete somam os lançamentos do razão de cada conta (a classificação desfeita não entra; a conta sintética mostra só o próprio movimento). O Livro Caixa percorre o extrato de cada conta bancária, com o saldo acumulado a partir do que veio antes do período.",
+          "Clique em “Excel” para baixar a planilha do relatório ou em “Imprimir” para imprimir ou salvar em PDF.",
+        ],
+      },
+      {
         titulo: "Como conciliar o Razão com o extrato",
         passos: [
           "Na aba “Conciliação”, em “Razão × extrato”, escolha a conta bancária e envie o “Razão da conta” (Excel ou PDF, de uma conta só).",

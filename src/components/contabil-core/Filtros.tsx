@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CampoMes } from "@/components/ui/CampoMes";
+import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 
 // Filtro por GET (mês, conta bancária e texto), sem recarregar a página: a URL guarda a seleção e o
@@ -16,6 +17,7 @@ export function Filtros({
   busca,
   status,
   vista,
+  periodo,
 }: {
   empresaId: string;
   aba: string;
@@ -27,6 +29,8 @@ export function Filtros({
   status?: string | null;
   /** A vista da aba que o filtro mantém (Fase D1: "conflitos" na aba NEO). */
   vista?: string | null;
+  /** O período em datas, "de" e "ate" (Fase D2: aba Relatórios). */
+  periodo?: { de: string | null; ate: string | null };
 }) {
   return (
     <FormularioDeFiltro role="search" className="mb-3 flex flex-wrap items-end gap-2 text-sm">
@@ -38,6 +42,12 @@ export function Filtros({
           <span className="text-micro text-fg-muted">Competência</span>
           <CampoMes name="mes" defaultValue={mes ?? ""} compact aria-label="Competência" />
         </label>
+      )}
+      {periodo && (
+        <div className="flex flex-col gap-1">
+          <span className="text-micro text-fg-muted">Período</span>
+          <CampoPeriodo nomeDe="de" nomeAte="ate" defaultDe={periodo.de ?? ""} defaultAte={periodo.ate ?? ""} compact aria-label="Período" />
+        </div>
       )}
       {agencias && (
         <label className="flex flex-col gap-1">

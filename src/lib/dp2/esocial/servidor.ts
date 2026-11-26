@@ -21,6 +21,7 @@ import {
   eventoS2230,
   eventoS2298,
   eventoS2299,
+  eventoS2299Transferencia,
   PAPEL_DA_VERBA,
   type Afastamento,
   type Reintegracao,
@@ -406,6 +407,34 @@ export async function gerarDesligamento(tenantId: string, personId: string, d: P
   const fimProjetado = indenizado ? dataProjetada(desligamento, diasDeAvisoPrevio(admissao, desligamento)).toISOString().slice(0, 10) : null;
   const ev = eventoS2299(v.empregador, v.t, { motivo: d.motivo, data: d.data, avisoIndenizado: indenizado, fimProjetado, verbas }, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
+// ─── Transferência entre empresas do grupo (26/11/2026, funcionalidade-771) ─
+
+/**
+ * Os eventos da transferência: o S-2299 com o motivo 11 na empresa de origem
+ * (último dia = véspera da transferência) e o S-2200 com a sucessão do vínculo
+ * na de destino. Cada um vai para a fila da sua empresa.
+ */
+export async function gerarEventosDaTransferencia(tenantId: string, transferenciaId: string, lado: "ORIGEM" | "DESTINO", userId: string): Promise<Resultado> {
+  const prisma = getPrisma();
+  const tr = await prisma.dp2Transferencia.findFirst({ where: { id: transferenciaId, tenantId } });
+  if (!tr) return { ok: false, erro: "Transferência não encontrada." };
+  const r = await trabalhadorCompleto(tenantId, tr.personId);
+  if (!r) return { ok: false, erro: SEM_CONTRATO };
+  if (semVinculo(r.t.categoria)) return { ok: false, erro: "Sócio, autônomo e estagiário não têm S-2299/S-2200: a troca de empresa é o S-2399 e o S-2300." };
+  const data = tr.data.toISOString().slice(0, 10);
+  const ultimoDia = new Date(tr.data.getTime() - 86400000).toISOString().slice(0, 10);
+  const [origem, destino] = await Promise.all([empregadorDaEmpresa(tenantId, tr.deCompanyId, ultimoDia.slice(0, 7)), empregadorDaEmpresa(tenantId, tr.companyId, data.slice(0, 7))]);
+  if (!origem || !destino) return { ok: false, erro: "Empresa da transferência não encontrada." };
+  const matriculaAnterior = tr.matriculaAnterior ?? r.t.matricula;
+  const novoId = geradorDeId((lado === "ORIGEM" ? origem.cnpj : destino.cnpj) || "0", new Date());
+  if (lado === "ORIGEM") {
+    const ev = eventoS2299Transferencia(origem, { ...r.t, matricula: matriculaAnterior }, { ultimoDia, cnpjSucessora: destino.cnpj, observacao: tr.motivo }, novoId);
+    return { ok: true, evento: "S-2299", ...(await guardar(tenantId, tr.deCompanyId, null, userId, [ev])) };
+  }
+  const ev = eventoS2200(destino, r.t, await sindicatoDaEmpresa(tenantId, tr.companyId), novoId, { cnpjAnterior: origem.cnpj, matriculaAnterior, data, observacao: tr.motivo });
+  return { ok: true, evento: "S-2200", ...(await guardar(tenantId, tr.companyId, null, userId, [ev])) };
 }
 
 // ─── Recibo, exclusão e reabertura (25/11/2026, funcionalidade-754) ────────
