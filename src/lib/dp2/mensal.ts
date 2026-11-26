@@ -27,6 +27,7 @@ import type { PapelDaRubrica, RubricaDoMotor } from "./rubricas";
 import type { TabelasDaCompetencia } from "./tabelas";
 import { MARCA_DA_FIXA } from "./rubricasFixas";
 import { ehDomestico } from "./categorias";
+import { diasPeloInss, type AfastamentoNoMes } from "./afastamentos";
 
 export type Insalubridade = "NENHUM" | "MINIMO" | "MEDIO" | "MAXIMO";
 
@@ -41,6 +42,8 @@ export type VinculoDoMotor = {
   insalubridade: Insalubridade;
   periculosidade: boolean;
   valeTransporte: boolean;
+  /** Custo diário do vale-transporte (funcionalidade-753); sem ele, o desconto é 6% sem limite. */
+  vtCustoDiario?: number | null;
   aprendiz: boolean;
   /** Categoria do eSocial (Tabela 1); sem ela, empregado (101). Ver categorias.ts. */
   categoria?: string;
@@ -145,12 +148,34 @@ export type EntradaMensal = {
    * o INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases.
    */
   outrasBasesInss?: number;
+  /** Dias de suspensão disciplinar no mês (funcionalidade-763): saem do salário. */
+  diasDeSuspensao?: number;
+  /**
+   * Afastamentos (S-2230) que caem no mês (funcionalidade-749): os dias pagos
+   * pelo INSS saem do salário; os avisos vão para os alertas.
+   */
+  afastamentos?: readonly AfastamentoNoMes[];
 };
 
 export const FGTS_ALIQUOTA = 8;
 export const FGTS_ALIQUOTA_APRENDIZ = 2;
 export const INSS_EMPRESA_ALIQUOTA = 20;
 export const VALE_TRANSPORTE_PCT = 6;
+
+/**
+ * O desconto do vale-transporte (funcionalidade-753): 6% do salário do mês,
+ * limitado ao custo do benefício — o custo diário × os dias úteis em que a
+ * pessoa trabalhou (os dias úteis do mês na proporção dos dias de salário).
+ * Sem o custo diário no contrato, fica nos 6%.
+ */
+export function descontoDoValeTransporte(salario: number, custoDiario: number | null, diasUteis: number, diasDeSalario: number) {
+  const seis = r2((salario * VALE_TRANSPORTE_PCT) / 100);
+  if (!custoDiario || custoDiario <= 0) return { valor: seis, limitado: false, diasUteis, custo: null as number | null, memoria: `${pct(VALE_TRANSPORTE_PCT)} × ${reais(r2(salario))} (sem o custo diário no contrato, não limitado ao custo)` };
+  const dias = Math.round((diasUteis * Math.min(30, diasDeSalario)) / 30);
+  const custo = r2(custoDiario * dias);
+  if (custo < seis) return { valor: custo, limitado: true, diasUteis: dias, custo, memoria: `Custo do benefício ${reais(custoDiario)} × ${dias} dias úteis = ${reais(custo)}, menor que ${pct(VALE_TRANSPORTE_PCT)} × ${reais(r2(salario))} = ${reais(seis)}` };
+  return { valor: seis, limitado: false, diasUteis: dias, custo, memoria: `${pct(VALE_TRANSPORTE_PCT)} × ${reais(r2(salario))} (custo do benefício: ${reais(custoDiario)} × ${dias} dias úteis = ${reais(custo)})` };
+}
 
 /** Dias do mês comercial (até 30) em que a pessoa esteve contratada. */
 export function diasNoMes(ano: number, mes: number, admissao: Date | null, desligamento: Date | null): number {
@@ -321,7 +346,13 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   // Férias no mês (funcionalidade-745): o salário e os adicionais pagam só os dias fora delas.
   const feriasDoMes = e.ferias ?? [];
   const diasDeFerias = Math.min(dias, feriasDoMes.reduce((s, f) => s + f.diasDeFerias, 0));
-  const diasDeSalario = dias - diasDeFerias;
+  // Afastamento (funcionalidade-749): do 16º dia em diante o INSS paga, e esses dias saem do salário.
+  const afastamentosDoMes = e.afastamentos ?? [];
+  const diasDeAfastamento = Math.min(dias - diasDeFerias, diasPeloInss(afastamentosDoMes));
+  for (const a of afastamentosDoMes) if (a.alerta) alertas.push(a.alerta);
+  // Suspensão disciplinar (funcionalidade-763): os dias não são remunerados.
+  const diasSuspenso = Math.min(dias - diasDeFerias - diasDeAfastamento, Math.max(0, e.diasDeSuspensao ?? 0));
+  const diasDeSalario = dias - diasDeFerias - diasDeAfastamento - diasSuspenso;
   const cheio = salarioMensalCheio(v);
   const { insalubridade, periculosidade } = adicionaisFixos(v, salarioMinimo);
   const horaNormal = v.tipoSalario === "HORISTA" ? v.salarioBase : cheio / v.horasMensais;
@@ -330,7 +361,10 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // ── Salário e adicionais fixos ──
   const salario = (cheio * diasDeSalario) / 30;
-  const deFerias = diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "";
+  const deFerias =
+    (diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "") +
+    (diasDeAfastamento > 0 ? ` (${diasDeAfastamento} dia(s) de afastamento pagos pelo INSS)` : "") +
+    (diasSuspenso > 0 ? ` (${diasSuspenso} dia(s) de suspensão)` : "");
   itens.push(
     itemDaRubrica(
       R("SALARIO"),
@@ -428,8 +462,8 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // ── Vale-transporte ──
   if (v.valeTransporte && salario > 0) {
-    const vt = (salario * VALE_TRANSPORTE_PCT) / 100;
-    itens.push(itemDaRubrica(R("VALE_TRANSPORTE"), vt, pct(VALE_TRANSPORTE_PCT), `${pct(VALE_TRANSPORTE_PCT)} × ${reais(r2(salario))} (limitado ao custo do benefício)`));
+    const vt = descontoDoValeTransporte(salario, v.vtCustoDiario ?? null, e.diasUteis, diasDeSalario);
+    if (vt.valor > 0) itens.push(itemDaRubrica(R("VALE_TRANSPORTE"), vt.valor, vt.limitado ? `${vt.diasUteis} dias` : pct(VALE_TRANSPORTE_PCT), vt.memoria));
   }
 
   // ── Bases, INSS e salário-família ──
