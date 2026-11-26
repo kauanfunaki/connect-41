@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { boardPath } from "@/lib/kanbanPaths";
-import { alvoDoEndereco, idCurto, textoDaBusca } from "@/lib/enderecoCurto";
+import { alvoDoEndereco, idCurtoNoEndereco, textoDaBusca } from "@/lib/enderecoCurto";
 
 // O card pelo id, sem saber a lista — o link das notificações de menção e
 // comentário (02/10/2026). Acha a lista e redireciona para a tela do card, que
@@ -28,5 +28,5 @@ export default async function CardPeloId({
     select: { id: true, number: true, pipeline: { select: { id: true } } },
   });
   if (!item) notFound();
-  redirect(`${boardPath(item.pipeline)}/itens/${idCurto("tarefa", item.number)}${textoDaBusca(await searchParams)}`);
+  redirect(`${boardPath(item.pipeline)}/itens/${idCurtoNoEndereco("tarefa", item.number)}${textoDaBusca(await searchParams)}`);
 }
