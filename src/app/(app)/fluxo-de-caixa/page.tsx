@@ -110,13 +110,15 @@ export default async function FluxoDeCaixaPage({
         <PorEmpresa tenantId={ctx.tenantId} companyIds={empresasDeTodas} mes={mes} hojeKey={hojeKey} />
       ) : aba === "categorias" ? (
         empresaId ? (
-          <>
-            <DataDeCaixa companyId={empresaId} atual={await configuracaoDoFluxo(ctx.tenantId, empresaId)} />
-            <CategoriasDoCliente companyId={empresaId} dados={await dadosDasCategoriasDoCliente(ctx.tenantId, empresaId)} />
-            <div className="mt-4">
+          // Em cima, as configurações curtas; embaixo, as categorias na largura
+          // toda — nada fica depois da lista longa (26/11/2026, melhoria-879).
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <DataDeCaixa companyId={empresaId} atual={await configuracaoDoFluxo(ctx.tenantId, empresaId)} />
               <PedidosECenario companyId={empresaId} dados={await pedidosECenarioDaEmpresa(ctx.tenantId, empresaId)} />
             </div>
-          </>
+            <CategoriasDoCliente companyId={empresaId} dados={await dadosDasCategoriasDoCliente(ctx.tenantId, empresaId)} />
+          </div>
         ) : (
           <EscolhaAEmpresa escolha={escolha} porQue="O modelo do fluxo é de uma empresa por vez: cada cliente tem a nomenclatura e a data de caixa dele." />
         )

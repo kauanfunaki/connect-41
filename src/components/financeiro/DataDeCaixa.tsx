@@ -6,6 +6,10 @@
 // cliente do BPO vê o que recebe um dia depois; outro, no mesmo dia. Sem
 // configurar, os dias ficam em zero e o saldo vem da conciliação (sem ela, do
 // Omie).
+//
+// Uma faixa de uma linha desde 26/11/2026 (melhoria-879): era um cartão com
+// parágrafo de explicação e rótulos em cima de cada campo, alto demais para
+// três controles. A explicação foi para o "?" do título.
 
 import { useState, useTransition } from "react";
 import { Check } from "lucide-react";
@@ -13,12 +17,15 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { BotaoDaDica } from "@/components/dre/BotaoDaDica";
 import { salvarDataDeCaixa } from "@/app/(app)/fluxo-de-caixa/actions";
 import type { ConfiguracaoDoFluxo, OrigemDoSaldo } from "@/lib/fluxoDeCaixa/previstoServidor";
 
 const MAXIMO_DE_DIAS = 30;
 
-const ROTULO = "text-micro uppercase tracking-wide text-fg-muted font-semibold";
+const DICA =
+  "Quantos dias depois da previsão (ou do vencimento) o dinheiro anda na conta. Se cair em fim de semana ou feriado, o Previsto passa para o próximo dia útil. " +
+  "O saldo inicial é o ponto de partida do Previsto: “Automático” usa a conciliação do Connect e, sem ela, o Omie; “Omie” é para a empresa que concilia lá.";
 
 export function DataDeCaixa({ companyId, atual }: { companyId: string; atual: ConfiguracaoDoFluxo }) {
   const [receber, setReceber] = useState(String(atual.diasReceber));
@@ -29,18 +36,9 @@ export function DataDeCaixa({ companyId, atual }: { companyId: string; atual: Co
   const mudou = receber !== String(atual.diasReceber) || pagar !== String(atual.diasPagar) || origem !== atual.origemDoSaldo;
 
   return (
-    <Card as="section" className="p-4 mb-4 flex flex-col gap-3" aria-labelledby="h-data-de-caixa">
-      <div className="flex flex-col gap-0.5">
-        <h2 id="h-data-de-caixa" className="text-section font-semibold text-fg">
-          Data de caixa e saldo
-        </h2>
-        <p className="text-helper text-fg-muted max-w-[72ch]">
-          Quantos dias depois da previsão (ou do vencimento) o dinheiro anda na conta. Se cair em fim de semana ou feriado, o Previsto passa
-          para o próximo dia útil. O saldo é o ponto de partida do Previsto.
-        </p>
-      </div>
+    <Card as="section" className="px-4 py-2.5" aria-labelledby="h-data-de-caixa">
       <form
-        className="flex flex-wrap items-end gap-x-4 gap-y-3"
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-8 text-ui text-fg-secondary"
         onSubmit={(e) => {
           e.preventDefault();
           setEstado(null);
@@ -50,26 +48,34 @@ export function DataDeCaixa({ companyId, atual }: { companyId: string; atual: Co
           });
         }}
       >
-        <label className="flex flex-col gap-1">
-          <span className={ROTULO}>A receber entra</span>
-          <span className="flex items-center gap-2 text-ui text-fg-secondary">
-            <Input compact type="number" inputMode="numeric" min={0} max={MAXIMO_DE_DIAS} value={receber} onChange={(e) => setReceber(e.target.value)} className="w-20" aria-describedby="dc-receber" />
-            <span id="dc-receber">dias depois</span>
-          </span>
+        <div className="flex items-center gap-0.5 mr-2">
+          <h2 id="h-data-de-caixa" className="text-label font-semibold text-fg">
+            Data de caixa e saldo
+          </h2>
+          <BotaoDaDica rotulo="a data de caixa e o saldo" dica={DICA} />
+        </div>
+        <label className="inline-flex items-center gap-2">
+          A receber entra
+          <Input compact type="number" inputMode="numeric" min={0} max={MAXIMO_DE_DIAS} value={receber} onChange={(e) => setReceber(e.target.value)} className="w-16" />
+          dias depois
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={ROTULO}>A pagar sai</span>
-          <span className="flex items-center gap-2 text-ui text-fg-secondary">
-            <Input compact type="number" inputMode="numeric" min={0} max={MAXIMO_DE_DIAS} value={pagar} onChange={(e) => setPagar(e.target.value)} className="w-20" aria-describedby="dc-pagar" />
-            <span id="dc-pagar">dias depois</span>
-          </span>
+        <span aria-hidden className="text-fg-muted">
+          ·
+        </span>
+        <label className="inline-flex items-center gap-2">
+          A pagar sai
+          <Input compact type="number" inputMode="numeric" min={0} max={MAXIMO_DE_DIAS} value={pagar} onChange={(e) => setPagar(e.target.value)} className="w-16" />
+          dias depois
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={ROTULO}>Saldo inicial</span>
-          <Select compact value={origem} onChange={(e) => setOrigem(e.target.value as OrigemDoSaldo)} className="w-72">
-            <option value="auto">Da conciliação; sem ela, do Omie</option>
-            <option value="conciliacao">Da conciliação do Connect</option>
-            <option value="omie">Do Omie (a empresa concilia lá)</option>
+        <span aria-hidden className="text-fg-muted">
+          ·
+        </span>
+        <label className="inline-flex items-center gap-2">
+          Saldo inicial
+          <Select compact value={origem} onChange={(e) => setOrigem(e.target.value as OrigemDoSaldo)} className="w-36">
+            <option value="auto">Automático</option>
+            <option value="conciliacao">Conciliação</option>
+            <option value="omie">Omie</option>
           </Select>
         </label>
         <Button type="submit" size="sm" variant="secondary" loading={pendente} loadingLabel="Salvando…" disabled={!mudou}>
