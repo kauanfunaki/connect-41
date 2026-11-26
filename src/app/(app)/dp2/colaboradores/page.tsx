@@ -20,6 +20,7 @@ import { colaboradoresDaEmpresa, listarRubricas } from "@/lib/dp2/servidor";
 import { RubricasFixasDoContrato } from "@/components/dp2/RubricasFixasDoContrato";
 import { regraDeLancamento } from "@/lib/dp2/rubricas";
 import { relatorioDeTransparencia, salarioMensalDoContrato, LIMITE_DA_LEI } from "@/lib/dp2/transparenciaSalarial";
+import { horasDoHorario } from "@/lib/dp2/horarios";
 import { abrirTelaDeEmpresaDoDp2, brl, mesAtual } from "@/lib/dp2/tela";
 import { reais } from "@/lib/dp2/formato";
 import { CampoData } from "@/components/ui/CampoData";
@@ -36,7 +37,9 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { criarColaboradorDp2Action, salvarVinculoAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, registrarOcorrenciaAction, salvarVinculoAction } from "../actions";
+import { FormularioDoDp2 } from "@/components/dp2/Formulario";
+import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
 
@@ -59,10 +62,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     );
   }
 
-  const [pessoas, cadastroDaEmpresa, linhasDeRubrica] = await Promise.all([
+  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios, centrosDeCusto] = await Promise.all([
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().company.findFirst({ where: { id: tela.empresa.id, tenantId: tela.tenantId }, select: { cnpj: true, kind: true } }),
     listarRubricas(tela.tenantId),
+    // Horários de trabalho da empresa (funcionalidade-752).
+    getPrisma().dp2Horario.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
+    // Centros de custo do BPO da empresa (funcionalidade-751).
+    getPrisma().costCenter.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
   ]);
   // As rubricas que podem ser fixas no contrato: as mesmas que o DP lança no mês (funcionalidade-767).
   const paraFixar = linhasDeRubrica
@@ -113,6 +120,22 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     (c) => nomeDaRaca.get(c) ?? c
   );
   const pctTransp = (v: number | null) => (v === null ? "—" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(v)}%`);
+  // Advertências e suspensões da empresa (funcionalidade-763).
+  const empresaId = tela.empresa.id;
+  const ocorrencias = await getPrisma().dp2Ocorrencia.findMany({ where: { tenantId: tela.tenantId, companyId: empresaId }, orderBy: { data: "desc" }, take: 100 });
+  const nomeDaPessoa = new Map(pessoas.map((p) => [p.id, p.name]));
+  // Saldo inicial das médias (funcionalidade-747): o histórico de antes do DP 2.
+  const saldoInicial = resumirSaldoInicial(
+    (
+      await getPrisma().dp2SaldoInicialMedia.findMany({
+        where: { tenantId: tela.tenantId, companyId: tela.empresa.id },
+        select: { personId: true, competencia: true, valor: true, conferidoEm: true },
+      })
+    ).map((l) => ({ personId: l.personId, competencia: l.competencia, valor: Number(l.valor), conferido: l.conferidoEm !== null }))
+  );
+  const nomeDe = new Map(pessoas.map((p) => [p.id, p.name]));
+  const mesDe = (c: string) => c.split("-").reverse().join("/");
+  const saldoPendente = saldoInicial.reduce((s, r) => s + r.pendentes, 0);
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
 
@@ -137,7 +160,17 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <option value="HORISTA">Horista</option>
             </Select>
           </CampoForm>
-          <CampoForm label="Horas por mês" htmlFor="horasMensais" dica="220 na jornada de 44 h semanais.">
+          <CampoForm label="Horário de trabalho" htmlFor="horarioId" dica="Os horários da Configuração da empresa. Com um horário, as horas por mês e a jornada do eSocial saem dele.">
+            <Select id="horarioId" name="horarioId" defaultValue={v?.horarioId ?? ""}>
+              <option value="">Sem horário (informar as horas)</option>
+              {horarios.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.nome} · {horasDoHorario(h).mensais} h/mês
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Horas por mês" htmlFor="horasMensais" dica="220 na jornada de 44 h semanais. Com horário escolhido, vale o do horário.">
             <Input id="horasMensais" name="horasMensais" inputMode="numeric" defaultValue={String(v?.horasMensais ?? 220)} />
           </CampoForm>
           <CampoForm label="Insalubridade" htmlFor="insalubridade">
@@ -306,6 +339,25 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
         )}
       </BlocoDoContrato>
 
+      <BlocoDoContrato titulo="Centro de custo">
+        <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+          <CampoForm label="Centro de custo" htmlFor="costCenterId" dica="Os centros de custo do BPO da empresa. A contabilização e o resumo da folha saem por centro.">
+            <Select id="costCenterId" name="costCenterId" defaultValue={v?.costCenterId ?? ""}>
+              <option value="">Sem centro de custo</option>
+              {centrosDeCusto.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code ? `${c.code} · ${c.name}` : c.name}
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Departamento" htmlFor="departamento">
+            <Input id="departamento" name="departamento" maxLength={80} defaultValue={v?.departamento ?? ""} />
+          </CampoForm>
+        </div>
+        {centrosDeCusto.length === 0 && <p className="text-fs-2 text-fg-muted mt-2">A empresa ainda não tem centros de custo: cadastre no BPO para escolher aqui.</p>}
+      </BlocoDoContrato>
+
       <BlocoDoContrato titulo="Rubricas fixas">
         <RubricasFixasDoContrato
           key={aberta?.id ?? "novo"}
@@ -328,6 +380,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <Checkbox id="valeTransporte" name="valeTransporte" label="Vale-transporte (desconta 6% do salário)" defaultChecked={v?.valeTransporte ?? false} />
           <Checkbox id="aprendiz" name="aprendiz" label="Aprendiz (FGTS de 2%)" defaultChecked={v?.aprendiz ?? false} />
         </div>
+        <CampoForm
+          label="Custo diário do vale-transporte"
+          htmlFor="vtCustoDiario"
+          className="mt-4 max-w-xs"
+          dica="As tarifas de ida e volta somadas. O desconto de 6% fica limitado a este custo × os dias úteis trabalhados, e o pedido do mês sai daqui."
+        >
+          <Input id="vtCustoDiario" name="vtCustoDiario" inputMode="decimal" prefix="R$" placeholder="0,00" defaultValue={v?.vtCustoDiario != null ? reais(Number(v.vtCustoDiario)) : ""} />
+        </CampoForm>
         <CampoForm label="Observações" htmlFor="observacoes" className="mt-4">
           <Textarea id="observacoes" name="observacoes" rows={2} defaultValue={v?.observacoes ?? ""} />
         </CampoForm>
@@ -464,6 +524,247 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             {transparencia.porRaca.map((r) => `${r.racaCor} ${r.pessoas} (média ${brl(r.media)})`).join(" · ")}
             {transparencia.semSexo > 0 ? `. ${transparencia.semSexo} sem sexo nos dados do eSocial do contrato: ficaram fora da comparação.` : "."} Salário do contrato; horista em mês pelas horas mensais.
           </p>
+        </Secao>
+      )}
+
+      {pessoas.some((p) => p.dp2Vinculo) && (
+        <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado e o contrato de experiência em PDF, do cadastro e do contrato do DP 2. O que faltar no cadastro sai com um traço.">
+          <form action="/api/dp2/documentos" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
+            <CampoForm label="Colaborador" htmlFor="doc-pessoa">
+              <Select id="doc-pessoa" name="pessoa" defaultValue="" required>
+                <option value="" disabled>
+                  Escolha…
+                </option>
+                {pessoas
+                  .filter((p) => p.dp2Vinculo)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </Select>
+            </CampoForm>
+            <CampoForm label="Documento" htmlFor="doc-tipo">
+              <Select id="doc-tipo" name="tipo" defaultValue="FICHA">
+                <option value="FICHA">Ficha de registro de empregado</option>
+                <option value="EXPERIENCIA">Contrato de experiência</option>
+              </Select>
+            </CampoForm>
+            <Button type="submit" variant="secondary">
+              Baixar (PDF)
+            </Button>
+          </form>
+          <p className="mt-2 text-fs-2 text-fg-muted">O contrato de experiência sai do contrato por prazo determinado (tipo 2 e data de término nos dados do eSocial), com o termo de prorrogação no fim.</p>
+        </Secao>
+      )}
+
+      {pessoas.some((p) => p.dp2Vinculo) && (
+        <Secao titulo="Termo de quitação anual" apoio="O termo do art. 507-B da CLT, com o que as competências fechadas do ano pagaram a cada colaborador, para assinar com o sindicato da categoria.">
+          <form action="/api/dp2/quitacao" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
+            <CampoForm label="Colaborador" htmlFor="quit-pessoa">
+              <Select id="quit-pessoa" name="pessoa" defaultValue="" required>
+                <option value="" disabled>
+                  Escolha…
+                </option>
+                {pessoas
+                  .filter((p) => p.dp2Vinculo)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </Select>
+            </CampoForm>
+            <CampoForm label="Ano" htmlFor="quit-ano">
+              <Input id="quit-ano" name="ano" inputMode="numeric" maxLength={4} defaultValue={String(new Date().getFullYear() - 1)} required />
+            </CampoForm>
+            <Button type="submit" variant="secondary">
+              Baixar termo (PDF)
+            </Button>
+          </form>
+        </Secao>
+      )}
+
+      {pessoas.length > 0 && (
+        <Secao
+          titulo="Advertências e suspensões"
+          apoio="O registro na ficha e o documento para assinatura. Os dias da suspensão saem do salário quando a folha do mês é calculada."
+        >
+          {ocorrencias.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[720px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Tipo</th>
+                    <th className={TH}>Data</th>
+                    <th className={TH}>Motivo</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ocorrencias.map((o) => (
+                    <tr key={o.id} className={TR}>
+                      <td className={`${TD} align-middle`}>{nomeDaPessoa.get(o.personId) ?? "Fora desta empresa"}</td>
+                      <td className={`${TD} align-middle`}>
+                        <Selo tom={o.tipo === "SUSPENSAO" ? "perigo" : "atencao"}>{o.tipo === "SUSPENSAO" ? `Suspensão · ${o.dias} dia(s)` : "Advertência"}</Selo>
+                      </td>
+                      <td className={`${TD} align-middle tabular-nums`}>{formatCalendarDate(o.data)}</td>
+                      <td className={`${TD} align-middle max-w-[320px] truncate`} title={o.motivo}>
+                        {o.motivo}
+                      </td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        <span className="inline-flex gap-2">
+                          <Button href={`/api/dp2/ocorrencias/${o.id}`} variant="secondary" size="sm" download>
+                            Documento (PDF)
+                          </Button>
+                          {tela.podeAgir && (
+                            <FormularioDoDp2
+                              acao={excluirOcorrenciaAction}
+                              rotulo="Excluir"
+                              rotuloEnviando="Excluindo…"
+                              variante="secondary"
+                              tamanho="sm"
+                              confirmar={{ titulo: "Excluir a ocorrência?", texto: "Ela sai da ficha do colaborador. Se era suspensão de um mês já calculado, calcule a folha de novo.", rotulo: "Excluir" }}
+                            >
+                              <input type="hidden" name="ocorrenciaId" value={o.id} />
+                            </FormularioDoDp2>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={registrarOcorrenciaAction} rotulo="Registrar" rotuloEnviando="Registrando…" variante="secondary">
+              <input type="hidden" name="companyId" value={empresaId} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <CampoForm label="Colaborador" htmlFor="oc-personId">
+                  <Select id="oc-personId" name="personId" defaultValue="" required>
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {pessoas
+                      .filter((p) => p.dp2Vinculo && !p.dismissalDate)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Tipo" htmlFor="oc-tipo">
+                  <Select id="oc-tipo" name="tipo" defaultValue="ADVERTENCIA">
+                    <option value="ADVERTENCIA">Advertência</option>
+                    <option value="SUSPENSAO">Suspensão</option>
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Data (ou início da suspensão)" htmlFor="oc-data">
+                  <CampoData id="oc-data" name="data" required />
+                </CampoForm>
+                <CampoForm label="Dias de suspensão" htmlFor="oc-dias" dica="Só na suspensão: de 1 a 30 dias seguidos.">
+                  <Input id="oc-dias" name="dias" inputMode="numeric" maxLength={2} />
+                </CampoForm>
+              </div>
+              <CampoForm label="Motivo" htmlFor="oc-motivo" className="mt-4" dica="O fato e quando aconteceu: vai no documento.">
+                <Textarea id="oc-motivo" name="motivo" rows={3} required />
+              </CampoForm>
+            </FormularioDoDp2>
+          )}
+        </Secao>
+      )}
+
+      {pessoas.length > 0 && (
+        <Secao
+          titulo="Saldo inicial das médias"
+          apoio={
+            saldoInicial.length === 0
+              ? "O histórico de antes do DP 2, para a média de férias, 13º e rescisão: cole da Domínio (Utilitários › Lançamentos › Lançamento de Rubricas para Médias)."
+              : saldoPendente > 0
+                ? `${saldoPendente} linha(s) a conferir: só entram na média depois de conferidas.`
+                : "Conferido: entra na média dos meses sem competência fechada no DP 2."
+          }
+          acao={
+            tela.podeAgir && saldoPendente > 0 ? (
+              <FormularioDoDp2 acao={conferirSaldoInicialAction} rotulo="Conferir todos" rotuloEnviando="Conferindo…" tamanho="sm">
+                <input type="hidden" name="companyId" value={tela.empresa.id} />
+              </FormularioDoDp2>
+            ) : undefined
+          }
+        >
+          {saldoInicial.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Meses</th>
+                    <th className={TH_NUM}>Total das rubricas</th>
+                    <th className={TH}>Situação</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {saldoInicial.map((r) => (
+                    <tr key={r.personId} className={TR}>
+                      <td className={`${TD} align-middle`}>{nomeDe.get(r.personId) ?? "Fora desta empresa"}</td>
+                      <td className={`${TD} align-middle tabular-nums`}>
+                        {r.meses} ({mesDe(r.de)} a {mesDe(r.ate)})
+                      </td>
+                      <td className={`${TD_NUM} align-middle`}>{brl(r.total)}</td>
+                      <td className={`${TD} align-middle`}>{r.pendentes > 0 ? <Selo tom="atencao">{r.pendentes} a conferir</Selo> : <Selo tom="sucesso">Conferido</Selo>}</td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        {tela.podeAgir && (
+                          <span className="inline-flex gap-2">
+                            {r.pendentes > 0 && (
+                              <FormularioDoDp2 acao={conferirSaldoInicialAction} rotulo="Conferir" rotuloEnviando="Conferindo…" variante="secondary" tamanho="sm">
+                                <input type="hidden" name="companyId" value={empresaId} />
+                                <input type="hidden" name="personId" value={r.personId} />
+                              </FormularioDoDp2>
+                            )}
+                            <FormularioDoDp2
+                              acao={apagarSaldoInicialAction}
+                              rotulo="Apagar"
+                              rotuloEnviando="Apagando…"
+                              variante="secondary"
+                              tamanho="sm"
+                              confirmar={{
+                                titulo: "Apagar o saldo inicial?",
+                                texto: `O saldo inicial de ${nomeDe.get(r.personId) ?? "este colaborador"} sai, e a média volta a usar só as competências do DP 2.`,
+                                rotulo: "Apagar",
+                              }}
+                            >
+                              <input type="hidden" name="companyId" value={empresaId} />
+                              <input type="hidden" name="personId" value={r.personId} />
+                            </FormularioDoDp2>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={importarSaldoInicialAction} rotulo="Importar saldo inicial" rotuloEnviando="Lendo…" variante="secondary">
+              <input type="hidden" name="companyId" value={tela.empresa.id} />
+              <CampoForm
+                label="Linhas da Domínio"
+                htmlFor="saldo-inicial"
+                dica="Uma linha por rubrica e mês: CPF; competência (MM/AAAA); código da rubrica no DP 2; valor. Vale ; ou tabulação (colado de planilha). Importar de novo troca o da mesma pessoa, mês e rubrica."
+              >
+                <Textarea id="saldo-inicial" name="texto" rows={5} required placeholder={"123.456.789-09;03/2026;150;412,30\n123.456.789-09;04/2026;150;380,00"} className="font-mono" />
+              </CampoForm>
+            </FormularioDoDp2>
+          )}
         </Secao>
       )}
 

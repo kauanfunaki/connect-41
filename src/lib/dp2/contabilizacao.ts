@@ -56,12 +56,14 @@ export type RubricaContabil = { codigo: string; nome: string; contaDebito: strin
 export type ItemContabil = { codigo: string; nome: string; tipo: string; valor: number };
 
 export type CalculoContabil = {
+  /** O centro de custo do contrato (código ou nome), funcionalidade-751; vazio = sem centro. */
+  centro?: string | null;
   itens: ItemContabil[];
   encargos: { inssEmpresa: number; rat: number; terceiros: number };
   provisoes: { ferias: number; tercoFerias: number; decimo: number; encargosFerias: number; encargosDecimo: number };
 };
 
-export type Lancamento = { debito: string; credito: string; valor: number; historico: string };
+export type Lancamento = { debito: string; credito: string; valor: number; historico: string; centro?: string };
 
 export const SEM_CONTA = "(sem conta)";
 
@@ -78,16 +80,19 @@ export function contabilizar(
     if (!t) faltam.add(nome);
     return t || SEM_CONTA;
   };
+  // O centro de custo da pessoa em curso: os lançamentos somam por conta, histórico e centro.
+  let centro = "";
   const somar = (debito: string, credito: string, valor: number, historico: string) => {
     if (!(valor > 0)) return;
-    const k = `${debito}|${credito}|${historico}`;
+    const k = `${debito}|${credito}|${historico}|${centro}`;
     const atual = soma.get(k);
     if (atual) atual.valor = r2(atual.valor + valor);
-    else soma.set(k, { debito, credito, valor: r2(valor), historico });
+    else soma.set(k, { debito, credito, valor: r2(valor), historico, ...(centro ? { centro } : {}) });
   };
   const salarios = () => conta(contas.salariosAPagar, "Salários a pagar (contas da folha)");
 
   for (const c of calculos) {
+    centro = (c.centro ?? "").trim();
     for (const i of c.itens) {
       const r = rubricas.get(i.codigo);
       const nome = r?.nome ?? i.nome;
@@ -104,13 +109,49 @@ export function contabilizar(
     somar(conta(contas.provisaoFeriasDespesa, "Despesa com provisão de férias (contas da folha)"), conta(contas.provisaoFerias, "Provisão de férias (contas da folha)"), r2(p.ferias + p.tercoFerias + p.encargosFerias), `Provisão de férias ${referencia}`);
     somar(conta(contas.provisaoDecimoDespesa, "Despesa com provisão de 13º (contas da folha)"), conta(contas.provisaoDecimo, "Provisão de 13º (contas da folha)"), r2(p.decimo + p.encargosDecimo), `Provisão de 13º ${referencia}`);
   }
-  return { lancamentos: [...soma.values()].sort((a, b) => a.historico.localeCompare(b.historico, "pt-BR")), faltam: [...faltam] };
+  return {
+    lancamentos: [...soma.values()].sort((a, b) => a.historico.localeCompare(b.historico, "pt-BR") || (a.centro ?? "").localeCompare(b.centro ?? "", "pt-BR")),
+    faltam: [...faltam],
+  };
 }
 
-/** O CSV para importar: Data;Débito;Crédito;Valor;Histórico, com vírgula decimal. */
+/**
+ * O CSV para importar: Data;Débito;Crédito;Valor;Histórico, com vírgula
+ * decimal. Com centro de custo em algum lançamento, ganha a coluna "Centro de
+ * custo" no fim (funcionalidade-751); sem, fica como sempre foi.
+ */
 export function csvDosLancamentos(lancamentos: readonly Lancamento[], data: string): string {
   const dataBr = data.split("-").reverse().join("/");
   const esc = (t: string) => (/[;"\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t);
-  const linhas = ["Data;Débito;Crédito;Valor;Histórico", ...lancamentos.map((l) => [dataBr, l.debito, l.credito, l.valor.toFixed(2).replace(".", ","), esc(l.historico)].join(";"))];
+  const comCentro = lancamentos.some((l) => l.centro);
+  const linhas = [
+    `Data;Débito;Crédito;Valor;Histórico${comCentro ? ";Centro de custo" : ""}`,
+    ...lancamentos.map((l) => [dataBr, l.debito, l.credito, l.valor.toFixed(2).replace(".", ","), esc(l.historico), ...(comCentro ? [esc(l.centro ?? "")] : [])].join(";")),
+  ];
   return "﻿" + linhas.join("\r\n") + "\r\n";
+}
+
+// ─── Resumo por centro de custo (25/11/2026, funcionalidade-751) ────────────
+
+export type ResumoDoCentro = { centro: string; pessoas: number; proventos: number; descontos: number; liquido: number; fgts: number; encargos: number; provisoes: number };
+
+/** A folha somada por centro de custo; quem não tem centro fica em "Sem centro de custo", no fim. */
+export function resumoPorCentro(
+  calculos: readonly { centro: string | null; proventos: number; descontos: number; liquido: number; fgts: number; encargos: number; provisoes: number }[]
+): ResumoDoCentro[] {
+  const SEM = "Sem centro de custo";
+  const por = new Map<string, ResumoDoCentro>();
+  for (const c of calculos) {
+    const nome = c.centro?.trim() || SEM;
+    const r = por.get(nome) ?? { centro: nome, pessoas: 0, proventos: 0, descontos: 0, liquido: 0, fgts: 0, encargos: 0, provisoes: 0 };
+    r.pessoas += 1;
+    r.proventos = r2(r.proventos + c.proventos);
+    r.descontos = r2(r.descontos + c.descontos);
+    r.liquido = r2(r.liquido + c.liquido);
+    r.fgts = r2(r.fgts + c.fgts);
+    r.encargos = r2(r.encargos + c.encargos);
+    r.provisoes = r2(r.provisoes + c.provisoes);
+    por.set(nome, r);
+  }
+  return [...por.values()].sort((a, b) => Number(a.centro === SEM) - Number(b.centro === SEM) || a.centro.localeCompare(b.centro, "pt-BR"));
 }
