@@ -19,6 +19,7 @@ import { NovaTarefaEmLinha, useNovaTarefaDoTopo } from "@/components/kanban/Nova
 import { useConcluirComSubatividades } from "@/components/kanban/useConcluirComSubatividades";
 import { aceitaSubatividade } from "@/lib/kanban/subatividades";
 import { segmentoDaTarefa } from "@/lib/enderecoCurto";
+import { SeloAutomatico } from "./SeloAutomatico";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 /** A subatividade, em qualquer nível — com as filhas dela em `subtasks` (06/11/2026). */
@@ -39,6 +40,8 @@ export type TaskRow = {
   tags?: { id: string; name: string; color: string }[];
   assignees?: AssigneeRow[];
   subtasks?: SubtaskRow[];
+  /** O processo societário que o cartão acompanha (27/11/2026, funcionalidade-844). */
+  processo?: { numero: number; corDoTipo: string | null } | null;
 };
 export type StageOption = { id: string; name: string; color: string | null; isTerminal?: boolean; type?: StageDotType };
 
@@ -318,6 +321,7 @@ function Row({
               >
                 {item.entityName}
               </Link>
+              {"processo" in item && item.processo && <SeloAutomatico processo={item.processo.numero} className="flex-shrink-0" />}
               {hasSubtasks && <ContadorDeFilhas filhas={filhas} />}
               {podeAdicionar && (
                 // Aparece ao passar o mouse na linha, como no ClickUp — e fica à
@@ -397,7 +401,7 @@ function Row({
               )}
             </span>
             <span className="flex justify-end">
-              {canAct && deleteAction && (
+              {canAct && deleteAction && !("processo" in item && item.processo) && (
                 <RowActionsMenu name={item.entityName} subatividades={contarAbaixo(item)} onDelete={() => deleteAction(item.id)} />
               )}
             </span>
@@ -504,6 +508,7 @@ function TaskCard({
           >
             {item.entityName}
           </Link>
+          {"processo" in item && item.processo && <SeloAutomatico processo={item.processo.numero} className="flex-shrink-0" />}
 
           {hasSubtasks && (
             <Button
@@ -541,7 +546,7 @@ function TaskCard({
             </IconButton>
           )}
 
-          {canAct && deleteAction && (
+          {canAct && deleteAction && !("processo" in item && item.processo) && (
             <RowActionsMenu name={item.entityName} subatividades={contarAbaixo(item)} onDelete={() => deleteAction(item.id)} />
           )}
         </div>

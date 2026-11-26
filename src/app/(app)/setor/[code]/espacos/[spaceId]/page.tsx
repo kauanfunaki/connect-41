@@ -11,6 +11,7 @@ import { NewListButton } from "@/components/kanban/NewListButton";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { JanelaDoEspaco } from "@/components/kanban/JanelaDoEspaco";
 import { QuadradoDoEspaco } from "@/components/kanban/QuadradoDoEspaco";
+import { SeloAutomatico } from "@/components/kanban/SeloAutomatico";
 import { criarPasta, criarListaSimples, editarEspaco, excluirPasta, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
@@ -22,9 +23,11 @@ function toListRow(p: {
   items: { stage: { isTerminal: boolean } }[];
   _count: { items: number };
   folder: { id: string; name: string } | null;
+  systemKey: string | null;
 }): ListRow {
   return {
     id: p.id,
+    automatica: !!p.systemKey,
     name: p.name,
     color: p.color,
     startDate: p.startDate,
@@ -67,7 +70,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
   const podeCriarTarefa = poderes.editar;
   const canDelete = poderes.excluir;
   const pipelineSelect = {
-    id: true, name: true, color: true, startDate: true, endDate: true,
+    id: true, name: true, color: true, startDate: true, endDate: true, systemKey: true,
     items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
     _count: { select: { items: true } },
     folder: { select: { id: true, name: true } },
@@ -108,10 +111,14 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
             </span>
           }
           subtitle={
-            <>
-              {space.description ? `${space.description} · ` : ""}
-              Colaboradores: {ROTULO_DA_PERMISSAO[space.defaultPermission]}
-            </>
+            <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>
+                {space.description ? `${space.description} · ` : ""}
+                Colaboradores: {ROTULO_DA_PERMISSAO[space.defaultPermission]}
+              </span>
+              {/* O espaço criado pelo sistema (27/11/2026, funcionalidade-844). */}
+              {space.systemKey && <SeloAutomatico />}
+            </span>
           }
           action={
             (canCreate || podeCriarTarefa || poderes.gerenciar) && (

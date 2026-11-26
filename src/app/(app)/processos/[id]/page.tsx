@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { EtiquetaDaCor } from "@/components/kanban/CapaDoCartao";
+import { corDaCapa } from "@/lib/kanban/capa";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
-import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, canViewSector, podeExcluir } from "@/lib/auth/context";
+import { SquareKanban } from "lucide-react";
+import { cartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
@@ -105,7 +109,7 @@ export default async function ProcessoDetalhePage({
       company: { select: { id: true, number: true, name: true, displayName: true } },
       owner: { select: { id: true, name: true } },
       type: {
-        select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
+        select: { name: true, color: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
       },
       template: {
         select: {
@@ -168,6 +172,11 @@ export default async function ProcessoDetalhePage({
     },
   });
   if (!processo) notFound();
+
+  // O cartão do processo nos Quadros (27/11/2026, funcionalidade-844): o "Ver
+  // no quadro" abre a lista com o cartão por cima — só para quem vê o setor dela.
+  const cartao = await cartaoDoProcesso(ctx.tenantId, processo.id);
+  const verNoQuadro = cartao && canViewSector(ctx, cartao.sectorCode) ? cartao.href : null;
 
   const feriados = await feriadosDoTenant(ctx.tenantId);
   const situacao = situacaoDoProcesso(processo.protocols, processo.concludedAt !== null, processo.status);
@@ -337,6 +346,8 @@ export default async function ProcessoDetalhePage({
           .filter(Boolean)
           .join(" · ");
 
+  const corDoTipo = corDaCapa(processo.type.color);
+
   return (
     <PageContainer>
       {/* Trilha no lugar do "Voltar" (padrão aceito em 08/10/2026): o processo
@@ -370,6 +381,9 @@ export default async function ProcessoDetalhePage({
         }
         meta={
           <>
+          {/* A cor do tipo, a mesma da faixa no kanban (27/11/2026,
+              funcionalidade-845), com o nome do tipo escrito. */}
+          {corDoTipo && <EtiquetaDaCor cor={corDoTipo}>{processo.type.name}</EtiquetaDaCor>}
           {/* Situação e prioridade em Selo: é a situação da ficha (regra de
               02/10 no Selo; auditoria de 07/10/2026). */}
           {encerradoSemConclusao ? (
@@ -434,6 +448,11 @@ export default async function ProcessoDetalhePage({
           <Button href={enderecoDe("empresa", processo.company)} variant="secondary" size="xs">
             Abrir empresa
           </Button>
+          {verNoQuadro && (
+            <Button href={verNoQuadro} variant="secondary" size="xs">
+              <SquareKanban size={11} aria-hidden /> Ver no quadro
+            </Button>
+          )}
           </>
         }
       />

@@ -75,6 +75,8 @@ export type ExemplosDoMotor = {
   media: ReturnType<typeof mediaDeVariaveis>;
   /** O mensalista que contribui para a previdência complementar (funcionalidade-762). */
   previdencia: CalculoDaPessoa;
+  /** O mensalista que recebe diferenças de convenção de meses anteriores e salário-família retroativo (funcionalidade-760). */
+  diferencas: CalculoDaPessoa;
   /** O mensalista que autorizou a contribuição sindical, no mês da convenção (funcionalidade-774). */
   sindical: CalculoDaPessoa;
   ferias: CalculoDeFerias;
@@ -274,6 +276,15 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
     autonomo: semVinculo("701", 2000),
     estagiario: semVinculo("901", 1500),
     previdencia: calcularMesDaCategoria({ ...base, vinculo: { ...VINCULO, salarioBase: SALARIO_ALTO, previdenciaComplementar: 400 }, eventos: [] }),
+    diferencas: calcularMesDaCategoria({
+      ...base,
+      vinculo: { ...VINCULO, filhosSalarioFamilia: 0 },
+      eventos: [
+        { ...evento("DIFERENCA_RETROATIVA", null, 300), memoria: "Convenção 2027 (5%): 03/2027 R$ 150,00; 04/2027 R$ 150,00" },
+        { ...evento("INSS_DIFERENCA", null, 27), memoria: "03/2027: INSS de R$ 3.150,00 − INSS de R$ 3.000,00 = R$ 13,50; 04/2027: R$ 13,50" },
+        { ...evento("SALARIO_FAMILIA_RETROATIVO", null, 65), memoria: "Salário-família de 03/2027 não pago: 1 filho × R$ 65,00" },
+      ],
+    }),
     sindical: calcularMesDaCategoria({ ...base, convencao: { ...CONVENCAO_DA_CLT, contribuicaoMes: mes }, vinculo: { ...VINCULO, contribuicaoSindical: true }, eventos: [] }),
   };
 }
@@ -448,6 +459,28 @@ export const FORMULAS: readonly Formula[] = [
     papeis: ["PREVIDENCIA_COMPLEMENTAR"],
     funcao: "calcularMes (mensal.ts) · calcularIrrf (impostos.ts)",
     exemplo: (x) => [...linha(x.previdencia, "PREVIDENCIA_COMPLEMENTAR"), ...x.previdencia.irrf.memoria.slice(0, 2)],
+  },
+  {
+    id: "diferencas-retroativas",
+    tema: "MENSAL",
+    nome: "Diferenças salariais retroativas",
+    conta: "Para cada mês fechado do período, a diferença é o que foi pago nas rubricas ligadas ao salário (salário, horas extras, adicional noturno, DSR, periculosidade, férias e 1/3, menos faltas e atrasos) × (salário novo ÷ salário pago − 1). Na alteração de rubrica, é o valor pago da rubrica × o percentual. A soma sai no mês, com FGTS e IRRF no mês do pagamento.",
+    detalhe: "O INSS não entra na base do mês: é apurado mês a mês (INSS de base do mês + diferença, menos o INSS já descontado, pela tabela daquele mês) e sai na rubrica própria, que também deduz da base do IRRF. No eSocial, as diferenças vão no S-1200 do mês do pagamento, no grupo infoPerAnt, com o perRef de cada mês e o instrumento (convenção, acordo, dissídio ou parcela complementar).",
+    baseLegal: "Lei 8.212/1991, art. 20; leiaute do eSocial S-1.3, S-1200 infoPerAnt (tpAcConv)",
+    papeis: ["DIFERENCA_RETROATIVA", "INSS_DIFERENCA"],
+    funcao: "diferencasDoPeriodo (diferencasRetroativas.ts) · calcularMes (mensal.ts)",
+    exemplo: (x) => [...linha(x.diferencas, "DIFERENCA_RETROATIVA"), ...linha(x.diferencas, "INSS_DIFERENCA")],
+  },
+  {
+    id: "salario-familia-retroativo",
+    tema: "MENSAL",
+    nome: "Salário-família retroativo",
+    conta: "Para cada mês fechado do período em que a remuneração ficou até o limite da tabela daquele mês: filhos × cota do mês, menos o salário-família que já foi pago no mês.",
+    detalhe: "Paga no mês corrente, sem incidência de INSS, FGTS ou IRRF, e compensado com as contribuições do mês na DCTFWeb.",
+    baseLegal: "Lei 8.213/1991, arts. 65 a 70",
+    papeis: ["SALARIO_FAMILIA_RETROATIVO"],
+    funcao: "salarioFamiliaRetroativo (diferencasRetroativas.ts)",
+    exemplo: (x) => linha(x.diferencas, "SALARIO_FAMILIA_RETROATIVO"),
   },
   {
     id: "vale-transporte",

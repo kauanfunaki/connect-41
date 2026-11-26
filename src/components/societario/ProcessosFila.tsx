@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, ArrowRight, Clock, Play } from "lucide-react";
+import { AlertCircle, ArrowRight, Clock, Play, SquareKanban } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -12,6 +12,8 @@ import { enderecoDe } from "@/lib/enderecoCurto";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
+import { EtiquetaDaCor } from "@/components/kanban/CapaDoCartao";
+import { corDaCapa } from "@/lib/kanban/capa";
 
 export const SITUACAO_LABEL: Record<SituacaoDoProcesso, string> = {
   EM_EXIGENCIA: "Em exigência",
@@ -75,12 +77,43 @@ export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
   );
 }
 
+/**
+ * O tipo do processo e o título, embaixo do nome da empresa. Com a cor do tipo
+ * escolhida em Roteiros (27/11/2026, funcionalidade-845), o tipo vai numa
+ * etiqueta cheia daquela cor — a mesma da faixa do kanban —, com o nome escrito.
+ */
+function TipoDoProcesso({ linha: l }: { linha: Pick<LinhaDaFila, "tipoNome" | "tipoCor" | "titulo"> }) {
+  const cor = corDaCapa(l.tipoCor);
+  if (!cor) {
+    return (
+      <span className="block text-micro text-fg-muted truncate" title={l.titulo ?? l.tipoNome}>
+        {l.tipoNome}
+        {l.titulo ? ` · ${l.titulo}` : ""}
+      </span>
+    );
+  }
+  return (
+    <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-micro text-fg-muted">
+      <EtiquetaDaCor cor={cor} className="flex-shrink-0">
+        {l.tipoNome}
+      </EtiquetaDaCor>
+      {l.titulo && (
+        <span className="truncate" title={l.titulo}>
+          {l.titulo}
+        </span>
+      )}
+    </span>
+  );
+}
+
 type Props = {
   linhas: LinhaDaFila[];
   /** Há processos no setor, mas nenhum passou pelo filtro atual. */
   filtrado: boolean;
   /** Agora, do servidor — o prazo combinado conta dias no fuso de São Paulo. */
   agora: Date;
+  /** Por processo, o endereço do cartão dele nos Quadros (27/11/2026); sem a chave, sem o botão. */
+  quadros?: Record<string, string>;
 };
 
 /**
@@ -93,7 +126,7 @@ type Props = {
  * página; desde 13/11/2026 (melhoria-662) a fila vem de 50 em 50, e o recorte
  * grande (situação, responsável, prioridade, busca) é o do servidor.
  */
-export function ProcessosFila({ linhas, filtrado, agora }: Props) {
+export function ProcessosFila({ linhas, filtrado, agora, quadros }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
       <EmptyState
@@ -147,10 +180,14 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
           <Link key={l.id} href={enderecoDe("processo", { id: l.id, number: l.numero })} className="block">
             <Cartao className="hover:border-brand/40 transition-colors">
               <TopoDoCartao nome={l.empresaNome} />
-              <InfoDoCartao>
-                {l.tipoNome}
-                {l.titulo ? ` · ${l.titulo}` : ""}
-              </InfoDoCartao>
+              {corDaCapa(l.tipoCor) ? (
+                <TipoDoProcesso linha={l} />
+              ) : (
+                <InfoDoCartao>
+                  {l.tipoNome}
+                  {l.titulo ? ` · ${l.titulo}` : ""}
+                </InfoDoCartao>
+              )}
               <InfoDoCartao>{l.etapasAgora.length > 0 ? l.etapasAgora.join(" · ") : "Nada liberado no roteiro"}</InfoDoCartao>
               <div className="mt-1.5">{prazos(l)}</div>
               {/* Situação e prioridade em Selo: é a situação de uma linha ou
@@ -214,7 +251,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   <FiltroDaColuna rotulo="Início" chave="inicio" tipo="data" align="right" />
                 </th>
                 <th className="px-4 py-3">
-                  <span className="sr-only">Abrir</span>
+                  <span className="sr-only">Ações</span>
                 </th>
               </tr>
             </thead>
@@ -229,10 +266,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                     >
                       {l.empresaNome}
                     </Link>
-                    <span className="block text-micro text-fg-muted truncate" title={l.titulo ?? l.tipoNome}>
-                      {l.tipoNome}
-                      {l.titulo ? ` · ${l.titulo}` : ""}
-                    </span>
+                    <TipoDoProcesso linha={l} />
                     <span
                       className="block text-micro text-fg-muted truncate"
                       title={l.etapasAgora.join(" · ") || undefined}
@@ -256,9 +290,24 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   </td>
                   <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.iniciadoEm)}</td>
                   <td className="px-4 py-3">
-                    <Button href={enderecoDe("processo", { id: l.id, number: l.numero })} variant="secondary" size="xs">
-                      Abrir <ArrowRight size={12} />
-                    </Button>
+                    <div className="flex items-center justify-center gap-1.5">
+                      {/* O cartão do processo nos Quadros, aberto por cima da
+                          lista (27/11/2026, funcionalidade-844). */}
+                      {quadros?.[l.id] && (
+                        <Button
+                          href={quadros[l.id]}
+                          variant="ghost"
+                          size="xs"
+                          aria-label={`Ver o processo nº ${l.numero} no quadro`}
+                          title="Ver no quadro"
+                        >
+                          <SquareKanban size={12} aria-hidden /> Quadro
+                        </Button>
+                      )}
+                      <Button href={enderecoDe("processo", { id: l.id, number: l.numero })} variant="secondary" size="xs">
+                        Abrir <ArrowRight size={12} />
+                      </Button>
+                    </div>
                   </td>
                 </LinhaFiltravel>
               ))}

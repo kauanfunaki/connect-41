@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { listarRoteiros } from "@/lib/societario/roteirosServidor";
 import { formatInstantDate } from "@/lib/format";
+import { SeletorDeCapa } from "@/components/kanban/SeletorDeCapa";
+import { definirCorDoTipo } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +47,10 @@ export default async function RoteirosPage() {
           />
         ) : (
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[760px]">
+            <table className="w-full min-w-[900px]">
               <thead>
                 <tr>
-                  {["Tipo de processo", "Versão em vigor", "Etapas", "Publicada", "Em andamento", ""].map((c, i) => (
+                  {["Tipo de processo", "Cor no quadro", "Versão em vigor", "Etapas", "Publicada", "Em andamento", ""].map((c, i) => (
                     <th key={i} className="px-3 py-2">
                       {c || <span className="sr-only">Ações</span>}
                     </th>
@@ -63,6 +65,18 @@ export default async function RoteirosPage() {
                         <span className="font-semibold text-fg">{t.nome}</span>
                         {!t.ativo && <Selo tom="neutro">Inativo</Selo>}
                       </span>
+                    </td>
+                    {/* A cor do tipo no quadro (27/11/2026, funcionalidade-845): a
+                        faixa do kanban de processos e a etiqueta da fila. */}
+                    <td className="px-3 py-2">
+                      <SeletorDeCapa
+                        valor={t.cor}
+                        onEscolher={definirCorDoTipo.bind(null, t.id)}
+                        rotulo="Cor"
+                        textoSemCor="Sem cor"
+                        aria-label={`Cor de ${t.nome} no quadro`}
+                        ajuda="A cor aparece na faixa do kanban de processos, na fila e no alto do processo, sempre com o nome do tipo."
+                      />
                     </td>
                     <td className="px-3 py-2">{t.versao ? `Versão ${t.versao.numero}` : <Selo tom="atencao">Sem roteiro</Selo>}</td>
                     <td className="px-3 py-2">{t.versao ? t.versao.etapas : "—"}</td>

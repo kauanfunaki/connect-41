@@ -19,6 +19,7 @@ import { getPrisma } from "@/lib/prisma";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { lerRoteiro, mesmoRoteiro, proximaVersao, type CampoDoRoteiro } from "@/lib/societario/roteiroEditavel";
 import { etapasDaVersao } from "@/lib/societario/roteirosServidor";
+import { corDaCapa, ehCorDaCapa } from "@/lib/kanban/capa";
 
 const MODULO = "societario_processos";
 
@@ -141,4 +142,43 @@ export async function publicarRoteiro(pedido: { tipoId: string; versaoBase: numb
   revalidatePath(`/processos/roteiros/${tipo.id}`);
   revalidatePath("/processos/novo");
   return { ok: true, versao: publicada.versao };
+}
+
+/**
+ * A cor do tipo no quadro (27/11/2026, funcionalidade-845): a faixa do cartão
+ * no kanban de processos, a etiqueta na fila e no cabeçalho do processo. Uma
+ * chave da paleta da capa ou `null` para tirar. Mesmo nível do roteiro
+ * ("gerir"): é configuração do módulo, vale para todos os processos do tipo.
+ */
+export async function definirCorDoTipo(tipoId: string, cor: string | null): Promise<{ error: string } | void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado." };
+  if (!(await podeNoModulo(ctx, MODULO, "gerir"))) return { error: "Só a coordenação do Societário escolhe a cor dos tipos." };
+  if (cor !== null && !ehCorDaCapa(cor)) return { error: "Cor fora da paleta." };
+  const tenantId = ctx.tenantId;
+
+  const prisma = getPrisma();
+  const tipo = await prisma.processType.findFirst({ where: { id: tipoId, tenantId }, select: { id: true, name: true, color: true } });
+  if (!tipo) return { error: "Tipo de processo não encontrado." };
+  if ((tipo.color ?? null) === cor) return;
+
+  try {
+    await prisma.processType.update({ where: { id: tipo.id }, data: { color: cor } });
+  } catch (err) {
+    console.error("[definirCorDoTipo]", err);
+    return { error: "Erro ao gravar a cor. Tente de novo." };
+  }
+
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "societario.tipo.cor",
+    entityType: "ProcessType",
+    entityId: tipo.id,
+    metadata: { nome: tipo.name, de: corDaCapa(tipo.color)?.nome ?? null, para: corDaCapa(cor)?.nome ?? null },
+  });
+
+  revalidatePath("/processos/roteiros");
+  revalidatePath("/processos");
+  revalidatePath("/processos/kanban");
 }

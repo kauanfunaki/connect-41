@@ -83,17 +83,18 @@ function tagDoLink(html: string, texto: string): string {
 
 /**
  * Os itens que abrem a janela ao lado (05/11/2026, opção C): a tag de abertura
- * do botão, o nome (na coluna, o texto; na faixa, o começo do aria-label) e o
- * número de telas.
+ * do botão, o nome (na coluna, o texto; na faixa, o começo do aria-label), o
+ * texto visível de dentro (sem as tags) e o número de telas — desde 26/11/2026
+ * só no `data-telas`, que não aparece (a contagem saiu da linha e do nome).
  */
-function botoesComJanela(html: string): { tag: string; nome: string; telas: number | null }[] {
+function botoesComJanela(html: string): { tag: string; nome: string; texto: string; telas: number | null }[] {
   const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
   return [...nav.matchAll(/(<button [^>]*aria-haspopup="menu"[^>]*>)([\s\S]*?)<\/button>/g)].map((m) => {
     const tag = m[1]!;
     const rotulo = /aria-label="([^"]*)"/.exec(tag)?.[1];
     const nome = rotulo ? rotulo.split(",")[0]! : (/<span class="truncate">([^<]*)<\/span>/.exec(m[2]!)?.[1] ?? "");
-    const telas = /(\d+) telas?/.exec(rotulo ?? m[2]!)?.[1];
-    return { tag, nome, telas: telas ? Number(telas) : null };
+    const telas = /data-telas="(\d+)"/.exec(tag)?.[1];
+    return { tag, nome, texto: m[2]!.replace(/<[^>]+>/g, "").trim(), telas: telas ? Number(telas) : null };
   });
 }
 
@@ -106,10 +107,11 @@ function botaoComJanela(html: string, nome: string) {
 
 /**
  * Os grupos do menu do setor: os botões com janela sem os do Geral, que
- * aparecem em todo setor — o Apoio e, desde 10/11/2026, os Cadastros.
+ * aparecem em todo setor — o Apoio, desde 10/11/2026 os Cadastros e desde
+ * 26/11/2026 o Atendimento.
  */
 function gruposDoSetor(html: string) {
-  return botoesComJanela(html).filter((b) => b.nome !== "Apoio" && b.nome !== "Cadastros");
+  return botoesComJanela(html).filter((b) => !["Apoio", "Cadastros", "Atendimento"].includes(b.nome));
 }
 
 /** Os links do menu: tag de abertura e o texto visível de dentro (sem as tags). */
@@ -187,7 +189,7 @@ describe("menu recolhido: a faixa de ícones", () => {
 
   it("item com telas dentro (Cadastros) ganha o pontinho; os outros não", () => {
     const aside = lateral(casco(true));
-    const cadastros = aside.slice(aside.indexOf('aria-label="Cadastros, 2 telas"'));
+    const cadastros = aside.slice(aside.indexOf('aria-label="Cadastros"'));
     expect(cadastros.slice(0, cadastros.indexOf("</button>"))).toContain('data-marca="telas"');
     const inicio = aside.slice(aside.indexOf('aria-label="Início"'));
     expect(inicio.slice(0, inicio.indexOf("</a>"))).not.toContain('data-marca="telas"');
@@ -259,7 +261,8 @@ describe("menu aberto: igual a antes", () => {
 describe("os itens na faixa, um a um", () => {
   const naFaixa = (filho: React.ReactElement) => renderToStaticMarkup(React.createElement(ProvedorDaFaixa, { value: true }, filho));
 
-  it("o item com janela leva a contagem para o nome e ganha o pontinho", () => {
+  // Sem a contagem de telas no nome desde 26/11/2026 (pedido do Kauan).
+  it("o item com janela tem só o nome no aria-label e ganha o pontinho", () => {
     const html = naFaixa(
       React.createElement(NavItem, {
         label: "Contas",
@@ -270,7 +273,8 @@ describe("os itens na faixa, um a um", () => {
         menu: { aberto: false, onClick: () => {}, painelId: "p1", telas: 2 },
       })
     );
-    expect(html).toContain('aria-label="Contas, 2 telas"');
+    expect(html).toContain('aria-label="Contas"');
+    expect(html).toContain('data-telas="2"');
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).toContain('aria-current="true"');
     expect(html).toContain('data-marca="telas"');
@@ -342,6 +346,8 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
     ];
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: todas }));
     expect(gruposDoSetor(aside).map((g) => [g.nome, g.telas])).toEqual([["Operação", 3], ["Regularização", 2]]);
+    // Sem a contagem de telas na linha (26/11/2026, pedido do Kauan): o nome e o "›".
+    expect(gruposDoSetor(aside).map((g) => g.texto)).toEqual(["Operação›", "Regularização›"]);
     const ordem = ["Operação", "Regularização", "Exigências e prazos", "Relatórios", "Hub de robôs"].map((n) => posicao(aside, n));
     expect(ordem).toEqual([...ordem].sort((a, b) => a - b));
     expect(tagDoLink(aside, "Hub de robôs")).toContain('href="/robo"');
@@ -434,9 +440,10 @@ describe("o Apoio no Geral", () => {
     const geral = itensDoGeral(aside, "dp");
     expect(geral.slice(0, 2)).toEqual(["Cadastros", "Quadro de tarefas"]);
     expect(geral.at(-1)).toBe("Apoio");
-    // Os outros seguem com as cores juntas, entre os dois.
-    expect(geral).toContain("Solicitações");
-    expect(geral.indexOf("Arquivos")).toBeLessThan(geral.indexOf("Apoio"));
+    // Os outros seguem com as cores juntas, entre os dois — Solicitações e
+    // Arquivos no grupo Atendimento desde 26/11/2026 (melhoria-871).
+    expect(geral).toContain("Atendimento");
+    expect(geral.indexOf("Atendimento")).toBeLessThan(geral.indexOf("Apoio"));
   });
 
   it("com uma tela só no Apoio, ela fica solta, também no fim do Geral", () => {
@@ -557,6 +564,16 @@ describe("Cadastros no Geral", () => {
     }
   });
 
+  // 26/11/2026 (pedido do Kauan): nenhum grupo do Geral mostra quantas telas
+  // tem — só o nome e o "›"; o número do que é novo continua (ver Atendimento).
+  it("os grupos do Geral sem a contagem de telas, na coluna e no nome da faixa", () => {
+    const comTudo = { telasFixadas: [], solicitacoesLigadas: true, atendimentoLigado: true, arquivosLigados: true, apoioLigado: { senhas: true, manuais: true } };
+    const aberto = botoesComJanela(lateral(casco(false, comTudo)));
+    expect(aberto.map((b) => [b.nome, b.texto])).toEqual([["Cadastros", "Cadastros›"], ["Atendimento", "Atendimento›"], ["Apoio", "Apoio›"]]);
+    const faixa = botoesComJanela(lateral(casco(true, comTudo)));
+    expect(faixa.map((b) => /aria-label="([^"]*)"/.exec(b.tag)?.[1])).toEqual(["Cadastros", "Atendimento", "Apoio"]);
+  });
+
   it("fora das telas de Cadastros, o grupo fica apagado", () => {
     rota.atual = "/agenda";
     expect(botaoComJanela(lateral(casco(false, { telasFixadas: [] })), "Cadastros").tag).not.toContain("aria-current");
@@ -570,16 +587,88 @@ describe("Cadastros no Geral", () => {
     expect(botaoComJanela(lateral(casco(false, { telasFixadas: [] })), "Cadastros").telas).toBe(2);
   });
 
-  it("na faixa de ícones também é o botão da janela, com a contagem no nome", () => {
+  it("na faixa de ícones também é o botão da janela, só com o nome", () => {
     rota.atual = "/pessoas";
     const cadastros = botaoComJanela(lateral(casco(true, { telasFixadas: [] })), "Cadastros");
-    expect(cadastros.tag).toContain('aria-label="Cadastros, 2 telas"');
+    expect(cadastros.tag).toContain('aria-label="Cadastros"');
     expect(cadastros.tag).toContain('aria-current="true"');
   });
 
   it("escondido no Geral do setor, some do menu", () => {
     const aside = lateral(casco(false, { telasFixadas: [], telasDoGeral: ["transferencias", "agenda"] }));
     expect(botoesComJanela(aside).map((b) => b.nome)).not.toContain("Cadastros");
+  });
+});
+
+// Atendimento no Geral (26/11/2026, melhoria-871, pedido do Kauan; era
+// "Atendimento ao cliente" e virou só "Atendimento" no mesmo dia):
+// Solicitações, Atendimento e Arquivos, que eram itens soltos, num grupo só,
+// no mesmo lugar do Geral, com a regra dos outros grupos.
+describe("Atendimento no Geral", () => {
+  const TODAS = { solicitacoesLigadas: true, atendimentoLigado: true, arquivosLigados: true } as const;
+
+  it("as três na janela do grupo, no lugar em que ficavam — depois dos azuis, antes do Apoio", () => {
+    const aside = lateral(casco(false, { telasFixadas: [], ...TODAS, chamadosLigados: true, apoioLigado: { senhas: true, manuais: true } }));
+    expect(itensDoGeral(aside, "dp")).toEqual(["Cadastros", "Quadro de tarefas", "Transferências", "Chamados", "Agenda", "Atendimento", "Apoio"]);
+    expect(botaoComJanela(aside, "Atendimento").telas).toBe(3);
+    // As telas ficam na janela, que começa fechada.
+    for (const href of ["/solicitacoes", "/atendimento", "/arquivos"]) expect(aside).not.toContain(`href="${href}"`);
+  });
+
+  it("aceso na tela de qualquer uma das três, e nas telas do BPO que moram nas Solicitações", () => {
+    for (const caminho of ["/solicitacoes", "/atendimento", "/arquivos", "/pendencias"]) {
+      rota.atual = caminho;
+      expect(botaoComJanela(lateral(casco(false, { telasFixadas: [], ...TODAS })), "Atendimento").tag, caminho).toContain('aria-current="true"');
+    }
+    rota.atual = "/agenda";
+    expect(botaoComJanela(lateral(casco(false, { telasFixadas: [], ...TODAS })), "Atendimento").tag).not.toContain("aria-current");
+  });
+
+  it("o grupo mostra a soma dos números das telas; na faixa, o ponto e a soma no nome", () => {
+    const aberto = lateral(casco(false, { telasFixadas: [], ...TODAS, solicitacoesNovas: 2, atendimentoNovos: 3 }));
+    const html = aberto.slice(aberto.indexOf(botaoComJanela(aberto, "Atendimento").tag));
+    expect(html.slice(0, html.indexOf("</button>"))).toContain(", 5 novas");
+
+    const faixa = botaoComJanela(lateral(casco(true, { telasFixadas: [], ...TODAS, solicitacoesNovas: 2, atendimentoNovos: 3 })), "Atendimento");
+    expect(faixa.tag).toContain('aria-label="Atendimento, 5 novas"');
+  });
+
+  // 26/11/2026 (pedido do Kauan): o grupo tem o mesmo nome da tela de dentro, e a
+  // linha não mostra mais quantas telas há — só o "›" e o número do que é novo.
+  it("o grupo se chama Atendimento, como a tela de dentro, e a linha não conta as telas", () => {
+    const aberto = botaoComJanela(lateral(casco(false, { telasFixadas: [], ...TODAS })), "Atendimento");
+    expect(aberto.texto).toBe("Atendimento›");
+    expect(aberto.telas).toBe(3);
+    const comNovas = botaoComJanela(lateral(casco(false, { telasFixadas: [], ...TODAS, atendimentoNovos: 4 })), "Atendimento");
+    expect(comNovas.texto).toBe("Atendimento4, 4 novas›");
+    const faixa = botaoComJanela(lateral(casco(true, { telasFixadas: [], ...TODAS })), "Atendimento");
+    expect(faixa.tag).toContain('aria-label="Atendimento"');
+  });
+
+  it("com uma tela só, ela fica solta, com o número dela", () => {
+    const aside = lateral(casco(false, { telasFixadas: [], atendimentoLigado: true, atendimentoNovos: 4 }));
+    expect(botoesComJanela(aside).map((b) => b.nome)).not.toContain("Atendimento");
+    expect(tagDoLink(aside, "Atendimento4, 4 novas")).toContain('href="/atendimento"');
+  });
+
+  it("o que o setor escondeu no Geral sai do grupo; sem nenhuma, o grupo some", () => {
+    const umaSo = lateral(casco(false, { telasFixadas: [], ...TODAS, telasDoGeral: ["cadastros", "transferencias", "arquivos"] }));
+    expect(botoesComJanela(umaSo).map((b) => b.nome)).not.toContain("Atendimento");
+    expect(tagDoLink(umaSo, "Arquivos")).toContain('href="/arquivos"');
+
+    const nenhuma = lateral(casco(false, { telasFixadas: [], ...TODAS, telasDoGeral: ["cadastros", "transferencias"] }));
+    expect(itensDoGeral(nenhuma, "dp")).toEqual(["Cadastros", "Transferências"]);
+    // Sem o módulo ligado, também não entra.
+    expect(itensDoGeral(lateral(casco(false, { telasFixadas: [] })), "dp")).not.toContain("Atendimento");
+  });
+
+  // A ordem gravada antes de 26/11/2026, com as três soltas: o grupo entra no
+  // lugar da primeira, e a escondida pelo olho continua escondida.
+  it("com a ordem do Geral gravada antes da mudança, o grupo fica no lugar da primeira das três", () => {
+    const gravada = { grupos: [], telas: [], geral: ["solicitacoes", "cadastros", "quadros", "transferencias", "atendimento", "arquivos", "agenda"], ocultasGeral: ["arquivos"] };
+    const aside = lateral(casco(false, { telasFixadas: [], ...TODAS, ordemDoMenu: lerOrdemDoMenu(JSON.stringify(gravada)) }));
+    expect(itensDoGeral(aside, "dp")).toEqual(["Atendimento", "Cadastros", "Quadro de tarefas", "Transferências", "Agenda"]);
+    expect(botaoComJanela(aside, "Atendimento").telas).toBe(2);
   });
 });
 

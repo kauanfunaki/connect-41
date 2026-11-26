@@ -211,6 +211,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2Alocacao", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Ambiente", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Medico", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "Dp2DiferencaRetroativa", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "Dp2NivelSalarial", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Epi", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2EntregaDeEpi", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Transferencia", coluna: "deCompanyId", tratamento: "manter", motivo: "a empresa de origem fica no histórico da transferência; a pessoa já está na outra empresa" },
@@ -261,6 +263,7 @@ const PESSOA: Ligacao[] = [
   { modelo: "Dp2TotalizadorEsocial", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["totalizador do eSocial do DP 2", "totalizadores do eSocial do DP 2"], historico: true },
   { modelo: "Dp2Rescisao", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["rescisão do DP 2", "rescisões do DP 2"], historico: true },
   { modelo: "Dp2Ferias", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["férias gravadas do DP 2", "férias gravadas do DP 2"], historico: true },
+  { modelo: "Dp2DiferencaRetroativa", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["diferença retroativa do DP 2", "diferenças retroativas do DP 2"], historico: true },
   { modelo: "Dp2EntregaDeEpi", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["entrega de EPI do DP 2", "entregas de EPI do DP 2"], historico: true },
   { modelo: "Dp2Alocacao", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["alocação em tomador do DP 2", "alocações em tomador do DP 2"], historico: true },
   { modelo: "Dp2Transferencia", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["transferência do DP 2", "transferências do DP 2"], historico: true },
@@ -343,6 +346,10 @@ const USUARIO: Ligacao[] = [
   { modelo: "HandoffSectorTask", campo: "doneBy", fk: "doneById", tratamento: "desligar" },
   // O caso revisado do histórico de chamados fica, sem quem revisou (17/11/2026).
   { modelo: "HelpdeskHistoricCase", campo: "reviewedBy", fk: "reviewedById", tratamento: "desligar" },
+  // A configuração da abertura automática do setor fica, sem quem configurou
+  // (27/11/2026, funcionalidade-872) — o rastro está na auditoria.
+  { modelo: "AberturaAutomatica", campo: "criadoPor", fk: "criadoPorId", tratamento: "desligar" },
+  { modelo: "AberturaAutomatica", campo: "atualizadoPor", fk: "atualizadoPorId", tratamento: "desligar" },
 
   // Responsável por algo — fica sem responsável.
   { modelo: "Person", campo: "linkedUser", fk: "linkedUserId", tratamento: "desligar", rotulo: ["ficha em Pessoas ligada à conta", "fichas em Pessoas ligadas à conta"] },
@@ -457,6 +464,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2TotalizadorEsocial", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os totalizadores; a auditoria guarda o nome" },
   { modelo: "Dp2Rescisao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou a rescisão; a auditoria guarda o nome" },
   { modelo: "Dp2Ferias", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou as férias; a auditoria guarda o nome" },
+  { modelo: "Dp2DiferencaRetroativa", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou a diferença; a auditoria guarda o nome" },
+  { modelo: "Dp2NivelSalarial", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou o nível; a auditoria guarda o nome" },
   { modelo: "Dp2Medico", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou o médico; a auditoria guarda o nome" },
   { modelo: "Dp2Ambiente", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou o ambiente; a auditoria guarda o nome" },
   { modelo: "Dp2Epi", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou o EPI; a auditoria guarda o nome" },

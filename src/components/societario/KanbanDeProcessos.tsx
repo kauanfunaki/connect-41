@@ -10,6 +10,8 @@ import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/priorida
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
 import { DIAS_DE_CONCLUIDOS_RECENTES } from "@/lib/societario/prazos";
 import { COR_DO_PRAZO_COMBINADO, PrazoCelula, SITUACAO_LABEL } from "./ProcessosFila";
+import { FaixaDaCapa } from "@/components/kanban/CapaDoCartao";
+import { corDaCapa } from "@/lib/kanban/capa";
 
 type Props = {
   colunas: { situacao: SituacaoDoProcesso; linhas: LinhaDaFilaLeve[] }[];
@@ -45,12 +47,17 @@ export function KanbanDeProcessos({ colunas, agora }: Props) {
             {coluna.linhas.map((l) => {
               const combinado =
                 l.prazoCombinado && l.situacao !== "CONCLUIDO" ? prazoCombinado(l.prazoCombinado, agora) : null;
+              const cor = corDaCapa(l.tipoCor);
               return (
                 <Link
                   key={l.id}
                   href={enderecoDe("processo", { id: l.id, number: l.numero })}
-                  className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface p-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
+                  className="flex flex-col gap-1.5 overflow-hidden rounded-lg border border-border bg-surface p-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
                 >
+                  {/* A cor do tipo como capa do cartão, com o nome escrito
+                      (27/11/2026, funcionalidade-845): como o Societário marcava
+                      no Trello. Sem cor escolhida, o tipo segue na linha de baixo. */}
+                  {cor && <FaixaDaCapa cor={cor} texto={l.tipoNome} className="-mx-3 -mt-3 mb-1" />}
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-kanban-title font-semibold leading-snug line-clamp-2">{l.empresaNome}</span>
                     {/* Selo, e não Badge: é a situação do cartão (regra de 02/10 no Selo). */}
@@ -58,10 +65,18 @@ export function KanbanDeProcessos({ colunas, agora }: Props) {
                       <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[l.prioridade])}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>
                     )}
                   </div>
-                  <span className="text-kanban-meta text-fg-secondary truncate">
-                    {l.tipoNome}
-                    {l.titulo && ` — ${l.titulo}`}
-                  </span>
+                  {cor ? (
+                    l.titulo && (
+                      <span className="text-kanban-meta text-fg-secondary truncate" title={l.titulo}>
+                        {l.titulo}
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-kanban-meta text-fg-secondary truncate">
+                      {l.tipoNome}
+                      {l.titulo && ` — ${l.titulo}`}
+                    </span>
+                  )}
                   <PrazoCelula prazo={l.prazo} />
                   {combinado && l.prazoCombinado && (
                     <span className={`text-micro ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>

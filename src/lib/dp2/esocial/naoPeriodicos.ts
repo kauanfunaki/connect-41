@@ -94,7 +94,7 @@ function infoContrato(t: TrabalhadorCompleto, cnpjEstab: string): No | null {
     el("nmCargo", t.nomeDoCargo?.slice(0, 100)),
     el("CBOCargo", d.cbo),
     el("codCateg", t.categoria),
-    el("remuneracao", [el("vrSalFx", decimal(t.salario)), el("undSalFixo", t.tipoSalario === "HORISTA" ? "1" : "5")]),
+    el("remuneracao", [el("vrSalFx", decimal(t.salario)), el("undSalFixo", t.tipoSalario === "HORISTA" ? "1" : "5"), el("dscSalVar", d.remuneracaoVariavel?.slice(0, 999))]),
     el("duracao", [el("tpContr", d.tipoContrato ?? "1"), el("dtTerm", d.tipoContrato === "2" ? d.dataTermino : null)]),
     el("localTrabalho", [el("localTrabGeral", [el("tpInsc", "1"), el("nrInsc", digitos(cnpjEstab))])]),
     el("horContratual", [

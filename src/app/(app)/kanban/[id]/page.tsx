@@ -6,6 +6,8 @@ import { carregarQuadro, type ItemDoQuadro } from "@/lib/kanban/carregarQuadro";
 import { lerLimiteDeConcluidas } from "@/lib/kanban/concluidasDoQuadro";
 import { getSectorMaps } from "@/lib/sectors";
 import { BoardView } from "@/components/kanban/BoardView";
+import { AbrirCartaoDoEndereco } from "@/components/kanban/AbrirCartaoDoEndereco";
+import { SeloAutomatico } from "@/components/kanban/SeloAutomatico";
 import { BotaoNovaTarefa } from "@/components/kanban/NovaTarefaEmLinha";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
@@ -27,10 +29,14 @@ export default async function KanbanBoardPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ concluidas?: string | string[] }>;
+  searchParams: Promise<{ concluidas?: string | string[]; abrir?: string | string[] }>;
 }) {
   const { id } = await params;
-  const limiteDeConcluidas = lerLimiteDeConcluidas((await searchParams).concluidas);
+  const busca = await searchParams;
+  const limiteDeConcluidas = lerLimiteDeConcluidas(busca.concluidas);
+  // `?abrir=tarefa-77`: a lista abre com o cartão por cima (o "Ver no quadro"
+  // do processo, 27/11/2026). Só o formato do endereço curto ou de um uuid.
+  const abrir = typeof busca.abrir === "string" && /^[A-Za-z0-9-]{1,64}$/.test(busca.abrir) ? busca.abrir : null;
   const ctx = await getAuthContext();
 
   const prisma = getPrisma();
@@ -109,10 +115,13 @@ export default async function KanbanBoardPage({
       stageId: i.stageId,
       entityName: nomeDe(i),
       priority: i.priority,
-      dueDate: i.dueDate ? i.dueDate.toISOString() : null,
+      // O cartão de processo mostra o prazo combinado do processo, lido na hora
+      // (27/11/2026): copiado, viraria um segundo alerta do mesmo trabalho.
+      dueDate: i.processo ? (i.processo.dueAt?.toISOString() ?? null) : i.dueDate ? i.dueDate.toISOString() : null,
       tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
       assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name, priority: a.priority })),
       recurring: i.recurring,
+      processo: i.processo ? { numero: i.processo.number, corDoTipo: i.processo.type.color } : null,
       daysInStage: daysSince(ultimaMudancaDeEtapa[i.id] ?? i.createdAt),
       lastActivity: ultimaAtividade[i.id] ?? null,
       description: i.description,
@@ -120,6 +129,7 @@ export default async function KanbanBoardPage({
       subtaskTotal: filhas.total,
       subtaskDone: filhas.concluidas,
       subtasks: i.filhas.map(subatividade),
+      coverColor: i.coverColor,
     };
   });
 
@@ -143,10 +153,15 @@ export default async function KanbanBoardPage({
       <PageHeader
         title={pipeline.name}
         subtitle={
-          <>
-            {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
-            {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
-          </>
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>
+              {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
+              {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
+            </span>
+            {/* A lista criada pelo sistema (27/11/2026, funcionalidade-844): os
+                processos viram cartão aqui sozinhos. */}
+            {pipeline.systemKey && <SeloAutomatico />}
+          </span>
         }
         action={
           canAddItem && (
@@ -171,6 +186,8 @@ export default async function KanbanBoardPage({
           )
         }
       />
+
+      <AbrirCartaoDoEndereco basePath={`/kanban/${id}`} segmento={abrir} />
 
       <div className="flex-1 min-h-0">
         <BoardView

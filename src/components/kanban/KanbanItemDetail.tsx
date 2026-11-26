@@ -15,11 +15,12 @@ import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import { AtalhosDoDetalhe, type AtalhoDoDetalhe } from "@/components/kanban/AtalhosDoDetalhe";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
 import { Button } from "@/components/ui/Button";
-import { ArrowRight, ChevronRight, Inbox } from "lucide-react";
+import { ArrowRight, Briefcase, ChevronRight, Inbox } from "lucide-react";
 import { SeloDaSolicitacao } from "@/components/solicitacoes/SelosDaSolicitacao";
 import { podeVerSolicitacao } from "@/lib/solicitacoes/acesso";
 import { emAberto } from "@/lib/solicitacoes/regras";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
+import { SeloAutomatico } from "@/components/kanban/SeloAutomatico";
 import { aceitaSubatividade, ancestrais, contarFilhas, descendentes, montarArvore } from "@/lib/kanban/subatividades";
 import {
   moverItem,
@@ -48,12 +49,16 @@ import {
   removerLinkItem,
   editarLancamentoTempo,
   excluirLancamentoTempo,
+  trocarCapaDoItem,
 } from "@/app/(app)/kanban/actions";
+import { SeletorDeCapa } from "@/components/kanban/SeletorDeCapa";
+import { EtiquetaDaCor } from "@/components/kanban/CapaDoCartao";
+import { corDaCapa, ehTrocaDeCapa } from "@/lib/kanban/capa";
 import { ListaDeHoras } from "@/components/shared/ListaDeHoras";
 import { campoDaData } from "@/lib/societario/datas";
 import { boardPath, trilhaDaLista } from "@/lib/kanbanPaths";
 import { getSectorMaps } from "@/lib/sectors";
-import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, canViewSector, podeExcluir } from "@/lib/auth/context";
 import { poderesNaLista } from "@/lib/kanban/permissaoDoEspacoServidor";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
@@ -123,12 +128,24 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
         watchers: { select: { userId: true } },
         // A solicitação do cliente que o cartão acompanha (09/11/2026).
         serviceRequest: { select: { id: true, number: true, status: true, sectorCode: true, assigneeId: true } },
+        // O processo societário que o cartão acompanha (27/11/2026, funcionalidade-844).
+        processo: { select: { id: true, number: true, dueAt: true } },
       },
     }),
   ]);
 
   if (!pipeline || !item) notFound();
   const itemId = item.id;
+
+  // O cartão do processo: o caminho até ele só para quem abre os Processos
+  // (módulo ligado e o setor dele); para os outros, o campo diz de onde vem.
+  const processo = item.processo;
+  const hrefDoProcesso =
+    processo &&
+    (await isModuleEnabled(tenantId, "societario_processos")) &&
+    canViewSector(ctx, (await setoresDoModulo(tenantId, "societario_processos")) ?? "societario")
+      ? enderecoDe("processo", { id: processo.id, number: processo.number })
+      : null;
 
   // O botão da solicitação só leva a ela quem pode abri-la: com o módulo
   // desligado ou a solicitação encaminhada a outro setor, a tela seria 404.
@@ -140,6 +157,9 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
   // administrador desde 13/10/2026 — era o gestor do setor (canManageSector).
   // O gestor segue corrigindo o apontamento de tempo de qualquer pessoa.
   const canDelete = podeExcluir(ctx);
+  // O cartão de processo sai com o processo, não pelo quadro (27/11/2026); os
+  // comentários, o checklist e as subatividades dele seguem a regra de sempre.
+  const podeExcluirCartao = canDelete && !processo;
   const canManage = canManageSector(ctx, pipeline.sectorCode);
   // Editar os campos e comentar, pela permissão do espaço (05/11/2026): no
   // nível "Comentário" o colaborador comenta sem editar.
@@ -278,6 +298,8 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
   const deleteLinkAction = removerLinkItem.bind(null, id, itemId);
   const editTimeEntryAction = editarLancamentoTempo.bind(null, id, itemId);
   const deleteTimeEntryAction = excluirLancamentoTempo.bind(null, id, itemId);
+  const capaAction = trocarCapaDoItem.bind(null, id, itemId);
+  const capa = corDaCapa(item.coverColor);
 
   const taskCandidates: TaskMentionCandidate[] = otherItems.map((o) => ({ id: o.id, name: nameFor(o), href: `${basePath}/itens/${segmentoDaTarefa(o)}` }));
 
@@ -300,7 +322,8 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
     .map((a) => ({
       id: a.id,
       type: a.type,
-      label: ACTIVITY_LABEL[a.type] ?? a.type,
+      // A troca de capa é gravada como TAG_CHANGE com a marca da capa (27/11/2026).
+      label: a.type === "TAG_CHANGE" && ehTrocaDeCapa(a.metadata) ? "Capa alterada" : (ACTIVITY_LABEL[a.type] ?? a.type),
       createdAtLabel: formatInstantDateTime(a.createdAt),
       userId: a.user.id,
       userName: a.user.name,
@@ -348,13 +371,13 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
           fechar (`top-4`, h-8, do `KanbanItemModal`). Ao lado do título, ele
           descia junto com a primeira linha do título grande e ficava torto em
           relação ao X (Ajustes de 27/10/2026). */}
-      {isModal && canDelete && (
+      {isModal && podeExcluirCartao && (
         <div className="absolute top-4 right-14 z-10 flex h-8 items-center">
           <DeleteTaskButton entityName={title} subatividades={abaixoDoItem.length} deleteAction={deleteAction} />
         </div>
       )}
 
-      <div className={isModal ? (canDelete ? "mb-3 pr-40" : "mb-3 pr-12") : "mb-3"}>
+      <div className={isModal ? (podeExcluirCartao ? "mb-3 pr-40" : "mb-3 pr-12") : "mb-3"}>
         {/* Os pais, de cima até o imediato (06/11/2026): com vários níveis, o
             "← Subtarefa de X" sozinho não dizia onde a subatividade mora. */}
         {pais.length > 0 && (
@@ -382,7 +405,7 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
           <h1 id="titulo-da-tarefa" className="text-display leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
             {title}
           </h1>
-          {!isModal && canDelete && <DeleteTaskButton entityName={title} subatividades={abaixoDoItem.length} deleteAction={deleteAction} />}
+          {!isModal && podeExcluirCartao && <DeleteTaskButton entityName={title} subatividades={abaixoDoItem.length} deleteAction={deleteAction} />}
         </div>
         {/* "Ver ficha completa" era link azul (30/09): botão não é link. O nome
             da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
@@ -390,6 +413,20 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
             primeiro, como no Controle interno (10/11/2026, pedido do Kauan). */}
         <div className="flex flex-wrap items-center gap-2 mt-1">
           <span className="text-fs-2 text-fg-muted tnum">{idCurto("tarefa", item.number)}</span>
+          {/* A capa do cartão no quadro, como no Trello (27/11/2026,
+              funcionalidade-845): quem edita troca; quem só vê, lê o nome. */}
+          {canAct ? (
+            <SeletorDeCapa
+              valor={item.coverColor}
+              onEscolher={capaAction}
+              rotulo="Capa"
+              textoSemCor="Sem capa"
+              aria-label="Capa do cartão no Kanban"
+              ajuda="A capa aparece no topo do cartão, no Kanban."
+            />
+          ) : (
+            capa && <EtiquetaDaCor cor={capa}>Capa: {capa.nome}</EtiquetaDaCor>
+          )}
           {entity && item.title && <span className="text-fs-3 text-fg-muted">{entity.name}</span>}
           {entity && (
             <Button
@@ -413,7 +450,21 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
               </span>
             ))}
           {solicitacao && <SeloDaSolicitacao status={solicitacao.status} lado="EQUIPE" />}
+          {/* O cartão que o processo abriu (27/11/2026, funcionalidade-844):
+              o selo de origem e o caminho até o processo. */}
+          {processo && <SeloAutomatico processo={processo.number} />}
+          {processo && hrefDoProcesso && (
+            <Button href={hrefDoProcesso} variant="secondary" size="xs">
+              <Briefcase size={11} aria-hidden /> Abrir processo
+            </Button>
+          )}
         </div>
+        {processo && (
+          <p className="mt-1.5 text-fs-2 text-fg-muted">
+            A coluna, o responsável, a prioridade e o prazo vêm do Processo nº {processo.number}: para mudar, registre no processo.
+            Comentário, etiqueta, anexo, checklist e capa ficam livres aqui.
+          </p>
+        )}
         {solicitacao && (
           <p className="mt-1.5 text-fs-2 text-fg-muted">
             {emAberto(solicitacao.status)
@@ -424,7 +475,8 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
       </div>
 
       <CompletionBanner
-        canAct={canAct}
+        // Reabrir o cartão de processo é retomar o processo (27/11/2026).
+        canAct={canAct && !processo}
         isCompleted={isCompleted}
         completedByLabel={
           isCompleted && lastCompletion
@@ -478,6 +530,7 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
             assigneeToggleAction={assigneeToggleAction}
             selectedWatcherIds={item.watchers.map((w) => w.userId)}
             watcherToggleAction={watcherToggleAction}
+            doProcesso={processo ? { href: hrefDoProcesso, prazo: processo.dueAt ? processo.dueAt.toISOString() : null } : null}
           />
 
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />

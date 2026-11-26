@@ -151,6 +151,8 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
             pipeline: { ...scopedPipelineWhere(ctx), active: true },
             stage: { isTerminal: false },
             candidatura: { is: null },
+            // O prazo do processo já entra aqui pelo próprio processo (27/11/2026, funcionalidade-844).
+            processId: null,
             dueDate: noPeriodo,
           },
           select: {

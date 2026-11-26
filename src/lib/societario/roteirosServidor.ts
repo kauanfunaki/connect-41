@@ -62,6 +62,8 @@ export type TipoNaListaDeRoteiros = {
   id: string;
   nome: string;
   ativo: boolean;
+  /** A cor do tipo no quadro — chave da paleta da capa (27/11/2026, funcionalidade-845); nula = sem cor. */
+  cor: string | null;
   /** A versão em vigor; nulo quando o tipo ainda não tem roteiro publicado. */
   versao: { numero: number; etapas: number; publicadaEm: Date; autor: string | null } | null;
   emAndamento: number;
@@ -75,6 +77,7 @@ export async function listarRoteiros(tenantId: string): Promise<TipoNaListaDeRot
     select: {
       id: true,
       name: true,
+      color: true,
       active: true,
       templates: {
         where: { published: true },
@@ -95,6 +98,7 @@ export async function listarRoteiros(tenantId: string): Promise<TipoNaListaDeRot
       id: t.id,
       nome: t.name,
       ativo: t.active,
+      cor: t.color,
       versao: v ? { numero: v.version, etapas: v._count.steps, publicadaEm: v.createdAt, autor: autores.get(v.id) ?? null } : null,
       emAndamento: t._count.processes,
     };

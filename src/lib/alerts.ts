@@ -1173,6 +1173,15 @@ export function startAlertScheduler(): void {
         if (r.criadas > 0 || r.removidas > 0 || r.reprogramadas > 0) console.log("[obrigacoes] carteira ajustada", r);
       })
       .catch((err) => console.error("[obrigacoes] falha na geração por regime", err));
+    // Os processos societários nos Quadros (27/11/2026, funcionalidade-844): a
+    // carga inicial dos cartões, em lotes, e o ajuste do que um gancho perdeu.
+    // Idempotente: um cartão por processo, e só se grava o que difere.
+    import("@/lib/kanban/cartaoDoProcessoServidor")
+      .then(({ reconciliarCartoesDosProcessos }) => reconciliarCartoesDosProcessos())
+      .then((r) => {
+        if (r.verificados > 0) console.log("[processos-no-quadro] cartões conferidos", r);
+      })
+      .catch((err) => console.error("[processos-no-quadro] falha na reconciliação", err));
     // Os envios ao cliente (22/10/2026): o agendado sai na hora marcada, e o
     // lembrete de não lido sai quando o prazo vence — cada um travado antes do
     // e-mail, então duas passadas juntas não mandam em dobro. Sem nada

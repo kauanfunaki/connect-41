@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Folder as FolderIcon } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
+import { SeloAutomatico } from "@/components/kanban/SeloAutomatico";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { confirmacaoDaExclusaoDaTarefa } from "@/lib/kanban/exclusaoDeTarefa";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
@@ -19,6 +20,8 @@ export type ListRow = {
   endDate: Date | null;
   /** A pasta da lista, na tabela do espaço; `null` é a lista solta. */
   pasta?: { id: string; nome: string } | null;
+  /** Criada pelo sistema (27/11/2026, funcionalidade-844): o selo, e sem "Excluir". */
+  automatica?: boolean;
 };
 
 type Props = {
@@ -115,6 +118,7 @@ export function ListsTable({ lists, basePath, deleteAction, pastaBasePath }: Pro
                         {l.name}
                       </span>
                     </Link>
+                    {l.automatica && <SeloAutomatico className="ml-2 align-middle" />}
                   </td>
                   {comPasta && (
                     <td className="px-4 py-2.5 hidden sm:table-cell">
@@ -155,12 +159,13 @@ export function ListsTable({ lists, basePath, deleteAction, pastaBasePath }: Pro
                   </td>
                   {deleteAction && (
                     <td className="px-4 py-2.5">
-                      <DeleteEntityMenu
+                      {/* A lista automática não se exclui: desliga-se a abertura automática. */}
+                      {!l.automatica && <DeleteEntityMenu
                         kind="tarefa"
                         name={l.name}
                         action={deleteAction.bind(null, l.id)}
                         emMassa={confirmacaoDaExclusaoDaTarefa(l.name, { atividades: l.total, subatividades: l.subatividades })}
-                      />
+                      />}
                     </td>
                   )}
                 </LinhaFiltravel>

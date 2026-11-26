@@ -12,6 +12,7 @@ import {
   ArrowRightLeft,
   CalendarDays,
   FolderOpen,
+  Headset,
   Inbox,
   Settings,
   ReceiptText,
@@ -44,7 +45,7 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { slugDoGrupo, ICONE_DO_GRUPO, MODULO_NO_LUGAR_DOS_QUADROS, TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
 import { caminhoDoMenuAtivo, quadrosAtivo } from "@/lib/caminhoDoMenu";
-import { montarMenuDoSetor, ordemTemPosicao, pelaOrdem, telasDoBloco, telasVisiveis, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
+import { GRUPO_DO_CLIENTE, NOME_DO_GRUPO_DO_CLIENTE, montarMenuDoSetor, ordemTemPosicao, pelaOrdem, telasDoBloco, telasVisiveis, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
 import { AvisoDaOrganizacao, GeralEmOrganizacao, MenuEmOrganizacao, RodapeDaOrganizacao, useOrganizarMenu, type ItemDentro } from "@/components/shell/OrganizarMenuNaLateral";
 import { ItemComJanela } from "@/components/shell/ItemComJanela";
 import { CAMINHO_DOS_FORNECEDORES } from "@/lib/cadastrosNav";
@@ -325,8 +326,8 @@ export function AppShell({
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
   const noGeral = (tela: TelaDoGeral) => telasDoGeral.includes(tela);
-  /** Uma tela de um grupo do Geral (Apoio, Cadastros). */
-  type ItemDoGrupo = { chave: string; label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean };
+  /** Uma tela de um grupo do Geral (Apoio, Cadastros, Atendimento). `contador`: o que espera a pessoa nela. */
+  type ItemDoGrupo = { chave: string; label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean; contador?: number };
   // Cadastros é um grupo do Geral como o Apoio (10/11/2026, pedido do Kauan):
   // cada tela é um item da janela ao lado, aberta no clique e no toque, e não
   // mais uma aba no alto da página — antes só o mouse parado mostrava que
@@ -357,7 +358,30 @@ export function AppShell({
     ];
     return telas;
   };
-  /** As telas de um grupo do Geral (Apoio, Cadastros) na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
+  // O grupo Atendimento do Geral (26/11/2026, melhoria-871, pedido do Kauan):
+  // Solicitações, Atendimento e Arquivos, as três da área de cor "Clientes e
+  // atendimento", que eram itens soltos. Cada uma continua dependendo do
+  // módulo ligado e da visibilidade do setor (Configurações › Setores); a
+  // regra dos grupos vale igual — nenhuma, o grupo some; uma, ela fica solta.
+  // O nome não é "Clientes" para não se confundir com o grupo "Cliente" do
+  // menu do BPO; era "Atendimento ao cliente" e virou só "Atendimento" no mesmo
+  // dia, a pedido do Kauan — o mesmo nome da tela de dentro. Os números ficam em cada tela, dentro da janela,
+  // e a soma no grupo: as conversas novas do Atendimento não somem.
+  const clientesBruto = (): ItemDoGrupo[] => {
+    const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
+    const atendimento = areaDoModulo("atendimento") ?? "marca";
+    const arquivos = areaDoModulo("arquivos") ?? "marca";
+    return [
+      ...(solicitacoesLigadas && noGeral("solicitacoes")
+        ? [{ chave: "solicitacoes", label: "Solicitações", href: "/solicitacoes", icon: <Inbox size={16} />, area: solicitacoes, ativo: ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(pathname, h)), contador: novasSolicitacoes }]
+        : []),
+      ...(atendimentoLigado && noGeral("atendimento")
+        ? [{ chave: "atendimento", label: "Atendimento", href: "/atendimento", icon: <ModuleIcon code="atendimento" />, area: atendimento, contador: novosAtendimentos }]
+        : []),
+      ...(arquivosLigados && noGeral("arquivos") ? [{ chave: "arquivos", label: "Arquivos", href: "/arquivos", icon: <FolderOpen size={16} />, area: arquivos }] : []),
+    ];
+  };
+  /** As telas de um grupo do Geral (Apoio, Cadastros, Atendimento) na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
   // `comAOrdemEscolhida`: a ordem e o olho do organizador (09/11/2026) valem;
   // `comOcultas`: as escondidas ficam na lista (o organizador mostra todas).
   const escolhaDoSetor = (comAOrdemEscolhida: boolean) => (comAOrdemEscolhida && activeSector ? ordemDoMenu : undefined);
@@ -369,14 +393,19 @@ export function AppShell({
   const telasDoApoio = (comAOrdemEscolhida = true, comOcultas = false) =>
     telasDoGrupo("apoio", apoioBruto(), comAOrdemEscolhida, comOcultas);
   const telasDeCadastros = (comAOrdemEscolhida = true, comOcultas = false) => telasDoGrupo("cadastros", cadastrosBruto(), comAOrdemEscolhida, comOcultas);
-  /** O grupo no menu: nenhuma tela, nada; uma, ela solta; mais de uma, a janela ao lado. */
+  const telasDoCliente = (comAOrdemEscolhida = true, comOcultas = false) => telasDoGrupo(GRUPO_DO_CLIENTE, clientesBruto(), comAOrdemEscolhida, comOcultas);
+  /**
+   * O grupo no menu: nenhuma tela, nada; uma, ela solta; mais de uma, a janela
+   * ao lado. O número de cada tela vai com ela — na linha, solta, ou na janela,
+   * com a soma no grupo (`ItemComJanela`).
+   */
   const blocoDoGrupo = (telas: ItemDoGrupo[], grupo: { label: string; icon: React.ReactNode; area: string }) => {
     if (telas.length === 0) return null;
     const acesa = (i: ItemDoGrupo) => i.ativo ?? caminhoDoMenuAtivo(pathname, i.href);
-    const item = (i: ItemDoGrupo) => <NavItem key={i.chave} href={i.href} ativo={i.ativo} icon={i.icon} label={i.label} area={i.area} />;
+    const item = (i: ItemDoGrupo) => <NavItem key={i.chave} href={i.href} ativo={i.ativo} icon={i.icon} label={i.label} contador={i.contador} area={i.area} />;
     if (telas.length === 1) return item(telas[0]!);
     // Mais de uma: a janela ao lado, como os grupos do setor (05/11/2026, opção C).
-    return <ItemComJanela label={grupo.label} icon={grupo.icon} area={grupo.area} telas={telas.map((i) => ({ label: i.label, href: i.href, icon: i.icon, ativa: acesa(i) }))} />;
+    return <ItemComJanela label={grupo.label} icon={grupo.icon} area={grupo.area} telas={telas.map((i) => ({ label: i.label, href: i.href, icon: i.icon, ativa: acesa(i), contador: i.contador }))} />;
   };
   const blocoDoApoio = () => blocoDoGrupo(telasDoApoio(), { label: "Apoio", icon: <BookOpen size={16} />, area: "escritorio" });
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
@@ -393,12 +422,16 @@ export function AppShell({
   // Na ordem escolhida no organizador, o Apoio fica onde o setor o pôs; o
   // Quadro de tarefas, quando a ordem gravada não o conhece, entra logo depois
   // de Cadastros (`comQuadroForaDoApoio`, em menuDoSetor.ts).
+  //
+  // 26/11/2026 (melhoria-871): Solicitações, Atendimento e Arquivos viraram o
+  // grupo Atendimento, no mesmo lugar — depois dos azuis, antes do
+  // Apoio. A ordem gravada com as três soltas é convertida na leitura
+  // (`comAtendimentoAoClienteEmGrupo`): o grupo fica onde estava a primeira.
   const listaDoGeral = (quadros: ItemDoGrupo | null = null, comAOrdemEscolhida = true, comOcultas = false) => {
-    const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
-    const atendimento = areaDoModulo("atendimento") ?? "marca";
-    const arquivos = areaDoModulo("arquivos") ?? "marca";
-    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", apoioLigado.calculos && "Cálculos"].filter(Boolean) as string[];
+    const clientes = clientesBruto();
+    const areaDoCliente = areaDoModulo("atendimento") ?? "marca";
+    const apoio =[apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", apoioLigado.calculos && "Cálculos"].filter(Boolean) as string[];
     const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; existe?: boolean; no: React.ReactNode }[] = [
       {
         chave: "cadastros",
@@ -414,10 +447,18 @@ export function AppShell({
         ? [{ chave: "quadros", area: quadros.area, label: quadros.label, icon: quadros.icon, no: <NavItem href={quadros.href} ativo={quadros.ativo} icon={quadros.icon} label={quadros.label} area={quadros.area} /> }]
         : []),
       { chave: "transferencias", area: "marca", label: "Transferências", icon: <ArrowRightLeft size={16} />, no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
-      { chave: "solicitacoes", area: solicitacoes, label: "Solicitações", icon: <Inbox size={16} />, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" ativo={(p) => ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(p, h))} icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
-      { chave: "atendimento", area: atendimento, label: "Atendimento", icon: <ModuleIcon code="atendimento" />, no: atendimentoLigado && noGeral("atendimento") && <NavItem href="/atendimento" icon={<ModuleIcon code="atendimento" />} label="Atendimento" contador={novosAtendimentos} area={atendimento} /> },
+      {
+        chave: GRUPO_DO_CLIENTE,
+        area: areaDoCliente,
+        // No organizador, com uma tela só, o nome dela — como no menu (e como o Apoio).
+        label: clientes.length === 1 ? clientes[0]!.label : NOME_DO_GRUPO_DO_CLIENTE,
+        icon: clientes.length === 1 ? clientes[0]!.icon : <Headset size={16} />,
+        filhos: telasDoCliente(comAOrdemEscolhida, comOcultas).map((t) => ({ chave: t.chave, label: t.label, icon: t.icon })),
+        // Como o Apoio: com todas as telas escondidas pelo olho, ainda aparece no organizador.
+        existe: clientes.length > 0,
+        no: blocoDoGrupo(telasDoCliente(), { label: NOME_DO_GRUPO_DO_CLIENTE, icon: <Headset size={16} />, area: areaDoCliente }),
+      },
       { chave: "chamados", area: chamados, label: "Chamados", icon: <ModuleIcon code="helpdesk" />, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" contador={novosChamados} area={chamados} /> },
-      { chave: "arquivos", area: arquivos, label: "Arquivos", icon: <FolderOpen size={16} />, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
       { chave: "agenda", area: "marca", label: "Agenda", icon: <CalendarDays size={16} />, no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
       {
         chave: "apoio",
@@ -591,7 +632,7 @@ export function AppShell({
           {/* Nav */}
           {/* `scroll-gutter-stable`: quando a lista passa da altura da tela, a barra
               de rolagem aparece, o content box encolhe 9px e tudo que é alinhado à
-              direita (a contagem de cada grupo) salta de lugar. O comentário do
+              direita (o "›" e os números de cada item) salta de lugar. O comentário do
               globals.css evita o gutter em container estreito; aqui a troca vale:
               9px de faixa parada custam menos que o menu inteiro se mexendo. */}
           {/* Na faixa, sem barra de rolagem à vista (a roda do mouse e o Tab
@@ -728,8 +769,9 @@ export function AppShell({
                   type Mae = { label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean; exact?: boolean; contador?: number; semLink?: boolean };
                   // A janela de uma tela com filhas: a própria tela no alto, depois as filhas.
                   // Sem a mãe quando ela é só o título (o Orquestrador, 05/11/2026).
+                  // O número da mãe (os Chamados) vai com ela na janela; o grupo mostra a soma (26/11/2026, melhoria-871).
                   const telasDaMae = (mae: Mae, filhas: Filha[]): TelaDoPainel[] => [
-                    ...(mae.semLink ? [] : [{ label: mae.label, href: mae.href, icon: mae.icon, ativa: mae.ativo }]),
+                    ...(mae.semLink ? [] : [{ label: mae.label, href: mae.href, icon: mae.icon, ativa: mae.ativo, contador: mae.contador }]),
                     ...filhas.map((f) => ({ label: f.label, href: f.href, icon: f.icon, ativa: f.ativa })),
                   ];
                   const itemComFilhas = (chave: string, mae: Mae, filhas: Filha[]) =>

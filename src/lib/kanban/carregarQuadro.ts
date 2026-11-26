@@ -25,6 +25,9 @@ const INCLUDE_DO_ITEM = {
   stage: { select: { name: true, isTerminal: true } },
   tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
   assignees: { include: { user: { select: { id: true, name: true } } } },
+  // O processo do cartão automático (27/11/2026, funcionalidade-844): o número
+  // do selo, o prazo combinado (lido, não copiado) e a cor do tipo para a capa.
+  processo: { select: { number: true, dueAt: true, type: { select: { color: true } } } },
 } satisfies Prisma.PipelineItemInclude;
 
 export type ItemDoQuadro = Prisma.PipelineItemGetPayload<{ include: typeof INCLUDE_DO_ITEM }>;

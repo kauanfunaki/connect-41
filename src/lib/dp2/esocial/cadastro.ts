@@ -25,6 +25,12 @@ export type DadosEsocialDoVinculo = {
   tipoJornada: string | null;
   /** A jornada por extenso ("Segunda a sexta, 08:00 às 17:48, 1h de intervalo"). */
   descricaoJornada: string | null;
+  /**
+   * Descrição da remuneração variável (comissão, prêmio, produtividade…), como
+   * na Domínio (Arquivo › Descrição da Remuneração Variável); vai no dscSalVar
+   * do S-2200 e do S-2206 (funcionalidade-760).
+   */
+  remuneracaoVariavel: string | null;
   // Estágio (categoria 901, fase 3d): o que vai no S-2300.
   /** "O" obrigatório, "N" não obrigatório. */
   estagioNatureza: string | null;
@@ -51,6 +57,7 @@ export const DADOS_VAZIOS: DadosEsocialDoVinculo = {
   dataTermino: null,
   tipoJornada: null,
   descricaoJornada: null,
+  remuneracaoVariavel: null,
   estagioNatureza: null,
   estagioNivel: null,
   estagioArea: null,
@@ -145,6 +152,7 @@ export function lerDadosEsocial(bruto: unknown): DadosEsocialDoVinculo {
     dataTermino: typeof o.dataTermino === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.dataTermino) ? o.dataTermino : null,
     tipoJornada: de(TIPOS_DE_JORNADA, o.tipoJornada),
     descricaoJornada: texto(o.descricaoJornada, 999),
+    remuneracaoVariavel: texto(o.remuneracaoVariavel, 999),
     estagioNatureza: de(NATUREZAS_DE_ESTAGIO, o.estagioNatureza),
     estagioNivel: de(NIVEIS_DE_ESTAGIO, o.estagioNivel),
     estagioArea: texto(o.estagioArea, 100),

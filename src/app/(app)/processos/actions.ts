@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { sincronizarProcesso } from "@/lib/societario/conclusaoServidor";
+import { sincronizarCartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
 import {
   proximaTentativa,
   itensObrigatoriosPendentes,
@@ -195,7 +196,7 @@ export async function concluirEtapa(stepId: string): Promise<ProcessoState> {
       executedByUserId: ctx.userId ?? null,
     },
   });
-  await sincronizarProcesso(etapa.processId);
+  await sincronizarProcesso(etapa.processId, ctx.userId);
 
   revalidatePath(`/processos/${etapa.processId}`);
   revalidatePath("/processos");
@@ -214,7 +215,7 @@ export async function dispensarEtapa(stepId: string): Promise<ProcessoState> {
     where: { id: stepId },
     data: { status: "DISPENSADA", doneAt: new Date(), actor: "PESSOA", executedByUserId: ctx.userId ?? null },
   });
-  await sincronizarProcesso(etapa.processId);
+  await sincronizarProcesso(etapa.processId, ctx.userId);
 
   revalidatePath(`/processos/${etapa.processId}`);
   revalidatePath("/processos");
@@ -270,6 +271,8 @@ export async function protocolar(stepId: string, numero: string): Promise<Proces
     entityId: etapa.processId,
     metadata: { etapa: etapa.templateStep.label, tentativa: attempt },
   });
+  // Protocolado, o processo passa a aguardar o órgão: o cartão anda junto (27/11/2026).
+  await sincronizarCartaoDoProcesso(etapa.processId, { userId: ctx.userId });
 
   revalidatePath(`/processos/${etapa.processId}`);
   revalidatePath("/processos");
@@ -305,7 +308,7 @@ export async function deferirProtocolo(protocolId: string): Promise<ProcessoStat
       });
     }
   });
-  await sincronizarProcesso(protocolo.processId);
+  await sincronizarProcesso(protocolo.processId, ctx.userId);
 
   revalidatePath(`/processos/${protocolo.processId}`);
   revalidatePath("/processos");
@@ -357,7 +360,7 @@ export async function registrarExigencia(
       });
     }
   });
-  await sincronizarProcesso(protocolo.processId);
+  await sincronizarProcesso(protocolo.processId, ctx.userId);
 
   await logAudit({
     tenantId: ctx.tenantId,
@@ -442,7 +445,9 @@ export async function mudarSituacaoDoProcesso(
   // Retomar solta o que a pausa segurou (09/11/2026): o robô não manda o envio
   // ao cliente com o processo pausado, e sem isto ele só sairia na próxima
   // mudança de etapa.
-  if (acao === "retomar") await sincronizarProcesso(processo.id);
+  if (acao === "retomar") await sincronizarProcesso(processo.id, ctx.userId);
+  // Nas outras, só o cartão do processo nos Quadros anda (27/11/2026, funcionalidade-844).
+  else await sincronizarCartaoDoProcesso(processo.id, { userId: ctx.userId });
 
   revalidatePath(`/processos/${processo.id}`);
   revalidatePath("/processos");
@@ -475,7 +480,7 @@ export async function alternarItemDoChecklist(
   // O checklist da etapa de envio segura o robô (09/11/2026): marcar o último
   // item obrigatório, com o resto do processo encerrado, é o que solta o envio.
   if (feito) {
-    await sincronizarProcesso(item.step.processId);
+    await sincronizarProcesso(item.step.processId, ctx.userId);
     revalidatePath("/processos");
   }
 
@@ -615,6 +620,8 @@ export async function submeterPorRobo(stepId: string): Promise<ProcessoState> {
       orgao: sigla,
     },
   });
+  // O protocolo do robô põe o processo aguardando o órgão: o cartão anda junto (27/11/2026).
+  await sincronizarCartaoDoProcesso(etapa.processId, { userId: ctx.userId });
 
   revalidatePath(`/processos/${etapa.processId}`);
   revalidatePath("/processos");
@@ -811,6 +818,8 @@ export async function atualizarDadosDoProcesso(_prev: ProcessoState, form: FormD
     entityId: processo.id,
     metadata: { campos: mudou, prioridade: dados.prioridade },
   });
+  // Responsável e prioridade são do processo; o cartão nos Quadros espelha (27/11/2026).
+  await sincronizarCartaoDoProcesso(processo.id, { userId: ctx.userId });
 
   revalidatePath(`/processos/${processo.id}`);
   revalidatePath("/processos");

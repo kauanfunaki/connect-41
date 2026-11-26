@@ -526,6 +526,51 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
+  // Contábil Core, Bloco D, Fase D3a (26/11/2026): o Razão de fornecedores do ConcilPro, que o original
+  // mandava à OpenAI (`concilpro/ai_classifier.py`). Cada bloco "Conta:" é lido primeiro pelas colunas, sem
+  // IA; o texto do bloco vai ao agente de texto só quando a soma não fecha com o "Total da conta" impresso, e
+  // as páginas do bloco vão ao de imagem (até 3 por chamada) só quando o texto também não deu. Os lançamentos
+  // de tipo incerto vão juntos, numa chamada, ao de classificação. Vale a mesma chave do escritório para
+  // documento financeiro ir à IA.
+  {
+    code: "leitor_de_razao_texto",
+    label: "Leitura do Razão de fornecedores (texto do PDF)",
+    sectorCode: "contabil",
+    description:
+      "Lê o texto de um bloco de fornecedor do Razão em PDF quando a leitura pelas colunas não fecha com o total da conta e devolve saldo anterior, totais e lançamentos (data, lote, histórico, contrapartida, débito, crédito e saldo)",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 5_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
+    code: "leitor_de_razao_imagem",
+    label: "Leitura do Razão de fornecedores (imagem)",
+    sectorCode: "contabil",
+    description:
+      "Lê as páginas de um bloco de fornecedor do Razão (até 3 por chamada) quando o texto não bastou e devolve os lançamentos e uma conciliação de compras e pagamentos, para conferência",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 20_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
+    code: "classificador_de_razao",
+    label: "Classificação de lançamentos do Razão de fornecedores",
+    sectorCode: "contabil",
+    description:
+      "Classifica os lançamentos de tipo incerto do Razão de fornecedores (compra, pagamento, devolução, débito ou crédito) e extrai o número da nota do histórico",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 2_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
   {
     code: "resumo_agente",
     label: "Resumo de avaliações do atendente",

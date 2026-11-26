@@ -296,7 +296,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Centro de custo: no contrato (DP 2 › Colaboradores), escolha o centro de custo do BPO da empresa e, se quiser, o departamento. O passo “Conferir” mostra a folha por centro (proventos, líquido, FGTS, encargos e provisões) e o CSV dos lançamentos contábeis ganha a coluna “Centro de custo”.",
           "Vale-transporte: no contrato, marque “Vale-transporte” e informe o custo diário (as tarifas de ida e volta somadas). A folha desconta 6% do salário, limitado ao custo do benefício nos dias úteis trabalhados, e o passo “Conferir” mostra o pedido do mês de cada pessoa, o desconto e o custo da empresa.",
           "Afastamentos entram no cálculo pelo S-2230 gerado em DP 2 › eSocial: na doença ou no acidente, os 15 primeiros dias são pagos pela empresa e os dias seguintes (pagos pelo INSS) saem do salário do mês. Na licença-maternidade o salário continua e o holerite avisa para deduzir o salário-maternidade na DCTFWeb. Informe o fim do afastamento num novo S-2230 com o mesmo início quando a pessoa voltar.",
-          "Reajuste e histórico salarial: ao mudar o salário no contrato, informe desde quando vale e o motivo; a mudança vai para o histórico. Para a convenção, use “Reajuste coletivo” em DP 2 › Colaboradores: o percentual e, se houver, o piso valem para todos os empregados ativos a partir da data. Depois, gere o S-2206 de cada um em DP 2 › eSocial.",
+          "Reajuste e histórico salarial: ao mudar o salário no contrato, informe desde quando vale e o motivo; a mudança vai para o histórico. A folha de cada mês usa o salário que vale naquele mês pelo histórico: um reajuste com data futura não muda os meses de antes. Para a convenção, use “Reajuste coletivo” em DP 2 › Colaboradores: o percentual e, se houver, o piso valem para todos os empregados ativos a partir da data, e o S-2206 de cada um sai junto (opção marcada).",
+          "Diferenças retroativas: quando a convenção, o acordo ou o dissídio sai depois da data-base, abra a competência em que vai pagar e, na etapa de lançar eventos, use “Diferenças retroativas”. Escolha o que mudou (salário por percentual ou piso, uma rubrica paga a menor ou o salário-família que faltou), o instrumento, a data de assinatura, a descrição e o período. O Connect refaz os meses fechados do período: a diferença do salário reflete nas horas extras, no adicional noturno, no DSR, na periculosidade e nas férias. O total sai na folha com FGTS e IRRF do mês, o INSS é apurado mês a mês pela tabela de cada mês, e no eSocial as diferenças vão no S-1200 deste mês, grupo infoPerAnt, com o mês de referência de cada uma. Faça isso antes de aplicar o reajuste com a data retroativa (o reajuste pode vir em seguida, no Reajuste coletivo).",
+          "Níveis salariais: em DP 2 › Configuração da empresa, cadastre os níveis com as faixas (classe, referência, meses de casa e valor). No contrato, escolha o nível; em DP 2 › Colaboradores, “Aplicar níveis salariais” leva o salário de cada um para a faixa do tempo de casa na data, grava no histórico e gera o S-2206. A remuneração variável (comissão, prêmio) se descreve no contrato e vai no S-2200/S-2206.",
           "Contribuição sindical: só desconta de quem autorizou por escrito (marque “Autorizou a contribuição sindical” no contrato). Sai uma vez por ano, no mês definido na convenção (março, sem convenção): um dia de trabalho ou o percentual que a convenção fixar.",
           "Empregado doméstico: use a categoria 104 no contrato. O cálculo usa os encargos da LC 150/2015 (INSS patronal 8%, GILRAT 0,8%, FGTS 8% e indenização compensatória 3,2%), e o passo “Conferir” mostra o total do DAE do Simples Doméstico para conferir com a guia emitida no eSocial Doméstico.",
           "Previdência complementar: informe no contrato a contribuição mensal do empregado (PGBL ou fundo de pensão). Ela sai como desconto (rubrica 065) e entra nas deduções legais do IRRF; quando elas passam do desconto simplificado, o IRRF fica menor.",
@@ -740,6 +742,25 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Clique em “Publicar versão”. A versão nova vale para os processos abertos daqui em diante; os que estão em andamento continuam na versão em que começaram.",
         ],
       },
+      {
+        titulo: "Escolher a cor de cada tipo de processo",
+        passos: [
+          "No botão “⋯” do alto de “Processos”, escolha “Roteiros dos processos”.",
+          "Na coluna “Cor no quadro”, clique em “Cor” na linha do tipo e escolha uma das cores. “Sem cor” tira a cor do tipo.",
+          "A cor aparece na faixa do cartão em “Ver no kanban”, na etiqueta do tipo na fila e no alto do processo, sempre com o nome do tipo escrito.",
+          "Sugestão, para seguir as cores que o setor já usava no Trello: roxo para Constituição, vermelho para Baixa, verde-limão para Alteração e Filial, amarelo para Alvará e Licenças, e rosa para os outros (regularização e avulsas).",
+        ],
+      },
+      {
+        titulo: "Ver o processo no Quadro de tarefas",
+        passos: [
+          "Todo processo vira um cartão no Quadro de tarefas do setor, sozinho, assim que é aberto. O padrão é o espaço “Processos”, na lista “Processos societários”; a coordenação do setor pode escolher outra lista em “Abertura automática”.",
+          "Para abrir o cartão, clique em “Ver no quadro”, no alto do processo, ou em “Quadro”, na linha do processo na fila. A lista abre com o cartão por cima.",
+          "No cartão, o selo “Automático · Processo nº” diz de onde ele veio, e “Abrir processo” volta para cá.",
+          "A coluna, o responsável, a prioridade e o prazo do cartão vêm do processo e andam sozinhos: registre no processo, e o cartão acompanha.",
+          "Comentário, etiqueta, anexo, checklist e capa ficam livres no cartão, para a equipe se organizar no quadro.",
+        ],
+      },
     ],
     dicas: [
       "Uma etapa com item obrigatório do checklist em aberto não pode ser concluída.",
@@ -748,7 +769,8 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       "Em “Taxas”, lance a guia da Junta, o DAM ou a taxa do Bombeiros quando sair. Ligada da 2ª apresentação em diante, a taxa conta como custo das voltas do processo.",
       "As horas lançadas em “Horas trabalhadas” entram nas horas de operação da Gestão.",
       "Em “Pergunte à Ceci”, no fim de “Processos”, pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para destravar — ou peça para abrir um processo. A Ceci lê os mesmos processos que você vê e não altera nada: toda mudança passa pelo seu clique na sugestão.",
-      "“Ver no kanban” mostra a mesma fila em colunas por situação. A coluna é a situação que os protocolos dizem: o cartão muda de coluna quando o desfecho é registrado no processo, e não arrastando.",
+      "“Ver no kanban” mostra a mesma fila em colunas por situação. A coluna é a situação que os protocolos dizem: o cartão muda de coluna quando o desfecho é registrado no processo, e não arrastando. O “Ver no quadro” de lá leva à lista dos processos no Quadro de tarefas.",
+      "O cartão do processo no quadro não conta na Gestão, no Meu dia nem nos alertas: o processo já conta, e o mesmo trabalho não entra duas vezes.",
     ],
   },
 

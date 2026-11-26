@@ -111,7 +111,7 @@ type NavItemProps = {
    * 11/11/2026): "Pendências, 3 esperando você".
    */
   contadorDiz?: string;
-  /** O item abre a janela ao lado (`PainelDoItem`); `telas`: quantas há nela. */
+  /** O item abre a janela ao lado (`PainelDoItem`); `telas`: quantas há nela (só em `data-telas`, sem aparecer). */
   menu?: { aberto: boolean; onClick: () => void; painelId: string; telas?: number };
   /**
    * A área de uso do item no Connect da equipe (28/10/2026) — ver
@@ -170,12 +170,15 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
 
   if (menu) {
     const focarMenu = () => requestAnimationFrame(() => document.getElementById(menu.painelId)?.querySelector<HTMLElement>("[role='menuitem']")?.focus());
-    // A contagem de telas (05/11/2026, opção C): em cinza antes do "›"; na faixa, no nome.
-    const contagem = menu.telas ? `${menu.telas} ${menu.telas === 1 ? "tela" : "telas"}` : null;
+    // Sem a contagem de telas (26/11/2026, pedido do Kauan): o cinza antes do
+    // "›" e o "3 telas" do leitor de tela saíram de todos os grupos. Fica só o
+    // número do que espera a pessoa (`contador`). `data-telas` não aparece: é
+    // o que os testes do menu conferem sem abrir a janela.
     return (
       <button
         type="button"
-        aria-label={naFaixa ? (contagem ? `${label}, ${contagem}` : label) : undefined}
+        aria-label={naFaixa ? [label, contador > 0 ? `${contador} ${contador === 1 ? "nova" : "novas"}` : null].filter(Boolean).join(", ") : undefined}
+        data-telas={menu.telas}
         aria-haspopup="menu"
         aria-expanded={menu.aberto}
         aria-controls={menu.painelId}
@@ -186,7 +189,11 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
         className={naFaixa ? classeDoItemNaFaixa(active, area) : area !== undefined ? classeDoItemComArea(active, "w-[calc(100%+0.75rem)] text-label font-medium") : classeDoItem(active, "w-[calc(100%+0.75rem)] text-label font-medium")}
       >
         {naFaixa ? (
-          <IconeNaFaixa icon={icon} active={active} comTelas />
+          <>
+            <IconeNaFaixa icon={icon} active={active} comTelas />
+            {/* Na faixa, o ponto vermelho do item solto (26/11/2026, melhoria-871): o grupo também avisa. */}
+            {contador > 0 && <span aria-hidden className="absolute top-[5px] right-[5px] size-2 rounded-full bg-danger-solid ring-2 ring-surface" />}
+          </>
         ) : (
           <>
             {active && <BarraAtiva />}
@@ -199,8 +206,6 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
                   <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
                 </>
               )}
-              {/* Sem alfa (07/10/2026): o cinza a 70% dava 3,0:1 e os números quase sumiam. */}
-              {contagem && <span className="text-micro tabular-nums font-normal text-fg-muted"><span aria-hidden>{menu.telas}</span><span className="sr-only">, {contagem}</span></span>}
               <span aria-hidden>›</span>
             </span>
           </>

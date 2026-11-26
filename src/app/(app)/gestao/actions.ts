@@ -12,6 +12,7 @@ import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
 import { comTitulos, itensDaGestao } from "@/lib/gestao/itens";
 import { ordemDeAtencao, podeVerSetor, type Classificacao, type Origem } from "@/lib/gestao/regras";
 import { setorDoModulo } from "@/lib/modules";
+import { sincronizarCartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
 
 export type AcaoDaGestao = { error: string } | { ok: true };
 
@@ -38,8 +39,10 @@ export async function reatribuirItem(origem: "PROCESSO" | "CARD", id: string, us
     if (!p) return { error: "Processo não encontrado." };
     setor = (await setorDoModulo(ctx.tenantId, "societario_processos")) ?? "societario";
   } else {
-    const c = await prisma.pipelineItem.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { pipeline: { select: { sectorCode: true } } } });
+    const c = await prisma.pipelineItem.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { processId: true, pipeline: { select: { sectorCode: true } } } });
     if (!c) return { error: "Card não encontrado." };
+    // O cartão do processo societário espelha o responsável do processo (27/11/2026).
+    if (c.processId) return { error: "Este card acompanha um processo societário: troque o responsável no processo." };
     setor = c.pipeline.sectorCode;
   }
   if (!podeVerSetor(recorte, setor) || !(isFullWrite(ctx.role) || canManageSector(ctx, setor))) {
@@ -54,6 +57,7 @@ export async function reatribuirItem(origem: "PROCESSO" | "CARD", id: string, us
 
   if (origem === "PROCESSO") {
     await prisma.process.update({ where: { id }, data: { ownerUserId: pessoa.id } });
+    await sincronizarCartaoDoProcesso(id, { userId: ctx.userId });
   } else {
     await prisma.$transaction([
       prisma.pipelineItemAssignee.deleteMany({ where: { pipelineItemId: id } }),
