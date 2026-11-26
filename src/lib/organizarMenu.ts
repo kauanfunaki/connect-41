@@ -22,7 +22,7 @@ export type ListaDoMenu =
  * Os itens do Geral que o organizador ordena (as chaves do `itensDoGeral` do
  * AppShell). "quadros" é o Quadro de tarefas — ou o Controle interno, na Tech
  * —, item próprio do Geral desde 25/11/2026 (melhoria-842); antes ficava
- * dentro do Apoio. "clientes" é o grupo Atendimento ao cliente (26/11/2026,
+ * dentro do Apoio. "clientes" é o grupo Atendimento (26/11/2026,
  * melhoria-871): Solicitações, Atendimento e Arquivos, que eram itens soltos —
  * a ordem gravada com elas é convertida na leitura (`comAtendimentoAoClienteEmGrupo`).
  */
@@ -33,7 +33,7 @@ export const CHAVES_DO_GERAL = ["cadastros", "quadros", "transferencias", "chama
  * esconde (a chave em `dentro` e `ocultasDentro`): o Apoio (05/11/2026; sem o
  * Quadro de tarefas desde 25/11/2026), os
  * Cadastros (10/11/2026, pedido do Kauan — Empresas, Pessoas e, no BPO,
- * Fornecedores e sacados) e o Atendimento ao cliente (26/11/2026, melhoria-871
+ * Fornecedores e sacados) e o Atendimento (26/11/2026, melhoria-871
  * — Solicitações, Atendimento e Arquivos).
  */
 export const GRUPOS_DO_GERAL = ["apoio", "cadastros", "clientes"] as const;

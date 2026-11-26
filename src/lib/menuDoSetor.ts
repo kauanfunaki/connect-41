@@ -195,22 +195,27 @@ export function comQuadroForaDoApoio(ordem: OrdemDoMenu): OrdemDoMenu {
   };
 }
 
-/** A chave do grupo "Atendimento ao cliente" no Geral (26/11/2026, melhoria-871). */
+/**
+ * A chave do grupo "Atendimento" no Geral (26/11/2026, melhoria-871). Não muda
+ * com o nome: é ela que fica gravada na ordem do menu de cada setor.
+ */
 export const GRUPO_DO_CLIENTE = "clientes";
 
 /**
  * O nome do grupo no menu. "Clientes", o nome da área de cor, ficava a uma
  * letra do grupo "Cliente" do menu do BPO (Pendências ao cliente, Conversa com
- * o cliente, Aprovações) — no BPO os dois apareceriam juntos.
+ * o cliente, Aprovações) — no BPO os dois apareceriam juntos. Era "Atendimento
+ * ao cliente"; virou só "Atendimento" no mesmo dia (26/11/2026, pedido do
+ * Kauan), igual ao nome da tela Atendimento, que fica dentro dele.
  */
-export const NOME_DO_GRUPO_DO_CLIENTE = "Atendimento ao cliente";
+export const NOME_DO_GRUPO_DO_CLIENTE = "Atendimento";
 
 /** As telas que entraram no grupo, na ordem de sempre do menu. */
 export const TELAS_DO_GRUPO_DO_CLIENTE = ["solicitacoes", "atendimento", "arquivos"] as const;
 
 /**
  * A ordem gravada antes de Solicitações, Atendimento e Arquivos virarem o
- * grupo "Atendimento ao cliente" do Geral (26/11/2026, melhoria-871), lida no
+ * grupo "Atendimento" do Geral (26/11/2026, melhoria-871), lida no
  * jeito novo — como a `comQuadroForaDoApoio`, sem script de banco: vale na
  * leitura e fica gravada no próximo "Concluir" do organizador.
  *

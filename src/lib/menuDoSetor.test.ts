@@ -120,7 +120,7 @@ describe("a ordem escolhida", () => {
 });
 
 // 26/11/2026 (melhoria-871): Solicitações, Atendimento e Arquivos viraram o
-// grupo "Atendimento ao cliente" (chave `clientes`) do Geral. A ordem gravada
+// grupo "Atendimento" (chave `clientes`) do Geral. A ordem gravada
 // com as três soltas é lida no jeito novo.
 describe("a ordem gravada com Solicitações, Atendimento e Arquivos soltos", () => {
   it("o grupo entra no lugar da primeira das três, e as outras saem do Geral", () => {

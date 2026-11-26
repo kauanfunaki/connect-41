@@ -161,7 +161,7 @@ export const ARTIGOS_DE_CONFIGURACOES: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Na barra lateral, o Atendimento fica em “Atendimento ao cliente”, com Solicitações e Arquivos. O número no grupo soma o que espera você nas três; dentro dele, cada tela mostra o seu.",
+      "Na barra lateral, abra o grupo “Atendimento” e escolha “Atendimento”; no grupo ficam também Solicitações e Arquivos. O número no grupo soma o que espera você nas três; dentro dele, cada tela mostra o seu.",
       "“Métricas” mostra os atendimentos abertos no período. Os tempos são a mediana: o do meio, que um atendimento esquecido não distorce.",
       "As configurações do Atendimento valem para o WhatsApp do escritório; o WhatsApp do Recrutamento tem as configurações dele.",
       "Com as respostas automáticas desligadas, o Connect não manda nada sozinho: nem boas-vindas, nem fora do horário, nem a confirmação de quem pede para parar. As conversas chegam na triagem do mesmo jeito. Os textos só saem com elas ligadas, e texto vazio não manda nada.",

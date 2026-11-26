@@ -9,8 +9,9 @@ import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem
  * Um item do menu com telas dentro (05/11/2026, opção C da página "Ajustes de
  * 05/11", "o jeito do BPO para todos"): o grupo de um setor (Contas, Processos…)
  * ou a tela que tem filhas (Processos com Painel e Órgãos, o Painel de Gestão
- * com as abas dele). A linha mostra o número de telas e o "›"; a janela abre ao
- * lado, com o mouse parado ou com o clique (no toque e no teclado também).
+ * com as abas dele). A linha mostra o "›" — sem o número de telas desde
+ * 26/11/2026, pedido do Kauan; a janela abre ao lado, com o mouse parado ou
+ * com o clique (no toque e no teclado também).
  *
  * O menu fica curto em todo setor; o preço, que o Kauan aceitou, é a tela
  * ficar a um passo a mais — abrir a janela.
