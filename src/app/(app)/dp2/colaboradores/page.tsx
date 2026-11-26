@@ -454,6 +454,33 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
         )}
       </Secao>
 
+      {pessoas.some((p) => p.dp2Vinculo) && (
+        <Secao titulo="Termo de quitação anual" apoio="O termo do art. 507-B da CLT, com o que as competências fechadas do ano pagaram a cada colaborador, para assinar com o sindicato da categoria.">
+          <form action="/api/dp2/quitacao" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
+            <CampoForm label="Colaborador" htmlFor="quit-pessoa">
+              <Select id="quit-pessoa" name="pessoa" defaultValue="" required>
+                <option value="" disabled>
+                  Escolha…
+                </option>
+                {pessoas
+                  .filter((p) => p.dp2Vinculo)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </Select>
+            </CampoForm>
+            <CampoForm label="Ano" htmlFor="quit-ano">
+              <Input id="quit-ano" name="ano" inputMode="numeric" maxLength={4} defaultValue={String(new Date().getFullYear() - 1)} required />
+            </CampoForm>
+            <Button type="submit" variant="secondary">
+              Baixar termo (PDF)
+            </Button>
+          </form>
+        </Secao>
+      )}
+
       {pessoas.length > 0 && (
         <Secao
           titulo="Advertências e suspensões"

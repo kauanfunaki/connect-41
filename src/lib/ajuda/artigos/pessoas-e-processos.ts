@@ -307,6 +307,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pagar e entregar a folha",
         passos: [
+          "Termo de quitação anual (art. 507-B da CLT): em DP 2 › Colaboradores, escolha o colaborador e o ano e baixe o termo em PDF. Ele soma por rubrica o que as competências fechadas do ano pagaram (folha e 13º), o líquido e o FGTS, com as assinaturas do empregador, do empregado e do sindicato da categoria.",
           "Com a competência fechada, “Lançar no Contas a pagar” (em Saídas da folha) cria no Contas a pagar da empresa os líquidos dos colaboradores (vencem no 5º dia útil do mês seguinte), o DARF da DCTFWeb com INSS e IRRF e o FGTS Digital (dia 20) e o PIS sobre a folha, quando houver (dia 25). A categoria vem do plano de contas pelo nome (salários, INSS, FGTS, PIS); sem ela, a conta fica provisória para o BPO classificar. Lançar de novo atualiza as que seguem em aberto e não mexe nas pagas.",
           "Em “Saídas da folha”, “Relatórios da folha (Excel)” baixa uma planilha com quatro abas: o resumo por rubrica com os totais e os encargos patronais, a folha analítica (cada pessoa, rubrica a rubrica), a relação de encargos (INSS da empresa, RAT/FAP, terceiros e FGTS) e as provisões de férias e 13º do mês.",
           "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
