@@ -24,7 +24,7 @@ export async function lancarContasDaFolha(tenantId: string, competenciaId: strin
 
   const [calculos, pessoas, informacoes, cfg, categorias] = await Promise.all([
     prisma.dp2Calculo.findMany({ where: { tenantId, competenciaId } }),
-    colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes),
+    colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo),
     prisma.dp2InformacaoDaApuracao.findMany({ where: { tenantId, competenciaId } }),
     configDaEmpresa(tenantId, comp.companyId),
     prisma.financeCategory.findMany({ where: ondeDaEmpresa(tenantId, comp.companyId, { kind: "PAGAR" }), select: { id: true, name: true, companyId: true } }),

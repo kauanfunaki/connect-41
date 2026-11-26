@@ -70,6 +70,7 @@ import {
   gerarCat,
   gerarCondicaoAmbiental,
   gerarDesligamento,
+  gerarEventosDaTransferencia,
   gerarExclusao,
   gerarPeriodicos,
   gerarReabertura,
@@ -319,7 +320,7 @@ export async function lancarPorRubricaAction(_: EstadoDoDp2, fd: FormData): Prom
   if (!lancavel) return erro(`${rubrica.nome} é calculada pelo motor, não se lança.`);
 
   // Só quem tem contrato no DP 2 e está na folha do mês.
-  const pessoas = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes)).filter((p) => p.dp2Vinculo);
+  const pessoas = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo)).filter((p) => p.dp2Vinculo);
   const nomes = new Map(pessoas.map((p) => [p.id, p.name]));
   const campos = camposDoFormulario(fd.entries());
   if (campos.some((c) => c.texto.trim() && !nomes.has(c.personId))) return erro("Há colaborador que não está na folha deste mês. Recarregue a tela.");
@@ -542,7 +543,7 @@ export async function incluirOutraBaseInssAction(_: EstadoDoDp2, fd: FormData): 
   if ("erro" in r0) return erro(r0.erro!);
   const comp = r0.comp;
   const prisma = getPrisma();
-  const pessoa = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  const pessoa = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
   if (!pessoa) return erro("Escolha um colaborador desta folha.");
   // Por enquanto, só empregado (CLT): estagiário não tem INSS, e sócio/autônomo têm outra regra.
   if (regimeDaCategoria(pessoa.dp2Vinculo?.categoria) !== "CLT") return erro(`${pessoa.name} não é empregado (CLT): outras bases de INSS valem só para empregados por enquanto.`);
@@ -605,7 +606,7 @@ export async function copiarOutrasBasesInssAction(_: EstadoDoDp2, fd: FormData):
   const [deLa, daqui, pessoas] = await Promise.all([
     prisma.dp2OutraBaseInss.findMany({ where: { tenantId: a.tenantId, competenciaId: anterior.id } }),
     prisma.dp2OutraBaseInss.findMany({ where: { tenantId: a.tenantId, competenciaId }, select: { personId: true } }),
-    colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes),
+    colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo),
   ]);
   const naFolha = new Set(pessoas.filter((p) => p.dp2Vinculo).map((p) => p.id));
   const jaTem = new Set(daqui.map((d) => d.personId));
@@ -1137,7 +1138,9 @@ export async function transferirColaboradorAction(_: EstadoDoDp2, fd: FormData):
   await prisma.$transaction(async (tx) => {
     await tx.person.update({ where: { id: pessoa.id }, data: { currentCompanyId: paraCompanyId } });
     await tx.dp2Vinculo.update({ where: { personId: pessoa.id }, data: { companyId: paraCompanyId, ambienteId: null } });
-    await tx.dp2Transferencia.create({ data: { tenantId: a.tenantId, companyId: paraCompanyId, deCompanyId, personId: pessoa.id, data: new Date(`${t.data}T00:00:00Z`), motivo: t.motivo, criadoPorId: a.userId } });
+    await tx.dp2Transferencia.create({
+      data: { tenantId: a.tenantId, companyId: paraCompanyId, deCompanyId, personId: pessoa.id, data: new Date(`${t.data}T00:00:00Z`), motivo: t.motivo, matriculaAnterior: pessoa.dp2Vinculo!.matricula, criadoPorId: a.userId },
+    });
   });
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.colaborador_transferido", entityType: "Person", entityId: pessoa.id, metadata: { nome: pessoa.name, de: deCompanyId, para: paraCompanyId, data: t.data } });
   revalidatePath("/dp2/colaboradores");
@@ -1346,7 +1349,7 @@ export async function lancarAdiantamentoAction(_: EstadoDoDp2, fd: FormData): Pr
   const prisma = getPrisma();
   const rubrica = await prisma.dp2Rubrica.findFirst({ where: { tenantId: a.tenantId, papel: "ADIANTAMENTO", ativa: true } });
   if (!rubrica) return erro("A rubrica de adiantamento salarial não está ativa no catálogo.");
-  const pessoas = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes)).filter((p) => p.dp2Vinculo && regimeDaCategoria(p.dp2Vinculo.categoria) === "CLT");
+  const pessoas = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo)).filter((p) => p.dp2Vinculo && regimeDaCategoria(p.dp2Vinculo.categoria) === "CLT");
   const comAdiantamento = new Set(
     (await prisma.dp2Evento.findMany({ where: { tenantId: a.tenantId, competenciaId, rubricaId: rubrica.id }, select: { personId: true } })).map((e) => e.personId)
   );
@@ -2256,6 +2259,34 @@ export async function reabrirNoEsocialAction(_: EstadoDoDp2, fd: FormData): Prom
   revalidatePath("/dp2/esocial");
   revalidarCompetencia(competenciaId);
   return { ok: true, texto: "S-1298 (reabertura) pronto na fila do eSocial." };
+}
+
+/**
+ * Os eventos do eSocial da transferência (funcionalidade-771): o S-2299 com o
+ * motivo 11 na empresa de origem ou o S-2200 com a sucessão do vínculo na de
+ * destino. As duas empresas precisam estar no grupo em foco.
+ */
+export async function gerarEventoDaTransferenciaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const tr = await getPrisma().dp2Transferencia.findFirst({ where: { id: texto(fd, "transferenciaId"), tenantId: a.tenantId }, include: { person: { select: { name: true } } } });
+  if (!tr) return erro("Transferência não encontrada.");
+  for (const c of [tr.deCompanyId, tr.companyId]) {
+    const recusa = await empresaDoEscritorio(a, c);
+    if (recusa) return erro(recusa);
+  }
+  const lado = texto(fd, "lado") === "DESTINO" ? "DESTINO" : "ORIGEM";
+  const r = await gerarEventosDaTransferencia(a.tenantId, tr.id, lado, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_transferencia",
+    entityType: "Person",
+    entityId: tr.personId,
+    metadata: { nome: tr.person.name, transferencia: tr.id, lado, evento: lado === "ORIGEM" ? "S-2299" : "S-2200" },
+  });
+  revalidatePath("/dp2/colaboradores");
+  return respostaDoEvento(lado === "ORIGEM" ? "S-2299 (transferência)" : "S-2200 (sucessão)", tr.person.name, r);
 }
 
 function respostaDoEvento(evento: string, nome: string, r: { ok: true; prontos: number } | { ok: false; erro: string }): EstadoDoDp2 {
