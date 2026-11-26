@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lerIdCurto } from "@/lib/enderecoCurto";
 
 export const MODULO = "helpdesk";
 // "Aguardando triagem" (10/11/2026): o chamado da tela nasce nela e sai quando a
@@ -250,12 +251,15 @@ export type Parecer = z.infer<typeof parecerSchema>;
 
 /**
  * O número do chamado que a busca da tela digitou (25/11/2026, bug-819): o id
- * curto do cartão ("chamado-45", sem diferença de maiúsculas), "#45" ou só
- * "45". `null` quando o termo não é um número de chamado — aí a busca segue só
- * no título, na descrição e no protocolo.
+ * curto do cartão ("CHA-45" desde a melhoria-818, ou o antigo "chamado-45",
+ * sem diferença de maiúsculas — quem lê é `lerIdCurto`), "#45" ou só "45".
+ * `null` quando o termo não é um número de chamado — aí a busca segue só no
+ * título, na descrição e no protocolo.
  */
 export function numeroDaBusca(termo: string): number | null {
-  const achado = /^(?:chamado-|#)?\s*([1-9][0-9]{0,9})$/i.exec(termo.trim());
+  const curto = lerIdCurto("chamado", termo);
+  if (curto !== null) return curto;
+  const achado = /^#?\s*([1-9][0-9]{0,9})$/.exec(termo.trim());
   if (!achado) return null;
   const numero = Number(achado[1]);
   return numero <= 2147483647 ? numero : null;

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, idCurtoDoItem, enderecoDoItem, lerIdCurto, ehUuid, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO, entregaSchema } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, idCurtoDoItem, enderecoDoItem, ehOEnderecoDeAgora, lerIdCurto, ehUuid, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO, entregaSchema } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -73,18 +73,41 @@ describe("controle interno do Tech", () => {
     expect(destinoDeVolta("/controle-interno/entregas?periodo=anterior")).toBe("/controle-interno/entregas?periodo=anterior");
     for (const ruim of ["/controle-interno/bug-1", "/controle-interno/novo", "/controle-interno/historicox", "/controle-interno/historico/x", "/controle-interno/entregasx", "/controle-interno/entregas/x"]) expect(destinoDeVolta(ruim)).toBe("/controle-interno");
   });
-  it("o endereço curto do item: prefixo do tipo de agora e o número do escritório", () => {
-    expect(idCurtoDoItem({ type: "BUG", number: 123 })).toBe("bug-123");
-    expect(enderecoDoItem({ type: "IMPROVEMENT", number: 45 })).toBe("/controle-interno/melhoria-45");
-    expect([["FEATURE", "funcionalidade"], ["TEST", "teste"], ["MIGRATION", "migracao"]].map(([type, prefixo]) => [idCurtoDoItem({ type: type as "FEATURE", number: 1 }), prefixo])).toEqual([["funcionalidade-1", "funcionalidade"], ["teste-1", "teste"], ["migracao-1", "migracao"]]);
+  it("o id curto do item: sigla do tipo de agora, em maiúsculas na tela e em minúsculas no endereço (melhoria-818)", () => {
+    expect(idCurtoDoItem({ type: "BUG", number: 123 })).toBe("BUG-123");
+    expect(idCurtoDoItem({ type: "FEATURE", number: 816 })).toBe("FUN-816");
+    expect(enderecoDoItem({ type: "IMPROVEMENT", number: 45 })).toBe("/controle-interno/mel-45");
+    expect(enderecoDoItem({ type: "FEATURE", number: 816 })).toBe("/controle-interno/fun-816");
+    expect((["BUG", "IMPROVEMENT", "FEATURE", "TEST", "MIGRATION"] as const).map(type => [idCurtoDoItem({ type, number: 1 }), enderecoDoItem({ type, number: 1 })])).toEqual([
+      ["BUG-1", "/controle-interno/bug-1"], ["MEL-1", "/controle-interno/mel-1"], ["FUN-1", "/controle-interno/fun-1"], ["TES-1", "/controle-interno/tes-1"], ["MIG-1", "/controle-interno/mig-1"],
+    ]);
   });
   it("lê o id curto de volta, sem diferença de maiúsculas, e recusa o resto", () => {
+    expect(lerIdCurto("BUG-123")).toEqual({ tipo: "BUG", numero: 123 });
     expect(lerIdCurto("bug-123")).toEqual({ tipo: "BUG", numero: 123 });
-    expect(lerIdCurto(" Melhoria-45 ")).toEqual({ tipo: "IMPROVEMENT", numero: 45 });
-    expect(lerIdCurto("migracao-2147483647")).toEqual({ tipo: "MIGRATION", numero: 2147483647 });
-    for (const ruim of ["bug-0", "bug-012", "bug-", "bug-1.5", "bug--1", "tarefa-3", "bug-2147483648", "bug-99999999999", "bug_3", "/controle-interno/bug-3", "11111111-2222-4333-8444-555555555555"]) expect(lerIdCurto(ruim), ruim).toBeNull();
+    expect(lerIdCurto("FUN-816")).toEqual({ tipo: "FEATURE", numero: 816 });
+    expect(lerIdCurto(" fun-816 ")).toEqual({ tipo: "FEATURE", numero: 816 });
+    expect(lerIdCurto("Mel-45")).toEqual({ tipo: "IMPROVEMENT", numero: 45 });
+    expect(lerIdCurto("tes-7")).toEqual({ tipo: "TEST", numero: 7 });
+    expect(lerIdCurto("MIG-2147483647")).toEqual({ tipo: "MIGRATION", numero: 2147483647 });
+    for (const ruim of ["bug-0", "bug-012", "bug-", "bug-1.5", "bug--1", "tarefa-3", "tar-3", "cha-3", "fu-3", "func-3", "bug-2147483648", "bug-99999999999", "bug_3", "/controle-interno/bug-3", "11111111-2222-4333-8444-555555555555"]) expect(lerIdCurto(ruim), ruim).toBeNull();
     expect(ehUuid("11111111-2222-4333-8444-555555555555")).toBe(true);
     expect(ehUuid("bug-1")).toBe(false);
+  });
+  it("o prefixo por extenso de antes de 25/11/2026 continua lendo, para sempre", () => {
+    expect(lerIdCurto(" Melhoria-45 ")).toEqual({ tipo: "IMPROVEMENT", numero: 45 });
+    expect(lerIdCurto("funcionalidade-816")).toEqual({ tipo: "FEATURE", numero: 816 });
+    expect(lerIdCurto("FUNCIONALIDADE-816")).toEqual({ tipo: "FEATURE", numero: 816 });
+    expect(lerIdCurto("teste-7")).toEqual({ tipo: "TEST", numero: 7 });
+    expect(lerIdCurto("migracao-2147483647")).toEqual({ tipo: "MIGRATION", numero: 2147483647 });
+  });
+  it("a tela do item abre no endereço de agora e passa para ele do antigo, do uuid e das maiúsculas", () => {
+    const item = { type: "FEATURE" as const, number: 816 };
+    expect(ehOEnderecoDeAgora("fun-816", item)).toBe(true);
+    for (const outro of ["funcionalidade-816", "FUN-816", "Fun-816", "mel-816", "melhoria-816", "11111111-2222-4333-8444-555555555555"]) expect(ehOEnderecoDeAgora(outro, item), outro).toBe(false);
+    // O antigo acha o mesmo item pelo número; a tela redireciona para enderecoDoItem.
+    expect(lerIdCurto("funcionalidade-816")?.numero).toBe(816);
+    expect(enderecoDoItem(item)).toBe("/controle-interno/fun-816");
   });
   it("registra só campos alterados e preserva valor anterior", () => {
     expect(diferencas({ Prazo: null, Título: "Antes" }, { Prazo: null, Título: "Depois" })).toEqual([{ field: "Título", before: "Antes", after: "Depois" }]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useOptimistic, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, Columns3, Download, LayoutGrid, Plus, Rows3, Sigma, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Columns3, Download, Plus, Rows3, Sigma, X } from "lucide-react";
 import { useNavegarSemRecarregar } from "@/components/shared/NavegacaoSemRecarregar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,7 +14,8 @@ import { ItemDoMenu, Popover } from "@/components/ui/Popover";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Select } from "@/components/ui/Select";
 import { normalizar } from "@/lib/buscaDeTelas";
-import { formatarCompetencia } from "@/lib/format";
+import { configuracaoDoModelo, textoDoPeriodo, type ModeloDaTabela, type ModelosDaTela } from "@/lib/relatorios/modelosDaTabela";
+import { ModelosDaTabela } from "./ModelosDaTabela";
 import {
   BASES,
   DIMENSOES,
@@ -62,13 +63,6 @@ const rotuloDoTipo = (tipo: Tipo, baixas: boolean) =>
     RECEBER: baixas ? "Só entradas" : "Só a receber",
   })[tipo];
 
-function textoDoPeriodo(f: Pick<Filtros, "de" | "ate">): string {
-  if (!f.de && !f.ate) return "Todo o histórico";
-  if (!f.ate) return `Desde ${formatarCompetencia(f.de!)}`;
-  if (!f.de) return `Até ${formatarCompetencia(f.ate)}`;
-  return f.de === f.ate ? formatarCompetencia(f.de) : `${formatarCompetencia(f.de)} a ${formatarCompetencia(f.ate)}`;
-}
-
 /**
  * O que está filtrado fica à vista, com o "x" que tira só aquele — o desenho
  * das etiquetas do `FiltrosDaTela`. Sem `aoTirar` é o valor padrão: neutra e
@@ -104,7 +98,7 @@ const TITULO_DA_AREA = "c41-rotulo mb-1.5 flex items-center gap-1.5 px-1";
 
 /**
  * A configuração da tabela dinâmica (16/11/2026, melhoria-719): a barra de cima
- * (base, filtros, visões prontas e exportação), os campos da base e as áreas
+ * (base, filtros, modelos e exportação), os campos da base e as áreas
  * Linhas, Colunas e Valores, como no Excel. O retorno do BPO era que os dez
  * seletores com "Aplicar" eram pouco intuitivos perto do Omie.
  *
@@ -124,6 +118,7 @@ export function ConfiguracaoDaTabela({
   empresa,
   visao,
   hoje,
+  modelos,
   children,
 }: {
   /** O que o servidor leu do endereço. */
@@ -134,6 +129,8 @@ export function ConfiguracaoDaTabela({
   visao: string | null;
   /** "AAAA-MM-DD" de hoje em São Paulo: o período padrão sai dele. */
   hoje: string;
+  /** Os modelos salvos — os da pessoa e os do setor (funcionalidade-816). */
+  modelos: ModelosDaTela;
   /** A tabela, que fica ao lado dos campos em tela larga e embaixo na estreita. */
   children: React.ReactNode;
 }) {
@@ -178,6 +175,12 @@ export function ConfiguracaoDaTabela({
     const url = new URLSearchParams({ ...v.params, visao: v.id });
     if (empresa) url.set("empresa", empresa);
     navegar(url, lerConfiguracao(v.params, hoje), v.id);
+  }
+  // Aplicar um modelo é trocar o endereço pelos parâmetros dele, com o período
+  // calculado hoje se for o relativo (25/11/2026, funcionalidade-816).
+  function aplicarModelo(m: ModeloDaTabela) {
+    const nova = configuracaoDoModelo(m, c, hoje);
+    navegar(paramsDaConfiguracao(nova, { empresa: empresa ?? undefined }), nova, null);
   }
 
   const padrao = lerConfiguracao({}, hoje).filtros;
@@ -280,37 +283,16 @@ export function ConfiguracaoDaTabela({
       )}
 
       <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
-        {/* As visões prontas eram seis pílulas acima do quadro; num menu, cada
-            uma diz o que monta, e o botão mostra a que está aberta. */}
-        <Popover
-          align="right"
-          width={320}
-          aria-label="Visões prontas"
-          trigger={({ open, toggle }) => (
-            <Button type="button" variant="secondary" size="sm" onClick={toggle} aria-expanded={open} className="min-w-0 max-w-full">
-              <LayoutGrid size={14} aria-hidden className="flex-shrink-0" />
-              <span className="truncate">{visaoAberta ? visaoAberta.rotulo : "Visões prontas"}</span>
-              <ChevronDown size={14} aria-hidden className="flex-shrink-0" />
-            </Button>
-          )}
-        >
-          {({ close }) => (
-            <>
-              {VISOES_PRONTAS.map((v) => (
-                <ItemDoMenu
-                  key={v.id}
-                  descricao={v.descricao}
-                  onClick={() => {
-                    close();
-                    abrirVisao(v);
-                  }}
-                >
-                  {v.rotulo}
-                </ItemDoMenu>
-              ))}
-            </>
-          )}
-        </Popover>
+        {/* O menu de modelos (25/11/2026, funcionalidade-816): os da pessoa,
+            os do setor e as visões prontas, que eram o menu inteiro. */}
+        <ModelosDaTabela
+          modelos={modelos}
+          config={c}
+          hoje={hoje}
+          visaoAberta={visaoAberta}
+          aoAbrirVisao={abrirVisao}
+          aoAplicarModelo={aplicarModelo}
+        />
         <Button href={exportar} download variant="secondary" size="sm" title="A tabela montada, os dados numa Tabela do Excel e os filtros usados.">
           <Download size={14} aria-hidden /> Exportar Excel
         </Button>
