@@ -56,6 +56,8 @@ type Props = {
   aoSair: () => void;
   /** Avisa a área de trabalho de que há mudança não salva — ela confere antes de abrir outro fluxo. */
   aoMudarSujo: (sujo: boolean) => void;
+  /** O "Mostrar pastas" da área de trabalho, à direita do título (a árvore recolhe na edição). */
+  controleDasPastas?: React.ReactNode;
 };
 
 type Erro = { mensagem: string; etapaId?: string; campo?: string };
@@ -80,8 +82,13 @@ const PLACEHOLDER: Record<TipoDeEtapa, string> = {
  * - Nada é gravado até "Salvar versão N"; a action roda a mesma validação.
  * - Sair com mudança não salva pede confirmação (fechar a aba e clicar num
  *   link do Connect).
+ * - Página cheia (25/11/2026, melhoria-829): a coluna das etapas vai a 640 px,
+ *   com o desenho ao lado enquanto houver espaço (a área conta, e não a tela:
+ *   com a árvore à vista, a coluna estreita e o desenho desce). Na etapa
+ *   aberta, os campos curtos dividem a linha em três e os textos crescem com
+ *   o que se escreve.
  */
-export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rotuloDoSetor, salvarAction, aoSair, aoMudarSujo }: Props) {
+export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rotuloDoSetor, salvarAction, aoSair, aoMudarSujo, controleDasPastas }: Props) {
   const router = useRouter();
   const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
@@ -264,10 +271,13 @@ export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rot
   const noLimite = etapas.length >= LIMITES_DO_FLUXO.etapas;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <span className="c41-rotulo">Editando</span>
-        <h2 className="text-title font-semibold leading-tight tracking-[-0.02em] text-fg">{titulo.trim() || "Fluxo sem nome"}</h2>
+    <div className="@container flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="c41-rotulo">Editando</span>
+          <h2 className="text-title font-semibold leading-tight tracking-[-0.02em] text-fg">{titulo.trim() || "Fluxo sem nome"}</h2>
+        </div>
+        {controleDasPastas}
       </div>
 
       <Card className="grid gap-4 p-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -289,8 +299,9 @@ export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rot
         </CampoForm>
       </Card>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(360px,440px)_minmax(0,1fr)]">
-        <Card as="section" aria-labelledby="etapas-do-fluxo" className="flex min-w-0 flex-col gap-3 p-4">
+      {/* Lado a lado a partir de 896 px de área (@4xl, o editor é o contêiner): as etapas até 640 px, o desenho com pelo menos 320 px e o resto. */}
+      <div className="grid items-start gap-4 @4xl:grid-cols-[minmax(0,640px)_minmax(320px,1fr)]">
+        <Card as="section" aria-labelledby="etapas-do-fluxo" className="@container flex min-w-0 flex-col gap-3 p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 id="etapas-do-fluxo" className="text-section font-semibold text-fg">
               Etapas
@@ -362,7 +373,7 @@ export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rot
           </div>
         </Card>
 
-        <Card as="section" aria-labelledby="desenho-ao-vivo" className="flex min-w-0 flex-col gap-3 p-4 lg:sticky lg:top-4">
+        <Card as="section" aria-labelledby="desenho-ao-vivo" className="flex min-w-0 flex-col gap-3 p-4 @4xl:sticky @4xl:top-4">
           <h3 id="desenho-ao-vivo" className="text-section font-semibold text-fg">
             Desenho
           </h3>
@@ -553,8 +564,12 @@ function EtapaEditavel({
       }
     >
       <div className="flex flex-col gap-4 border-t border-border-soft pt-4">
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
-          <CampoForm label={e.tipo === "decisao" ? "Pergunta" : "Nome"} htmlFor={`titulo-${c}`} required error={erroNo("titulo")}>
+        {/* Os campos curtos em três por linha quando a coluna tem 512 px ou mais
+            (@lg, a coluna das etapas é o contêiner); abaixo disso, um por linha.
+            Prazo fica sempre na terceira coluna e os destinos começam a linha, com
+            ou sem o "Setor da pessoa" no meio. */}
+        <div className="grid gap-4 @lg:grid-cols-3">
+          <CampoForm label={e.tipo === "decisao" ? "Pergunta" : "Nome"} htmlFor={`titulo-${c}`} required error={erroNo("titulo")} className={e.tipo === "inicio" ? "@lg:col-span-3" : "@lg:col-span-2"}>
             <Input id={`titulo-${c}`} value={e.titulo} maxLength={LIMITES_DO_FLUXO.titulo} error={!!erroNo("titulo")} placeholder={PLACEHOLDER[e.tipo]} onChange={(ev) => aoMudar({ titulo: ev.target.value })} />
           </CampoForm>
           {e.tipo !== "inicio" && (
@@ -574,60 +589,48 @@ function EtapaEditavel({
               </Select>
             </CampoForm>
           )}
-        </div>
 
-        {e.tipo !== "fim" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CampoForm label="Quem executa" htmlFor={`executor-${c}`} error={erroNo("executor")}>
-              <Select
-                id={`executor-${c}`}
-                value={e.executor?.tipo ?? ""}
-                onChange={(ev) => {
-                  const tipo = ev.target.value as TipoDeExecutor | "";
-                  aoMudar({ executor: tipo ? (tipo === "pessoa" ? { tipo, setor: e.executor?.setor ?? setorDaTela } : { tipo }) : undefined });
-                }}
-              >
-                <option value="">Ninguém em especial</option>
-                {TIPOS_DE_EXECUTOR.map((t) => (
-                  <option key={t} value={t}>
-                    {ROTULO_DO_EXECUTOR[t]}
-                  </option>
-                ))}
-              </Select>
-            </CampoForm>
-            {e.executor?.tipo === "pessoa" && (
-              <CampoForm label="Setor da pessoa" htmlFor={`setor-${c}`}>
-                <Select id={`setor-${c}`} value={e.executor.setor ?? ""} onChange={(ev) => aoMudar({ executor: { tipo: "pessoa", setor: ev.target.value || undefined } })}>
-                  <option value="">Sem setor</option>
-                  {setores.map((s) => (
-                    <option key={s.codigo} value={s.codigo}>
-                      {s.rotulo}
+          {e.tipo !== "fim" && (
+            <>
+              <CampoForm label="Quem executa" htmlFor={`executor-${c}`} error={erroNo("executor")} className="@lg:col-start-1">
+                <Select
+                  id={`executor-${c}`}
+                  value={e.executor?.tipo ?? ""}
+                  onChange={(ev) => {
+                    const tipo = ev.target.value as TipoDeExecutor | "";
+                    aoMudar({ executor: tipo ? (tipo === "pessoa" ? { tipo, setor: e.executor?.setor ?? setorDaTela } : { tipo }) : undefined });
+                  }}
+                >
+                  <option value="">Ninguém em especial</option>
+                  {TIPOS_DE_EXECUTOR.map((t) => (
+                    <option key={t} value={t}>
+                      {ROTULO_DO_EXECUTOR[t]}
                     </option>
                   ))}
                 </Select>
               </CampoForm>
-            )}
-          </div>
-        )}
+              {e.executor?.tipo === "pessoa" && (
+                <CampoForm label="Setor da pessoa" htmlFor={`setor-${c}`}>
+                  <Select id={`setor-${c}`} value={e.executor.setor ?? ""} onChange={(ev) => aoMudar({ executor: { tipo: "pessoa", setor: ev.target.value || undefined } })}>
+                    <option value="">Sem setor</option>
+                    {setores.map((s) => (
+                      <option key={s.codigo} value={s.codigo}>
+                        {s.rotulo}
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+              )}
+              <CampoForm label="Prazo" htmlFor={`prazo-${c}`} error={erroNo("prazo")} className="@lg:col-start-3">
+                <Input id={`prazo-${c}`} value={e.prazo ?? ""} maxLength={LIMITES_DO_FLUXO.texto} placeholder="Ex.: Até 1 dia antes" onChange={(ev) => aoMudar({ prazo: ev.target.value })} />
+              </CampoForm>
+            </>
+          )}
 
-        {(e.tipo === "etapa" || e.tipo === "inicio") && (
-          <CampoForm label="Depois vai para" htmlFor={`proxima-${c}`} dica="Uma etapa de cima vira uma volta, tracejada no desenho." error={erroNo("proxima")}>
-            <Select id={`proxima-${c}`} value={e.proxima ?? ""} error={!!erroNo("proxima")} onChange={(ev) => aoMudar({ proxima: ev.target.value || undefined })}>
-              <option value="">{seguinte ? `A seguinte da lista (${nomeCurtoDaEtapa(seguinte, numeros)})` : "Escolha (é a última da lista)"}</option>
-              {outras.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {destino(x.id)}
-                </option>
-              ))}
-            </Select>
-          </CampoForm>
-        )}
-
-        {e.tipo === "decisao" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CampoForm label="Se sim, vai para" htmlFor={`sim-${c}`} error={erroNo("sim")}>
-              <Select id={`sim-${c}`} value={e.sim ?? ""} error={!!erroNo("sim")} onChange={(ev) => aoMudar({ sim: ev.target.value || undefined })}>
-                <option value="">{seguinte ? `A seguinte da lista (${nomeCurtoDaEtapa(seguinte, numeros)})` : "Escolha"}</option>
+          {(e.tipo === "etapa" || e.tipo === "inicio") && (
+            <CampoForm label="Depois vai para" htmlFor={`proxima-${c}`} dica="Uma etapa de cima vira uma volta, tracejada no desenho." error={erroNo("proxima")} className="@lg:col-span-2 @lg:col-start-1">
+              <Select id={`proxima-${c}`} value={e.proxima ?? ""} error={!!erroNo("proxima")} onChange={(ev) => aoMudar({ proxima: ev.target.value || undefined })}>
+                <option value="">{seguinte ? `A seguinte da lista (${nomeCurtoDaEtapa(seguinte, numeros)})` : "Escolha (é a última da lista)"}</option>
                 {outras.map((x) => (
                   <option key={x.id} value={x.id}>
                     {destino(x.id)}
@@ -635,36 +638,35 @@ function EtapaEditavel({
                 ))}
               </Select>
             </CampoForm>
-            <CampoForm label="Se não, vai para" htmlFor={`nao-${c}`} required error={erroNo("nao")}>
-              <Select id={`nao-${c}`} value={e.nao ?? ""} error={!!erroNo("nao")} onChange={(ev) => aoMudar({ nao: ev.target.value || undefined })}>
-                <option value="">Escolha</option>
-                {outras.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {destino(x.id)}
-                  </option>
-                ))}
-              </Select>
-            </CampoForm>
-          </div>
-        )}
+          )}
 
-        {e.tipo !== "fim" && (
-          <>
-            <CampoForm label="Prazo" htmlFor={`prazo-${c}`} error={erroNo("prazo")}>
-              <Input id={`prazo-${c}`} value={e.prazo ?? ""} maxLength={LIMITES_DO_FLUXO.texto} placeholder="Ex.: Até 1 dia antes do início" onChange={(ev) => aoMudar({ prazo: ev.target.value })} />
-            </CampoForm>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <CampoForm label="Entra" htmlFor={`entra-${c}`} dica="O que precisa para começar." error={erroNo("entra")}>
-                <Textarea id={`entra-${c}`} rows={2} value={e.entra ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ entra: ev.target.value })} />
+          {e.tipo === "decisao" && (
+            <>
+              <CampoForm label="Se sim, vai para" htmlFor={`sim-${c}`} error={erroNo("sim")} className="@lg:col-start-1">
+                <Select id={`sim-${c}`} value={e.sim ?? ""} error={!!erroNo("sim")} onChange={(ev) => aoMudar({ sim: ev.target.value || undefined })}>
+                  <option value="">{seguinte ? `A seguinte da lista (${nomeCurtoDaEtapa(seguinte, numeros)})` : "Escolha"}</option>
+                  {outras.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {destino(x.id)}
+                    </option>
+                  ))}
+                </Select>
               </CampoForm>
-              <CampoForm label="Sai" htmlFor={`sai-${c}`} dica="O que resulta." error={erroNo("sai")}>
-                <Textarea id={`sai-${c}`} rows={2} value={e.sai ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ sai: ev.target.value })} />
+              <CampoForm label="Se não, vai para" htmlFor={`nao-${c}`} required error={erroNo("nao")}>
+                <Select id={`nao-${c}`} value={e.nao ?? ""} error={!!erroNo("nao")} onChange={(ev) => aoMudar({ nao: ev.target.value || undefined })}>
+                  <option value="">Escolha</option>
+                  {outras.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {destino(x.id)}
+                    </option>
+                  ))}
+                </Select>
               </CampoForm>
-            </div>
-            <CampoForm label="Se der erro" htmlFor={`seDerErro-${c}`} error={erroNo("seDerErro")}>
-              <Textarea id={`seDerErro-${c}`} rows={2} value={e.seDerErro ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ seDerErro: ev.target.value })} />
-            </CampoForm>
-            <CampoForm label="Tela no Connect" htmlFor={`tela-${c}`} dica="Onde a etapa se faz. Quem lê o fluxo abre a tela por um link." error={erroNo("tela")}>
+            </>
+          )}
+
+          {e.tipo !== "fim" && (
+            <CampoForm label="Tela no Connect" htmlFor={`tela-${c}`} dica="Onde a etapa se faz. Quem lê o fluxo abre a tela por um link." error={erroNo("tela")} className="@lg:col-start-3">
               <Select id={`tela-${c}`} busca value={e.tela ?? ""} error={!!erroNo("tela")} onChange={(ev) => aoMudar({ tela: ev.target.value || undefined })}>
                 <option value="">Nenhuma</option>
                 {telas.map((t) => (
@@ -673,6 +675,23 @@ function EtapaEditavel({
                   </option>
                 ))}
               </Select>
+            </CampoForm>
+          )}
+        </div>
+
+        {/* Os textos crescem com o que se escreve (melhoria-829): começam com duas linhas e não rolam por dentro. */}
+        {e.tipo !== "fim" && (
+          <>
+            <div className="grid gap-4 @lg:grid-cols-2">
+              <CampoForm label="Entra" htmlFor={`entra-${c}`} dica="O que precisa para começar." error={erroNo("entra")}>
+                <Textarea id={`entra-${c}`} crescer rows={2} value={e.entra ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ entra: ev.target.value })} />
+              </CampoForm>
+              <CampoForm label="Sai" htmlFor={`sai-${c}`} dica="O que resulta." error={erroNo("sai")}>
+                <Textarea id={`sai-${c}`} crescer rows={2} value={e.sai ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ sai: ev.target.value })} />
+              </CampoForm>
+            </div>
+            <CampoForm label="Se der erro" htmlFor={`seDerErro-${c}`} error={erroNo("seDerErro")}>
+              <Textarea id={`seDerErro-${c}`} crescer rows={2} value={e.seDerErro ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ seDerErro: ev.target.value })} />
             </CampoForm>
           </>
         )}
