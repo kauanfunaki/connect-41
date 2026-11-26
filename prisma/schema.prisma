@@ -7009,6 +7009,9 @@ model Dp2Vinculo {
   insalubridade        String   @default("NENHUM") @db.VarChar(10)
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
+  /// Contribuição mensal do empregado à previdência complementar (PGBL, fundo de
+  /// pensão), 26/11/2026, funcionalidade-762: desconta na folha e deduz do IRRF.
+  previdenciaComplementar Decimal? @db.Decimal(12, 2)
   /// O empregado autorizou por escrito o desconto da contribuição sindical
   /// (CLT arts. 545 e 578), 26/11/2026, funcionalidade-774.
   contribuicaoSindical Boolean  @default(false)

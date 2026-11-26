@@ -44,6 +44,8 @@ export type VinculoDoMotor = {
   filhosSalarioFamilia: number;
   insalubridade: Insalubridade;
   periculosidade: boolean;
+  /** Contribuição mensal do empregado à previdência complementar (funcionalidade-762). */
+  previdenciaComplementar?: number | null;
   /** Autorizou o desconto da contribuição sindical (funcionalidade-774). */
   contribuicaoSindical?: boolean;
   valeTransporte: boolean;
@@ -547,7 +549,12 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   // ── IRRF ──
   const rendimentos = baseDe(itens, "incideIrrf");
   // O INSS das férias já deduziu no IRRF delas (tributação separada).
-  const irrf = calcularIrrf({ rendimentos, inss: r2(Math.max(0, inss.valor - inssDasFerias)), dependentes: v.dependentesIrrf, pensao }, e.tabelas.irrf.dados);
+  // Previdência complementar (funcionalidade-762): desconta na folha e deduz da base do IRRF.
+  const previdenciaComplementar = r2(Math.max(0, v.previdenciaComplementar ?? 0));
+  if (previdenciaComplementar > 0) {
+    itens.push(itemDaRubrica(R("PREVIDENCIA_COMPLEMENTAR"), previdenciaComplementar, "", "Contribuição do empregado à previdência complementar, deduzida da base do IRRF"));
+  }
+  const irrf = calcularIrrf({ rendimentos, inss: r2(Math.max(0, inss.valor - inssDasFerias)), dependentes: v.dependentesIrrf, pensao, previdenciaComplementar }, e.tabelas.irrf.dados);
   if (irrf.valor > 0) itens.push(itemDaRubrica(R("IRRF"), irrf.valor, pct(irrf.aliquota), irrf.memoria.join("; ")));
 
   // O recibo de férias já pagou: o líquido dele e o IRRF retido nele saem da folha.
