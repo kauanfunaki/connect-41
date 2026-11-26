@@ -19,6 +19,7 @@ import { formatCalendarDate, formatCpf } from "@/lib/format";
 import { colaboradoresDaEmpresa, listarRubricas } from "@/lib/dp2/servidor";
 import { RubricasFixasDoContrato } from "@/components/dp2/RubricasFixasDoContrato";
 import { regraDeLancamento } from "@/lib/dp2/rubricas";
+import { relatorioDeTransparencia, salarioMensalDoContrato, LIMITE_DA_LEI } from "@/lib/dp2/transparenciaSalarial";
 import { horasDoHorario } from "@/lib/dp2/horarios";
 import { abrirTelaDeEmpresaDoDp2, brl, mesAtual } from "@/lib/dp2/tela";
 import { reais } from "@/lib/dp2/formato";
@@ -35,7 +36,7 @@ import {
   lerDadosEsocial,
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
-import { CATEGORIAS } from "@/lib/dp2/categorias";
+import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
 import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, registrarOcorrenciaAction, salvarVinculoAction } from "../actions";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -98,6 +99,27 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       </option>
     )),
   ];
+  // Transparência salarial (Lei 14.611/2023, funcionalidade-775): os empregados (CLT) ativos com contrato.
+  const ativosComContrato = pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate && p.active && regimeDaCategoria(p.dp2Vinculo.categoria) === "CLT");
+  const cargoDe = new Map(
+    (
+      await getPrisma().person.findMany({ where: { tenantId: tela.tenantId, id: { in: ativosComContrato.map((p) => p.id) } }, select: { id: true, cargo: { select: { name: true } } } })
+    ).map((p) => [p.id, p.cargo?.name ?? null])
+  );
+  const nomeDaRaca = new Map(RACAS);
+  const transparencia = relatorioDeTransparencia(
+    ativosComContrato.map((p) => {
+      const d = lerDadosEsocial(p.dp2Vinculo!.dadosEsocial);
+      return {
+        cargo: cargoDe.get(p.id) ?? null,
+        sexo: d.sexo,
+        racaCor: d.racaCor,
+        salarioMensal: salarioMensalDoContrato({ salarioBase: Number(p.dp2Vinculo!.salarioBase), tipoSalario: p.dp2Vinculo!.tipoSalario, horasMensais: p.dp2Vinculo!.horasMensais }),
+      };
+    }),
+    (c) => nomeDaRaca.get(c) ?? c
+  );
+  const pctTransp = (v: number | null) => (v === null ? "—" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(v)}%`);
   // Advertências e suspensões da empresa (funcionalidade-763).
   const empresaId = tela.empresa.id;
   const ocorrencias = await getPrisma().dp2Ocorrencia.findMany({ where: { tenantId: tela.tenantId, companyId: empresaId }, orderBy: { data: "desc" }, take: 100 });
@@ -453,6 +475,57 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           </div>
         )}
       </Secao>
+
+      {transparencia.empregados > 0 && (
+        <Secao
+          titulo="Transparência salarial (Lei 14.611/2023)"
+          apoio={
+            transparencia.obrigada
+              ? `${transparencia.empregados} empregados: a empresa publica o relatório semestral do Ministério do Trabalho. Confira aqui antes.`
+              : `${transparencia.empregados} empregado(s): o relatório semestral é obrigatório a partir de ${LIMITE_DA_LEI}. A conferência vale como prévia.`
+          }
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-fs-3">
+              <thead>
+                <tr>
+                  <th className={TH}>Cargo</th>
+                  <th className={TH_NUM}>Mulheres</th>
+                  <th className={TH_NUM}>Média</th>
+                  <th className={TH_NUM}>Homens</th>
+                  <th className={TH_NUM}>Média</th>
+                  <th className={TH_NUM}>Mulheres ÷ homens</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transparencia.porCargo.map((l) => (
+                  <tr key={l.cargo} className={TR}>
+                    <td className={TD}>{l.cargo}</td>
+                    <td className={TD_NUM}>{l.mulheres}</td>
+                    <td className={TD_NUM}>{l.mediaMulheres !== null ? brl(l.mediaMulheres) : "—"}</td>
+                    <td className={TD_NUM}>{l.homens}</td>
+                    <td className={TD_NUM}>{l.mediaHomens !== null ? brl(l.mediaHomens) : "—"}</td>
+                    <td className={`${TD_NUM} ${l.razao !== null && l.razao < 100 ? "text-warning-fg font-medium" : ""}`}>{pctTransp(l.razao)}</td>
+                  </tr>
+                ))}
+                <tr className={`${TR} font-semibold`}>
+                  <td className={TD}>Empresa</td>
+                  <td className={TD_NUM} />
+                  <td className={TD_NUM}>{transparencia.geral.mediaMulheres !== null ? brl(transparencia.geral.mediaMulheres) : "—"}</td>
+                  <td className={TD_NUM} />
+                  <td className={TD_NUM}>{transparencia.geral.mediaHomens !== null ? brl(transparencia.geral.mediaHomens) : "—"}</td>
+                  <td className={TD_NUM}>{pctTransp(transparencia.geral.razao)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-fs-2 text-fg-muted">
+            Por raça/cor:{" "}
+            {transparencia.porRaca.map((r) => `${r.racaCor} ${r.pessoas} (média ${brl(r.media)})`).join(" · ")}
+            {transparencia.semSexo > 0 ? `. ${transparencia.semSexo} sem sexo nos dados do eSocial do contrato: ficaram fora da comparação.` : "."} Salário do contrato; horista em mês pelas horas mensais.
+          </p>
+        </Secao>
+      )}
 
       {pessoas.some((p) => p.dp2Vinculo) && (
         <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado e o contrato de experiência em PDF, do cadastro e do contrato do DP 2. O que faltar no cadastro sai com um traço.">
