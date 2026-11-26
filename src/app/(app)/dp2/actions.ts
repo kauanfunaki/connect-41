@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
 import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
@@ -1051,6 +1052,51 @@ export async function importarTotalizadoresAction(_: EstadoDoDp2, fd: FormData):
   return { ok: true, texto: `Totalizadores importados: ${contagem}.${avisos ? ` ${avisos}` : ""}` };
 }
 
+// ─── Reajuste coletivo (26/11/2026, funcionalidade-760) ─────────────────────
+
+/**
+ * Aplica o reajuste da convenção a todos os empregados (CLT) ativos com
+ * contrato na empresa: o percentual e, se houver, o piso. Cada mudança entra
+ * no histórico salarial. O S-2206 de cada um sai depois, em DP 2 › eSocial.
+ */
+export async function reajusteColetivoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerReajuste({ percentual: texto(fd, "percentual"), piso: texto(fd, "piso"), data: texto(fd, "data"), motivo: texto(fd, "motivo") });
+  if (!lido.ok) return erro(lido.erro);
+  const r = lido.reajuste;
+  const pessoas = (await colaboradoresDaEmpresa(a.tenantId, companyId)).filter((p) => p.dp2Vinculo && p.active && !p.dismissalDate && regimeDaCategoria(p.dp2Vinculo.categoria) === "CLT");
+  const previsao = preverReajuste(
+    pessoas.map((p) => ({ personId: p.id, nome: p.name, salarioBase: Number(p.dp2Vinculo!.salarioBase), tipoSalario: p.dp2Vinculo!.tipoSalario, horasMensais: p.dp2Vinculo!.horasMensais })),
+    r
+  ).filter((x) => x.pelo !== "SEM_MUDANCA");
+  if (previsao.length === 0) return erro("Ninguém muda de salário com esse reajuste.");
+  const prisma = getPrisma();
+  const data = new Date(`${r.data}T00:00:00Z`);
+  await prisma.$transaction(async (tx) => {
+    for (const x of previsao) {
+      await tx.dp2Vinculo.update({ where: { personId: x.personId }, data: { salarioBase: x.depois } });
+      await tx.person.update({ where: { id: x.personId }, data: { currentSalary: x.depois } });
+      await tx.dp2HistoricoSalarial.create({
+        data: { tenantId: a.tenantId, companyId, personId: x.personId, data, salarioAnterior: x.antes, salario: x.depois, motivo: x.pelo === "PISO" ? `${r.motivo} (piso)` : r.motivo, criadoPorId: a.userId },
+      });
+    }
+  });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.reajuste_coletivo",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: { ...r, pessoas: previsao.length, peloPiso: previsao.filter((x) => x.pelo === "PISO").length },
+  });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Reajuste aplicado a ${previsao.length} colaborador(es) a partir de ${r.data.split("-").reverse().join("/")}. Gere o S-2206 de cada um em DP 2 › eSocial.` };
+}
+
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────
 
 export async function importarComparativoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -1194,8 +1240,26 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
   if (dados.bancoCodigo && !/^\d{3}$/.test(dados.bancoCodigo)) return erro("O banco é o código de 3 dígitos (ex.: 341).");
   const fixas = await rubricasFixasDoFormulario(a.tenantId, fd);
   if (!fixas.ok) return erro(fixas.erro);
+  const anterior = await prisma.dp2Vinculo.findUnique({ where: { personId: pessoa.id }, select: { salarioBase: true } });
+  const mudouSalario = !anterior || Number(anterior.salarioBase) !== salarioBase;
+  const desde = /^\d{4}-\d{2}-\d{2}$/.test(texto(fd, "salarioDesde")) ? texto(fd, "salarioDesde") : new Date().toISOString().slice(0, 10);
   await prisma.$transaction(async (tx) => {
     await tx.dp2Vinculo.upsert({ where: { personId: pessoa.id }, create: { tenantId: a.tenantId, personId: pessoa.id, ...dados }, update: dados });
+    // Histórico salarial (funcionalidade-760): o primeiro salário e cada mudança.
+    if (mudouSalario && salarioBase !== null) {
+      await tx.dp2HistoricoSalarial.create({
+        data: {
+          tenantId: a.tenantId,
+          companyId: pessoa.currentCompanyId!,
+          personId: pessoa.id,
+          data: new Date(`${desde}T00:00:00Z`),
+          salarioAnterior: anterior ? anterior.salarioBase : null,
+          salario: salarioBase,
+          motivo: (texto(fd, "motivoSalario") || (anterior ? "Alteração do contrato" : "Salário inicial do contrato")).slice(0, 120),
+          criadoPorId: a.userId,
+        },
+      });
+    }
     // Só quem manda a lista (o modal do contrato) troca as rubricas fixas.
     if (fd.has("rubricasFixas")) await gravarRubricasFixas(a.tenantId, pessoa.id, fixas.fixas, a.userId, tx);
   });
