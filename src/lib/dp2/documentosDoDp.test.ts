@@ -47,3 +47,24 @@ describe("documentos do DP", () => {
     expect((await PDFDocument.load(await pdfDoContratoDeExperiencia(dados()))).getPageCount()).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("ficha de atualização da CTPS (funcionalidade-776)", () => {
+  it("sai em PDF com as anotações", async () => {
+    const { pdfDaFichaDaCtps } = await import("./documentosDoDp");
+    const pdf = await pdfDaFichaDaCtps(
+      {
+        empresa: "Panificadora", documentoDaEmpresa: null, enderecoDaEmpresa: null, cidade: null, colaborador: "Joana", cpf: null, rg: null, pis: null, ctps: null, nascimento: null,
+        endereco: null, escolaridade: null, admissao: "2024-05-11", cargo: "Padeira", cbo: null, salario: 3000, tipoSalario: "MENSAL", horasMensais: 220, jornada: null, matricula: null,
+        categoria: "101", dataTermino: null, dependentes: [],
+      },
+      {
+        alteracoes: [{ data: "2027-03-01", de: 3000, para: 3150, motivo: "Convenção 2027" }],
+        ferias: [{ aquisitivoInicio: "2024-05-11", aquisitivoFim: "2025-05-10", inicio: "2025-07-01", dias: 30, abono: 0 }],
+        afastamentos: [{ inicio: "2026-02-01", fim: "2026-02-20", motivo: "doença" }],
+        contribuicoes: [{ competencia: "2027-03", valor: 100 }],
+        transferencias: [],
+      }
+    );
+    expect(Buffer.from(pdf).subarray(0, 5).toString()).toBe("%PDF-");
+  });
+});

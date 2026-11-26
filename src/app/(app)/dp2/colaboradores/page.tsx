@@ -39,7 +39,7 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, excluirAlocacaoAction, gerarEventoDaTransferenciaAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, guardarDocumentoAction, excluirAlocacaoAction, gerarEventoDaTransferenciaAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -640,7 +640,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       )}
 
       {pessoas.some((p) => p.dp2Vinculo) && (
-        <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado, o contrato de experiência e o histórico PPP em PDF, do cadastro e do contrato do DP 2. O que faltar no cadastro sai com um traço.">
+        <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado, o contrato de experiência, a ficha de atualização da CTPS e o histórico PPP em PDF, do cadastro e do contrato do DP 2. Guardar nos Arquivos põe o documento na pasta Departamento Pessoal da empresa. O que faltar no cadastro sai com um traço.">
           <form action="/api/dp2/documentos" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
             <CampoForm label="Colaborador" htmlFor="doc-pessoa">
               <Select id="doc-pessoa" name="pessoa" defaultValue="" required>
@@ -660,6 +660,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <Select id="doc-tipo" name="tipo" defaultValue="FICHA">
                 <option value="FICHA">Ficha de registro de empregado</option>
                 <option value="EXPERIENCIA">Contrato de experiência</option>
+                <option value="CTPS">Ficha de atualização da CTPS</option>
                 <option value="PPP">Histórico PPP (S-2240 e ASO)</option>
               </Select>
             </CampoForm>
@@ -670,6 +671,34 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               Quadro de horário da empresa (PDF)
             </Button>
           </form>
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={guardarDocumentoAction} rotulo="Guardar nos Arquivos" rotuloEnviando="Guardando…" variante="secondary" className="mt-4">
+              <input type="hidden" name="companyId" value={tela.empresa.id} />
+              <div className="flex flex-wrap items-end gap-4">
+                <CampoForm label="Colaborador" htmlFor="gd-pessoa">
+                  <Select id="gd-pessoa" name="pessoa" defaultValue="">
+                    <option value="">— (no quadro de horário)</option>
+                    {pessoas
+                      .filter((p) => p.dp2Vinculo)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Documento" htmlFor="gd-tipo">
+                  <Select id="gd-tipo" name="tipo" defaultValue="FICHA">
+                    <option value="FICHA">Ficha de registro de empregado</option>
+                    <option value="EXPERIENCIA">Contrato de experiência</option>
+                    <option value="CTPS">Ficha de atualização da CTPS</option>
+                    <option value="PPP">Histórico PPP (S-2240 e ASO)</option>
+                    <option value="QUADRO">Quadro de horário da empresa</option>
+                  </Select>
+                </CampoForm>
+              </div>
+            </FormularioDoDp2>
+          )}
           <p className="mt-2 text-fs-2 text-fg-muted">O contrato de experiência sai do contrato por prazo determinado (tipo 2 e data de término nos dados do eSocial), com o termo de prorrogação no fim. O histórico PPP junta os S-2240 e os ASOs gerados em DP 2 › eSocial.</p>
         </Secao>
       )}
