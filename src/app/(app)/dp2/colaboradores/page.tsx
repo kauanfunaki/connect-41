@@ -321,6 +321,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <Checkbox id="valeTransporte" name="valeTransporte" label="Vale-transporte (desconta 6% do salário)" defaultChecked={v?.valeTransporte ?? false} />
           <Checkbox id="aprendiz" name="aprendiz" label="Aprendiz (FGTS de 2%)" defaultChecked={v?.aprendiz ?? false} />
         </div>
+        <CampoForm
+          label="Custo diário do vale-transporte"
+          htmlFor="vtCustoDiario"
+          className="mt-4 max-w-xs"
+          dica="As tarifas de ida e volta somadas. O desconto de 6% fica limitado a este custo × os dias úteis trabalhados, e o pedido do mês sai daqui."
+        >
+          <Input id="vtCustoDiario" name="vtCustoDiario" inputMode="decimal" prefix="R$" placeholder="0,00" defaultValue={v?.vtCustoDiario != null ? reais(Number(v.vtCustoDiario)) : ""} />
+        </CampoForm>
         <CampoForm label="Observações" htmlFor="observacoes" className="mt-4">
           <Textarea id="observacoes" name="observacoes" rows={2} defaultValue={v?.observacoes ?? ""} />
         </CampoForm>

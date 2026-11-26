@@ -158,6 +158,7 @@ export function vinculoDoMotor(v: {
   insalubridade: string;
   periculosidade: boolean;
   valeTransporte: boolean;
+  vtCustoDiario?: unknown;
   aprendiz: boolean;
   categoria?: string;
 }): VinculoDoMotor {
@@ -170,6 +171,7 @@ export function vinculoDoMotor(v: {
     insalubridade: (["NENHUM", "MINIMO", "MEDIO", "MAXIMO"].includes(v.insalubridade) ? v.insalubridade : "NENHUM") as Insalubridade,
     periculosidade: v.periculosidade,
     valeTransporte: v.valeTransporte,
+    vtCustoDiario: v.vtCustoDiario == null ? null : Number(v.vtCustoDiario),
     aprendiz: v.aprendiz,
     categoria: v.categoria ?? "101",
   };
