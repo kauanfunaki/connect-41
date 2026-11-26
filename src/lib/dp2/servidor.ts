@@ -4,6 +4,7 @@
 
 import { avisosDeVencimento } from "./avisos";
 import { lerDadosEsocial } from "./esocial/cadastro";
+import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
@@ -298,6 +299,25 @@ export async function mediaDaPessoa(tenantId: string, personId: string, ate: str
     .filter((c) => competenciaDe(c.competencia.ano, c.competencia.mes) <= ate)
     .sort((a, b) => a.competencia.ano - b.competencia.ano || a.competencia.mes - b.competencia.mes)
     .map((c) => ({ competencia: competenciaDe(c.competencia.ano, c.competencia.mes), itens: (c.itens as unknown as ItemDoHolerite[]) ?? [] }));
+  // Os meses de antes do DP 2, do saldo inicial conferido (funcionalidade-747).
+  const desde = competenciaDe(de.getUTCFullYear(), de.getUTCMonth() + 1);
+  const saldo = await getPrisma().dp2SaldoInicialMedia.findMany({
+    where: { tenantId, personId, conferidoEm: { not: null }, competencia: { gte: desde, lte: ate } },
+    select: { competencia: true, valor: true, rubricaId: true },
+  });
+  if (saldo.length > 0) {
+    const rubricas = await getPrisma().dp2Rubrica.findMany({
+      where: { tenantId, id: { in: [...new Set(saldo.map((l) => l.rubricaId))] } },
+      select: { id: true, tipo: true, mediaFerias: true, mediaDecimo: true, mediaRescisao: true },
+    });
+    const porId = new Map(rubricas.map((r) => [r.id, r]));
+    const anteriores = mesesDoSaldoInicial(
+      saldo.flatMap((l) => (porId.has(l.rubricaId) ? [{ competencia: l.competencia, valor: Number(l.valor), rubrica: porId.get(l.rubricaId)! }] : [])),
+      new Set(doPeriodo.map((m) => m.competencia))
+    );
+    doPeriodo.push(...anteriores);
+    doPeriodo.sort((x, y) => x.competencia.localeCompare(y.competencia));
+  }
   return mediaDeVariaveis(doPeriodo, tipo);
 }
 
@@ -315,6 +335,8 @@ export type TotaisDaCompetencia = {
   provisoes: number;
   alertas: number;
   semVinculo: number;
+  /** Quem tem rescisão gravada no mês e saiu da folha mensal (funcionalidade-746). */
+  rescindidos?: string[];
   /** Ajustes manuais que entraram no cálculo (funcionalidade-768). */
   ajustes?: number;
 };
@@ -360,11 +382,30 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   // Férias gravadas que caem no mês (funcionalidade-745).
   const feriasDe = comp.tipo === "MENSAL" ? await feriasDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, FeriasNoMes[]>();
 
+  // Rescisão gravada com desligamento no mês (funcionalidade-746): as verbas do mês
+  // estão na rescisão e vão no S-2299, então a pessoa sai da folha mensal.
+  const rescindidos =
+    comp.tipo === "MENSAL"
+      ? new Set(
+          (
+            await prisma.dp2Rescisao.findMany({
+              where: { tenantId, personId: { in: pessoas.map((p) => p.id) }, desligamento: { gte: new Date(Date.UTC(comp.ano, comp.mes - 1, 1)), lte: new Date(Date.UTC(comp.ano, comp.mes, 0)) } },
+              select: { personId: true },
+            })
+          ).map((r) => r.personId)
+        )
+      : new Set<string>();
+  const nomesRescindidos: string[] = [];
+
   const resultados: { personId: string; c: CalculoDaPessoa; aplicados: AjusteAplicado[] }[] = [];
   let semVinculo = 0;
   for (const p of pessoas) {
     if (!p.dp2Vinculo) {
       semVinculo++;
+      continue;
+    }
+    if (rescindidos.has(p.id)) {
+      nomesRescindidos.push(p.name);
       continue;
     }
     const vinculo = vinculoDoMotor(p.dp2Vinculo);
@@ -404,7 +445,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
     resultados.push({ personId: p.id, c: calculo, aplicados });
   }
 
-  const totais: TotaisDaCompetencia = { pessoas: resultados.length, proventos: 0, descontos: 0, liquido: 0, inss: 0, irrf: 0, fgts: 0, encargos: 0, provisoes: 0, alertas: 0, semVinculo };
+  const totais: TotaisDaCompetencia = { pessoas: resultados.length, proventos: 0, descontos: 0, liquido: 0, inss: 0, irrf: 0, fgts: 0, encargos: 0, provisoes: 0, alertas: 0, semVinculo, ...(nomesRescindidos.length ? { rescindidos: nomesRescindidos } : {}) };
   totais.ajustes = resultados.reduce((s, r) => s + r.aplicados.length, 0);
   for (const { c } of resultados) {
     totais.proventos += c.proventos;

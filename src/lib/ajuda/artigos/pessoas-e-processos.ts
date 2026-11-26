@@ -288,6 +288,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Para a mesma rubrica em várias pessoas, use “Lançar por rubrica ou em grupo”: escolha a rubrica e preencha o valor (ou as horas) de cada um; para o mesmo valor, marque as pessoas, digite em “Em grupo” e clique em “Aplicar”. Quem fica em branco não entra. “Consulta por rubrica” soma o mês por rubrica, com as fixas do contrato.",
           "Para receber os eventos da empresa, use “Pedir os eventos ao cliente”: o link, sem login, deixa a empresa informar horas extras, faltas, atrasos e comissões de cada colaborador, ou que não houve nada. O que ela mandar entra como lançamento de origem Cliente.",
           "Para importar, copie do Excel ou do relatório de totais do Pontomais e cole com o cabeçalho: uma coluna CPF ou Nome e uma por evento (HE 50%, HE 100%, Noturno, Faltas, Atrasos, ou o código ou o nome da rubrica). Horas valem em 10:30 ou 10,5.",
+          "Rescisão: em DP 2 › Rescisões, calcule e clique em “Gravar rescisão”. Ela se liga ao desligamento em andamento da pessoa e tira a pessoa da folha mensal do mês do desligamento (as verbas do mês estão na rescisão). Em “Rescisões gravadas”, “Gerar o S-2299” monta o evento a partir da rescisão; “Excluir” só vale com a folha do mês aberta e o S-2299 ainda não enviado.",
           "Férias: em DP 2 › Férias, escolha a pessoa e veja os períodos aquisitivos (saldo, 1/3 pago e situação). Calcule o recibo e clique em “Gravar férias”, escolhendo o período e a data do pagamento. A folha dos meses do gozo paga o salário só dos dias fora das férias, soma férias e 1/3 ao INSS e ao FGTS do mês e desconta o líquido já pago no recibo. Período que passou do concessivo (em dobro) ainda não grava.",
           "Se o empregado também trabalha em outra empresa no mês, informe em “Outras bases de INSS” o CNPJ dela e a remuneração de lá (“Copiar do mês anterior” traz o que se repete). O INSS daqui passa a respeitar o teto somando as bases, e o S-1200 leva a informação ao eSocial.",
           "Clique em “Calcular a folha”. No passo “Conferir”, clique no nome de cada pessoa para ver o holerite com a memória de cálculo.",
@@ -295,12 +296,14 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Enquanto o DP 2 roda em paralelo com a Domínio, em “Comparar com a Domínio” cole uma pessoa por linha: CPF; proventos; descontos; líquido; INSS; IRRF; FGTS. Campo vazio não é comparado.",
           "Ainda em “Conferir”, “Apuração da competência” mostra o INSS (DCTFWeb), o IRRF e, para entidade sem fins lucrativos (opção na Configuração), o PIS de 1% sobre a folha a recolher. Inclua ali as retenções de 11% sofridas (CNPJ do tomador e nota) e as compensações de INSS, IRRF e PIS (mês de origem): elas abatem o devido, e o que sobrar aparece como saldo.",
           "No passo “Fechar”, clique em “Fechar competência”. A competência fechada é a que vale para as médias de férias, 13º e rescisão.",
+          "Para quem já trabalhava antes do DP 2, traga o histórico das médias em DP 2 › Colaboradores › “Saldo inicial das médias”: copie da Domínio (Utilitários › Lançamentos › Lançamento de Rubricas para Médias) uma linha por rubrica e mês, CPF; competência; código da rubrica; valor, e clique em “Importar saldo inicial”. Confira o total de cada pessoa e clique em “Conferir”: só então os meses entram na média de férias, 13º e rescisão, nos meses sem competência fechada no DP 2.",
         ],
       },
       {
         titulo: "Pagar e entregar a folha",
         passos: [
           "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
+          "Em “Guias da folha” (passo “Fechar”), o DARF da DCTFWeb baixado pela rotina do Serpro é conferido com o INSS e o IRRF a recolher da apuração. O FGTS Digital não tem API: baixe a GFD no portal e use “Anexar a GFD” com o valor e o vencimento; o PDF vai para Arquivos › Guias e o valor é conferido com o FGTS do mês.",
           "“Gerar remessa” monta o arquivo do banco (CNAB 240) com o líquido de cada um, pela conta pagadora da empresa, em crédito em conta corrente, crédito em poupança ou TED para outro banco. Quem está sem banco, agência, conta ou CPF fica de fora e aparece listado ali.",
           "O primeiro arquivo de cada banco vai para teste no banco antes de valer.",
           "“Baixar lançamentos (CSV)” traz os lançamentos contábeis da folha, pelas contas das rubricas e das contas da folha.",
@@ -320,9 +323,12 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "Em “eSocial”, comece por “Gerar tabelas”: empregador (S-1000), estabelecimento (S-1005), lotação (S-1020) e as rubricas ativas (S-1010). Depois de corrigir o cadastro, gere de novo: o evento não enviado é trocado.",
           "Em “Periódicos”, gere a remuneração (S-1200), o pagamento (S-1210) e o fechamento (S-1299) da folha mensal fechada. O 13º sai da 2ª parcela fechada, na apuração anual, com a 1ª parcela dentro.",
+          "Depois do envio, confira o que o eSocial calculou: na competência, passo “Conferir”, em “Totalizadores do eSocial”, importe os XML de retorno (S-5001, S-5002, S-5003, S-5011 e S-5013, soltos ou em .zip do “eSocial Download”). A tabela mostra, por pessoa, o INSS, o IRRF e o FGTS do cálculo ao lado do eSocial, e o total da empresa; diferença acima de 1 centavo fica marcada.",
           "Em “Trabalhadores”, gere a admissão (S-2200), a alteração contratual (S-2206) e o afastamento (S-2230) a partir do contrato e do cadastro. Para a alteração, atualize antes o contrato em Colaboradores e informe a data em que vale. O desligamento (S-2299) sai da tela de Rescisões, com as verbas calculadas; sócio, autônomo e estagiário têm início (S-2300) e término (S-2399).",
           "Em “Saúde e segurança”, gere um ASO (S-2220) por exame, as condições ambientais (S-2240) na admissão e quando a condição mudar, e o acidente de trabalho (S-2210).",
           "Em “O que falta no cadastro”, corrija o que está como “falta” e gere os eventos de novo. O que está em “conferir” não impede o envio: é um código que o Connect sugeriu.",
+          "Enviou um evento por fora do Connect? Na fila, use “Registrar recibo” com o nº que o eSocial devolveu: o evento fica aceito. Um evento aceito de trabalhador ou da folha pode ser excluído com “Excluir no eSocial (S-3000)”; quando o recibo do S-3000 é registrado, o original fica como excluído.",
+          "Para corrigir uma folha já fechada no eSocial (S-1299 aceito), reabra a competência no DP 2: o S-1298 (reabertura) sai junto na fila. Com o recibo do S-1298 registrado, feche a competência de novo e gere os periódicos: quem já tinha S-1200 ou S-1210 aceito recebe a retificação, com o recibo do original, e sai um novo S-1299.",
         ],
       },
       {
