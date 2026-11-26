@@ -881,6 +881,14 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                 <Button href={`/api/dp2/competencias/${comp.id}/holerites`} variant="secondary" size="sm" download>
                   Baixar holerites (PDF)
                 </Button>
+                {/* Recibos de RPA dos autônomos (funcionalidade-759). */}
+                {calculos
+                  .filter((c) => pessoas.find((p) => p.id === c.personId)?.dp2Vinculo?.categoria === "701")
+                  .map((c) => (
+                    <Button key={c.personId} href={`/api/dp2/competencias/${comp.id}/rpa?pessoa=${c.personId}`} variant="ghost" size="sm" download>
+                      RPA de {c.person.name}
+                    </Button>
+                  ))}
                 {fechada && podeAgir && (
                   <FormularioDoDp2 acao={guardarHoleritesAction} rotulo="Guardar nos Arquivos" rotuloEnviando="Guardando…" variante="ghost" tamanho="sm">
                     <input type="hidden" name="competenciaId" value={comp.id} />

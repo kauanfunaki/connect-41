@@ -299,6 +299,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pagar e entregar a folha",
         passos: [
+          "RPA: para o autônomo (categoria 701), “Saídas da folha” tem o botão “RPA de …” com o recibo de pagamento a autônomo em PDF: o serviço, o INSS de 11%, o IRRF, o campo do ISS (quando o município cobrar), o líquido e a contribuição de 20% da empresa.",
           "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
           "“Gerar remessa” monta o arquivo do banco (CNAB 240) com o líquido de cada um, pela conta pagadora da empresa, em crédito em conta corrente, crédito em poupança ou TED para outro banco. Quem está sem banco, agência, conta ou CPF fica de fora e aparece listado ali.",
           "O primeiro arquivo de cada banco vai para teste no banco antes de valer.",
