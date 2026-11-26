@@ -13,6 +13,7 @@
 // regime-geral). Os valores voltam como texto ("42.24"); o estado de cada item
 // diz se calculou. Os gabaritos dos testes são respostas reais do serviço.
 
+import { formatarReais } from "@/lib/format";
 import { lerNumeroDigitado } from "../numeroDigitado";
 
 export const MODULO_DA_CALCULADORA = "fiscal_calculadora";
@@ -785,11 +786,38 @@ export function lerPergunta(bruto: unknown): PerguntaDaCalculadora | null {
 // ─── Exibição ────────────────────────────────────────────────────────────────
 
 const PERCENTUAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 });
+// A memória de cálculo pede duas casas no mínimo ("0,90%") e mostra as que a
+// Receita mandou além delas, até as seis do texto dela ("0,0125%").
+const PERCENTUAL_COM_DUAS_CASAS = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 
-/** Percentual com vírgula e sem zeros à toa: 8.8 → "8,8%", 0.05 → "0,05%". */
-export function percentual(v: number | null | undefined): string {
+/**
+ * Percentual com vírgula e sem zeros à toa: 8.8 → "8,8%", 0.05 → "0,05%".
+ * Com `duasCasas`, nunca menos de duas: 0.9 → "0,90%", 0.0125 → "0,0125%".
+ */
+export function percentual(v: number | null | undefined, casas: "enxuto" | "duasCasas" = "enxuto"): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
-  return `${PERCENTUAL.format(v)}%`;
+  return `${(casas === "duasCasas" ? PERCENTUAL_COM_DUAS_CASAS : PERCENTUAL).format(v)}%`;
+}
+
+// Os números crus da memória: "R$ 1000.00000000" e "0.900000%", com ponto
+// decimal e sem milhar. O dinheiro não pode emendar em mais um dígito nem em
+// ",0"/".0" — assim "R$ 1.000,00", já no padrão, não casa. O percentual exige o
+// ponto decimal, para "Alíquota reduzida em 60%" (nome da classificação, que a
+// Receita escreve assim) ficar como está.
+const REAIS_CRUS = /R\$\s*(-?\d+(?:\.\d+)?)(?!\d|[.,]\d)/g;
+const PERCENTUAL_CRU = /(?<![\d.,])(-?\d+\.\d+)\s*%/g;
+
+/**
+ * A memória de cálculo da Receita com os números no padrão brasileiro
+ * (26/11/2026, melhoria-808). O texto vem pronto da calculadora oficial, com o
+ * enquadramento legal e o tratamento, que não existem em campo próprio; por
+ * isso os números são reescritos no próprio texto: "R$ 1000.00000000" →
+ * "R$ 1.000,00" e "0.900000%" → "0,90%". O resto do texto fica como veio.
+ */
+export function memoriaFormatada(memoria: string): string {
+  return memoria
+    .replace(REAIS_CRUS, (_, n: string) => formatarReais(Number(n)))
+    .replace(PERCENTUAL_CRU, (_, n: string) => percentual(Number(n), "duasCasas"));
 }
 
 /** O ano da data, para a tela dizer "alíquotas de 2026". */

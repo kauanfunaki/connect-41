@@ -29,6 +29,7 @@ import {
   itemVazio,
   lerAliquotaDeReferencia,
   lerResposta,
+  memoriaFormatada,
   montarPedido,
   percentual,
   resumirClassificacoes,
@@ -316,5 +317,52 @@ describe("serviço e exibição", () => {
     expect(percentual(0.05)).toBe("0,05%");
     expect(percentual(60)).toBe("60%");
     expect(percentual(null)).toBe("—");
+  });
+
+  it("percentual com duas casas no mínimo, para a memória de cálculo", () => {
+    expect(percentual(0.9, "duasCasas")).toBe("0,90%");
+    expect(percentual(26.5, "duasCasas")).toBe("26,50%");
+    expect(percentual(0.0125, "duasCasas")).toBe("0,0125%");
+    expect(percentual(60, "duasCasas")).toBe("60,00%");
+  });
+
+  // melhoria-808 (26/11/2026): a memória vinha com os números da API crus.
+  describe("memória de cálculo no padrão brasileiro", () => {
+    // O Intl separa o "R$" do número com espaço sem quebra.
+    const legivel = (s: string) => memoriaFormatada(s).replace(/ /g, " ");
+
+    it("reais com milhar e duas casas, alíquota com vírgula", () => {
+      expect(
+        legivel(
+          "Operação de consumo com enquadramento legal em LC 214/2025, tributada conforme Tributação integral. A base de cálculo utilizada é de R$ 1000.00000000, com alíquota de 0.900000%.",
+        ),
+      ).toBe(
+        "Operação de consumo com enquadramento legal em LC 214/2025, tributada conforme Tributação integral. A base de cálculo utilizada é de R$ 1.000,00, com alíquota de 0,90%.",
+      );
+      expect(legivel("A base de cálculo utilizada é de R$ 12345.6, com alíquota de 0.012500%.")).toBe(
+        "A base de cálculo utilizada é de R$ 12.345,60, com alíquota de 0,0125%.",
+      );
+    });
+
+    it("redução e Imposto Seletivo; o nome da classificação fica como veio", () => {
+      expect(
+        legivel(
+          "Operação de consumo com enquadramento legal em Art. 129, tributada conforme Alíquota reduzida em 60%. A base de cálculo utilizada é de R$ 1200.00000000, com alíquota de 0.100000%, sendo que esse regime define uma redução de 60.000000% na alíquota.",
+        ),
+      ).toBe(
+        "Operação de consumo com enquadramento legal em Art. 129, tributada conforme Alíquota reduzida em 60%. A base de cálculo utilizada é de R$ 1.200,00, com alíquota de 0,10%, sendo que esse regime define uma redução de 60,00% na alíquota.",
+      );
+      expect(legivel("A base de cálculo utilizada é de R$ 150.00, com alíquota ad valorem de 10.000000%. A alíquota ad rem é de .")).toBe(
+        "A base de cálculo utilizada é de R$ 150,00, com alíquota ad valorem de 10,00%. A alíquota ad rem é de .",
+      );
+    });
+
+    it("texto já no padrão, ou sem número, não muda", () => {
+      const pronto = "A base de cálculo utilizada é de R$ 1.000,00, com alíquota de 0,90%.";
+      expect(legivel(pronto)).toBe(pronto);
+      expect(legivel(legivel("Base de R$ 1000.00000000 e alíquota de 26.500000%."))).toBe("Base de R$ 1.000,00 e alíquota de 26,50%.");
+      const semNumero = "Operação de consumo com enquadramento legal em Art. 125, tributada conforme Alíquota zero. A base de cálculo utilizada é de R$ 100.00000000, com alíquota de zero.";
+      expect(legivel(semNumero)).toBe(semNumero.replace("R$ 100.00000000", "R$ 100,00"));
+    });
   });
 });
