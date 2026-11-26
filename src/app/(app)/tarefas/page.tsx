@@ -346,6 +346,11 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
             )}
             {/* "Todas as tarefas", o nome da tela que abre (20/10/2026, Quadro ›
                 Pasta › Tarefa): era "Kanban", e antes "Quadros". */}
+            {/* A Agenda saiu do menu por padrão (25/11/2026, melhoria-843):
+                o caminho fixo para ela passa a ser este botão. */}
+            <Button href="/agenda" variant="secondary" size="sm">
+              <CalendarDays size={14} /> Agenda
+            </Button>
             <Button href="/kanban" variant="secondary" size="sm">
               <Columns3 size={14} /> Todas as tarefas
             </Button>
