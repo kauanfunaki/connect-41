@@ -502,6 +502,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.alocacao_registrada": c("registrou a alocação de um colaborador num tomador no DP 2"),
   "folha.alocacao_excluida": x("excluiu a alocação de um colaborador num tomador no DP 2"),
   "folha.esocial_transferencia": c("gerou um evento do eSocial da transferência entre empresas no DP 2"),
+  "folha.documento_guardado": c("guardou um documento do DP 2 nos Arquivos da empresa"),
   "folha.colaborador_transferido": c("transferiu um colaborador para outra empresa no DP 2"),
   "folha.reajuste_coletivo": c("aplicou um reajuste coletivo de salários no DP 2"),
   "folha.ocorrencia_registrada": c("registrou uma advertência ou suspensão no DP 2"),

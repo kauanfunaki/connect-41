@@ -201,3 +201,62 @@ export async function pdfDoContratoDeExperiencia(d: DadosDoDocumento): Promise<U
   e.assinaturas(["Empregadora", "Empregado(a)"]);
   return pdf.save();
 }
+
+// ─── Ficha de atualização da CTPS (26/11/2026, funcionalidade-776) ──────────
+
+/**
+ * As anotações do contrato depois da admissão, como a Domínio emite em
+ * Relatórios › Outros › Ficha de Atualização da CTPS: alterações salariais,
+ * férias, afastamentos, contribuições sindicais e transferências. Com a CTPS
+ * digital, a ficha serve para conferir com o eSocial e entregar ao empregado.
+ */
+export type AnotacoesDaCtps = {
+  alteracoes: { data: string; de: number | null; para: number; motivo: string }[];
+  ferias: { aquisitivoInicio: string; aquisitivoFim: string; inicio: string; dias: number; abono: number }[];
+  afastamentos: { inicio: string; fim: string | null; motivo: string }[];
+  contribuicoes: { competencia: string; valor: number }[];
+  transferencias: { data: string; texto: string }[];
+};
+
+const somarDias = (iso: string, dias: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + dias * 86_400_000).toISOString().slice(0, 10);
+
+export async function pdfDaFichaDaCtps(d: DadosDoDocumento, a: AnotacoesDaCtps): Promise<Uint8Array> {
+  const { pdf, e } = await novo();
+  e.paragrafo("FICHA DE ATUALIZAÇÃO DA CTPS", 14, true);
+  e.paragrafo("Anotações do contrato depois da admissão, para conferir com a CTPS digital (eSocial).", 8);
+  e.pular(6);
+  e.campo("Empregador", `${d.empresa}${d.documentoDaEmpresa ? ` · CNPJ/CPF ${d.documentoDaEmpresa}` : ""}`);
+  e.campo("Empregado", d.colaborador);
+  e.campo("CPF", d.cpf);
+  e.campo("CTPS", d.ctps);
+  e.campo("Admissão", br(d.admissao));
+  e.campo("Cargo", d.cargo);
+  e.pular(6);
+  e.paragrafo("Alterações salariais", 10, true);
+  if (a.alteracoes.length === 0) e.paragrafo("Nenhuma alteração salarial registrada.", 9);
+  for (const x of a.alteracoes) e.campo(br(x.data), `${x.de !== null ? `${REAIS.format(x.de)} → ` : ""}${REAIS.format(x.para)} · ${x.motivo}`);
+  e.pular(6);
+  e.paragrafo("Férias", 10, true);
+  if (a.ferias.length === 0) e.paragrafo("Nenhuma férias gravada.", 9);
+  for (const f of a.ferias) {
+    e.campo(
+      `Período ${br(f.aquisitivoInicio)} a ${br(f.aquisitivoFim)}`,
+      `gozo de ${br(f.inicio)} a ${br(somarDias(f.inicio, f.dias - 1))} (${f.dias} dias)${f.abono ? ` · abono de ${f.abono} dias` : ""}`
+    );
+  }
+  e.pular(6);
+  e.paragrafo("Afastamentos", 10, true);
+  if (a.afastamentos.length === 0) e.paragrafo("Nenhum afastamento registrado.", 9);
+  for (const x of a.afastamentos) e.campo(`${br(x.inicio)} a ${x.fim ? br(x.fim) : "—"}`, x.motivo);
+  e.pular(6);
+  e.paragrafo("Contribuição sindical", 10, true);
+  if (a.contribuicoes.length === 0) e.paragrafo("Nenhuma contribuição sindical descontada.", 9);
+  for (const c of a.contribuicoes) e.campo(c.competencia.split("-").reverse().join("/"), REAIS.format(c.valor));
+  if (a.transferencias.length) {
+    e.pular(6);
+    e.paragrafo("Transferências", 10, true);
+    for (const t of a.transferencias) e.campo(br(t.data), t.texto);
+  }
+  e.assinaturas(["Empregador", "Empregado(a)"]);
+  return pdf.save();
+}

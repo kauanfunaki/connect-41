@@ -18,6 +18,7 @@ import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
 import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
 import { lerGuiaDoFgts } from "@/lib/dp2/guiasDaFolha";
 import { guardarArquivo } from "@/lib/drive/servidor";
+import { documentoDoColaborador, lerTipoDeDocumento, quadroDeHorarioDaEmpresa } from "@/lib/dp2/documentosServidor";
 import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
 import { lerTotalizadores } from "@/lib/dp2/esocial/totalizadores";
 import { calcularRescisaoDaPessoa, dadosDaRescisao, type AvisoDaRescisao } from "@/lib/dp2/rescisaoServidor";
@@ -917,6 +918,38 @@ export async function apagarSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Pr
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.saldo_inicial_apagado", entityType: "Person", entityId: personId, metadata: { linhas: r.count } });
   revalidatePath("/dp2/colaboradores");
   return { ok: true, texto: `Saldo inicial apagado (${r.count} linha(s)).` };
+}
+
+// ─── Documentos do DP nos Arquivos (26/11/2026, funcionalidade-776) ─────────
+
+/**
+ * Gera o documento escolhido (ficha de registro, contrato de experiência,
+ * histórico PPP, ficha de atualização da CTPS ou o quadro de horário) e o
+ * guarda em Arquivos › Departamento Pessoal da empresa.
+ */
+export async function guardarDocumentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const qual = texto(fd, "tipo");
+  let doc: Awaited<ReturnType<typeof quadroDeHorarioDaEmpresa>>;
+  if (qual === "QUADRO") doc = await quadroDeHorarioDaEmpresa(a.tenantId, companyId);
+  else {
+    const personId = texto(fd, "pessoa");
+    if (!personId) return erro("Escolha o colaborador.");
+    doc = await documentoDoColaborador(a.tenantId, personId, lerTipoDeDocumento(qual));
+    if (doc.ok && doc.companyId !== companyId) return erro("O colaborador não é desta empresa.");
+  }
+  if (!doc.ok) return erro(doc.erro);
+  const pasta = await pastaDoModeloDaEmpresa(a.tenantId, companyId, "Departamento Pessoal");
+  if (!pasta) return erro("A empresa não tem a pasta Departamento Pessoal nos Arquivos (ela vem do modelo de pastas do escritório).");
+  const guardado = await guardarArquivo({ tenantId: a.tenantId, folderId: pasta, arquivo: new File([new Uint8Array(doc.pdf)], doc.nome, { type: "application/pdf" }), uploadedByUserId: a.userId });
+  if (!guardado.ok) return erro(`Não deu para guardar: ${guardado.erro}`);
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.documento_guardado", entityType: "Company", entityId: companyId, metadata: { tipo: qual || "FICHA", arquivo: guardado.arquivoId, nome: guardado.nome } });
+  revalidatePath("/arquivos");
+  return { ok: true, texto: `"${guardado.nome}" guardado em Arquivos › Departamento Pessoal.${doc.faltas.length ? ` Falta no cadastro: ${doc.faltas.join("; ")}.` : ""}` };
 }
 
 // ─── Guias da folha (26/11/2026, funcionalidade-744) ────────────────────────
