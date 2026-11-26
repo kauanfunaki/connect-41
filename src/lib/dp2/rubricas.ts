@@ -27,6 +27,7 @@ export type PapelDaRubrica =
   | "VALE_TRANSPORTE"
   | "ADIANTAMENTO"
   | "PENSAO"
+  | "PREVIDENCIA_COMPLEMENTAR"
   | "CONTRIBUICAO_SINDICAL"
   | "FGTS"
   | "DECIMO_PRIMEIRA"
@@ -141,6 +142,7 @@ const PADRAO: Padrao[] = [
   { codigo: "062", nome: "Adiantamento do 13º", tipo: "DESCONTO", papel: "DECIMO_ADIANTADO", lancamento: "VALOR", incide: "SO_FGTS" },
   { codigo: "063", nome: "INSS sobre o 13º", tipo: "DESCONTO", papel: "INSS_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "064", nome: "IRRF sobre o 13º", tipo: "DESCONTO", papel: "IRRF_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "065", nome: "Previdência complementar", tipo: "DESCONTO", papel: "PREVIDENCIA_COMPLEMENTAR", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "070", nome: "Aviso prévio indenizado", tipo: "PROVENTO", papel: "AVISO_INDENIZADO", lancamento: "VALOR", incide: "SO_FGTS" },
   { codigo: "071", nome: "Desconto do aviso prévio", tipo: "DESCONTO", papel: "AVISO_DESCONTO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "072", nome: "Férias vencidas indenizadas", tipo: "PROVENTO", papel: "FERIAS_VENCIDAS_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },

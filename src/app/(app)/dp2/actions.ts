@@ -1202,6 +1202,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     insalubridade,
     periculosidade: marcado(fd, "periculosidade"),
     valeTransporte: marcado(fd, "valeTransporte"),
+    previdenciaComplementar: lerNumero(texto(fd, "previdenciaComplementar")),
     contribuicaoSindical: marcado(fd, "contribuicaoSindical"),
     horarioId,
     costCenterId,
