@@ -4,6 +4,7 @@ import { notifyUser } from "@/lib/notifications";
 import { configDoHelpdesk } from "./contexto";
 import { strings } from "./consultas";
 import { ROTULOS, aguardandoSolicitante, avisoDaTriagem, triagemSchema } from "./regras";
+import { avisoDoTeste, eventoDoTesteSchema, situacaoDoEvento } from "./teste";
 
 import { ROTULOS_EVENTO } from "./eventos";
 export { ROTULOS_EVENTO } from "./eventos";
@@ -22,12 +23,15 @@ export async function despacharEventos(tenantId: string, ticketId?: string) {
       catch { console.warn("[helpdesk] Entrega pendente para retomada."); }
       continue;
     }
+    // O passo do teste que muda a situação (pedido, retorno, conclusão) avisa como uma troca de situação (funcionalidade-853).
+    const passoDoTeste = e.type === "teste" ? eventoDoTesteSchema.safeParse(e.data) : null;
+    const mudouASituacao = e.type === "status" || (!!passoDoTeste?.success && !!situacaoDoEvento(passoDoTeste.data));
     const participantes = [t.createdById, ...t.participants.map(p => p.userId), ...(t.approvalStatus === "PENDING" ? strings(t.approverIds) : [])];
     const usuarios = await getPrisma().user.findMany({ where: { tenantId, active: true, id: { not: e.actorId ?? "" }, OR: [
       // A equipe do setor que atende o chamado (12/11/2026); no redirecionamento, já o novo.
       { role: { not: "READONLY" }, sectors: { some: { sectorCode: t.handlingSectorCode } } },
       // Os setores que acompanham (funcionalidade-709): só as mudanças de situação, para não encher o sino.
-      ...(e.type === "status" && t.followingSectors.length ? [{ role: { not: "READONLY" as const }, sectors: { some: { sectorCode: { in: t.followingSectors.map(f => f.sectorCode) } } } }] : []),
+      ...(mudouASituacao && t.followingSectors.length ? [{ role: { not: "READONLY" as const }, sectors: { some: { sectorCode: { in: t.followingSectors.map(f => f.sectorCode) } } } }] : []),
       ...(!e.internal ? [{ id: { in: participantes } }, { role: "SECTOR_ADMIN" as const, sectors: { some: { sectorCode: t.requesterSectorCode } } }] : []),
     ] }, select: { id: true } });
     const data = e.data as Record<string, string>;
@@ -37,6 +41,12 @@ export async function despacharEventos(tenantId: string, ticketId?: string) {
     const esperaOSolicitante = e.type === "status" && aguardandoSolicitante(data.to ?? "");
     try {
       for (const u of usuarios) {
+        // O teste da entrega (funcionalidade-853): quem abriu recebe o aviso da vez dele; a equipe, o resumo.
+        if (e.type === "teste") {
+          const aviso = avisoDoTeste(e.data, t.title, u.id === t.createdById);
+          if (aviso) await notifyUser(u.id, { tenantId, type: aviso.tipo, message: aviso.mensagem, entityId: t.id, actorUserId: e.actorId, deduplicationId: idDaNotificacao(e.id, u.id) });
+          continue;
+        }
         const suaVez = esperaOSolicitante && u.id === t.createdById;
         await notifyUser(u.id, { tenantId, type: suaVez ? "CHAMADO_AGUARDANDO_VOCE" : e.type === "sla" ? "CHAMADO_SLA" : e.internal ? "CHAMADO_INTERNO" : "CHAMADO_ATUALIZADO", message: suaVez ? `Seu chamado aguarda a sua resposta: ${t.title}` : `${descricao}: ${t.title}`, entityId: t.id, actorUserId: e.actorId, deduplicationId: idDaNotificacao(e.id, u.id) });
       }

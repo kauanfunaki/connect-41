@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ExternalLink, Hourglass, Info, Link2, ListChecks, MessageSquareReply, Paperclip, PencilLine, RefreshCw, RotateCcw, ScanSearch, Shuffle, Tags, UserPlus } from "lucide-react";
+import { CalendarClock, CheckCircle2, ExternalLink, FlaskConical, Hourglass, Info, Link2, ListChecks, MessageSquareReply, Paperclip, PencilLine, RefreshCw, RotateCcw, ScanSearch, Shuffle, Tags, UserPlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Accordion } from "@/components/ui/Accordion";
 import { Aviso } from "@/components/ui/Aviso";
@@ -16,6 +16,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Selo } from "@/components/ui/Selo";
 import { useToast } from "@/components/ui/Toast";
 import { CampoDataHora } from "@/components/ui/CampoDataHora";
+import { CampoData } from "@/components/ui/CampoData";
 import { formatInstantDateTime } from "@/lib/format";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -32,22 +33,25 @@ import { SeletorDePrioridade } from "./SeletorDePrioridade";
 import { SeloDaSituacao, SeletorDeSituacao } from "./SeletorDeSituacao";
 import { ResultadoDaTriagem, TriagemEmAndamento } from "./ResultadoDaTriagem";
 import { mudar } from "@/app/(app)/chamados/actions";
-import { ROTULOS_PRIORIDADE, aguardandoSolicitante, emTriagem, fechado, parecerSchema, situacoesDoSeletor, triagemSchema, type DadosDoChamado, type PapelNoChamado, type Prioridade, type Status } from "@/lib/chamados/regras";
+import { ROTULOS_PRIORIDADE, aguardandoSolicitante, emTeste, emTriagem, fechado, parecerSchema, situacoesDoSeletor, triagemSchema, type DadosDoChamado, type PapelNoChamado, type Prioridade, type Status } from "@/lib/chamados/regras";
 import type { detalhe } from "@/lib/chamados/consultas";
 import { montarLinhaDoTempo } from "@/lib/chamados/linhaDoTempo";
 import { painelDoPrazo } from "@/lib/chamados/painelDoPrazo";
 import { TOM_DA_PRIORIDADE } from "@/lib/chamados/tons";
 import { endereco, idCurto } from "@/lib/enderecoCurto";
 import { TENTATIVAS_NO_HUB } from "@/lib/chamados/hub";
+import { ROTULOS_DO_RETORNO, diaCurto, diaDoPrazo, esperaDecisao, estadoDoTeste, podeConduzirTeste, podePedirTeste, ultimoRetorno, type Retorno } from "@/lib/chamados/teste";
 
 type Chamado = Awaited<ReturnType<typeof detalhe>>;
 type Usuario = { id: string; name: string; atendente: boolean };
 type Setor = { code: string; label: string };
+/** O prazo do teste (funcionalidade-853): os atalhos com a data, hoje e o último dia aceito. Nulo para quem não atende. */
+type PrazosDoTeste = { atalhos: { dias: number; ate: string }[]; hoje: string; maximo: string };
 /** `setoresQueAtendem`: os que administram os chamados (12/11/2026); com dois ou mais, a tela mostra qual atende e permite redirecionar. */
-type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: Setor[]; setoresQueAtendem: Setor[]; permissoes: { operar: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean; verOrquestrador: boolean; redirecionar: boolean; reclassificar: boolean } };
+type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: Setor[]; setoresQueAtendem: Setor[]; prazosDoTeste: PrazosDoTeste | null; permissoes: { operar: boolean; responderTeste: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean; verOrquestrador: boolean; redirecionar: boolean; reclassificar: boolean } };
 type Resultado = { ok: true; valor: unknown } | { ok: false; error: string };
 /** As janelas que saem do menu "…" e dos avisos do alto (18/11/2026): os formulários deixaram de morar no cartão. */
-type Janela = "editar" | "categoria" | "setor" | "prazo" | "aprovar" | "recusar" | "reabrir" | "recusar_reabertura" | "pedir_reabertura";
+type Janela = "editar" | "categoria" | "setor" | "prazo" | "aprovar" | "recusar" | "reabrir" | "recusar_reabertura" | "pedir_reabertura" | "teste_pedir" | "teste_prorrogar" | "teste_retorno";
 const data = (v: Date | string) => formatInstantDateTime(new Date(v));
 const ID_DA_CAIXA = "caixa-de-resposta";
 // O cabeçalho de um recolhível do cartão: a linha inteira, com o resumo à direita e a seta na ponta.
@@ -100,7 +104,7 @@ function useAgora(inicial: string) {
  * Erros vão para um aviso que some (toast) ou para dentro da janela, e o
  * "Salvando…" fica no controle clicado.
  */
-export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuarios, categorias, setores, setoresQueAtendem, permissoes: p }: Props) {
+export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuarios, categorias, setores, setoresQueAtendem, prazosDoTeste, permissoes: p }: Props) {
   const router = useRouter(), toast = useToast();
   const [salvando, setSalvando] = useState<string | null>(null), [erroDaJanela, setErroDaJanela] = useState("");
   const [janela, setJanela] = useState<Janela | null>(null);
@@ -144,6 +148,14 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
   const podePedirReabertura = t.status === "RESOLVIDO" && p.escrever && !reaberturaPendente;
   const podeAssumir = papel === "equipe" && !encerrado && !responsaveis.includes(eu) && atendentes.some(u => u.id === eu);
   const souQuemPediu = papel === "solicitante";
+  // O período de teste (26/11/2026, funcionalidade-853).
+  const estadoDoTesteAgora = estadoDoTeste(t, agora);
+  const podePedirOTeste = !!prazosDoTeste && podePedirTeste({ status: situacao, approvalStatus: t.approvalStatus }, papel);
+  const conduzTeste = !!prazosDoTeste && podeConduzirTeste({ status: t.status }, papel);
+  const retornoPendente = emTeste(t.status) && esperaDecisao(t.testFeedback) ? ultimoRetorno(t.events) : null;
+  const [retornoEscolhido, setRetornoEscolhido] = useState<Retorno>("ok");
+  const [concluindoTeste, setConcluindoTeste] = useState(false);
+  const responderOTeste = (r: Retorno) => { setRetornoEscolhido(r); abrirJanela("teste_retorno"); };
 
   async function executar(chave: string, fn: () => Promise<Resultado>, naJanela = false) {
     setSalvando(chave); setErroDaJanela("");
@@ -197,7 +209,7 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
     </>}
     action={<div className="flex flex-wrap items-center gap-2">
       {papel === "equipe" && !encerrado && !triando
-        ? <SeletorDeSituacao atual={situacao} opcoes={opcoes} aprovacaoPendente={t.approvalStatus === "PENDING"} salvando={salvando === "situacao"} onTrocar={trocarSituacao} onEncerrar={setFinalPedido} />
+        ? <SeletorDeSituacao atual={situacao} opcoes={opcoes} aprovacaoPendente={t.approvalStatus === "PENDING"} salvando={salvando === "situacao"} onTrocar={trocarSituacao} onEncerrar={setFinalPedido} onPedirTeste={podePedirOTeste ? () => abrirJanela("teste_pedir") : undefined} />
         : <SeloDaSituacao status={situacao} />}
       {acaoPrincipal}
       <MenuDeMaisAcoes sempreMenu size="md" width={232} rotulo="Mais ações do chamado">
@@ -205,6 +217,7 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
           {podeEditar && <ItemDoMenu icone={<PencilLine />} onClick={() => { close(); abrirJanela("editar"); }}>Editar dados</ItemDoMenu>}
           {podeTrocarCategoria && <ItemDoMenu icone={<Tags />} onClick={() => { close(); abrirJanela("categoria"); }}>Trocar categoria</ItemDoMenu>}
           {podeRedirecionar && <ItemDoMenu icone={<Shuffle />} onClick={() => { close(); abrirJanela("setor"); }}>Enviar para outro setor</ItemDoMenu>}
+          {podePedirOTeste && <ItemDoMenu icone={<FlaskConical />} onClick={() => { close(); abrirJanela("teste_pedir"); }}>Entregar para teste</ItemDoMenu>}
           {podeAjustarPrazo && <ItemDoMenu icone={<CalendarClock />} onClick={() => { close(); abrirJanela("prazo"); }}>Ajustar prazo</ItemDoMenu>}
           {podePedirReabertura && <ItemDoMenu icone={<RotateCcw />} onClick={() => { close(); abrirJanela("pedir_reabertura"); }}>Pedir reabertura</ItemDoMenu>}
           <ItemDoMenu icone={<Link2 />} onClick={() => { close(); void copiarLink(); }}>Copiar link</ItemDoMenu>
@@ -248,6 +261,20 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
       onEnviar={f => enviarDaJanela("decidir_reabertura", { aprovado: janela === "reabrir", motivo: String(f.get("motivo")) })}>
       <Campo label="Motivo da decisão"><Textarea name="motivo" required maxLength={2000} rows={3} /></Campo>
     </JanelaDeAcao>
+    {/* O período de teste (funcionalidade-853): pedir, prorrogar, responder e concluir. */}
+    {prazosDoTeste && (janela === "teste_pedir" || janela === "teste_prorrogar") && <JanelaDoPrazoDoTeste prorrogar={janela === "teste_prorrogar"} prazos={prazosDoTeste}
+      atual={t.testDueAt ? diaDoPrazo(t.testDueAt) : null} salvando={salvando === "janela"} erro={erroDaJanela} onFechar={fecharJanela}
+      onEnviar={v => janela === "teste_pedir" ? enviarDaJanela("teste_pedir", { ate: v.ate, oQueTestar: v.texto }) : enviarDaJanela("teste_prorrogar", { ate: v.ate, motivo: v.texto })} />}
+    <JanelaDeAcao titulo={ROTULOS_DO_RETORNO[retornoEscolhido]} aberta={janela === "teste_retorno"} salvando={salvando === "janela"} erro={erroDaJanela}
+      rotulo={retornoEscolhido === "ok" ? "Confirmar e concluir" : retornoEscolhido === "problema" ? "Enviar e voltar ao atendimento" : "Enviar retorno"} onFechar={fecharJanela}
+      onEnviar={f => enviarDaJanela("teste_retorno", { retorno: retornoEscolhido, texto: String(f.get("texto") ?? "") })}>
+      <p className="text-ui text-fg-secondary">{EFEITO_NA_JANELA[retornoEscolhido]}</p>
+      <Campo label={ROTULO_DO_TEXTO[retornoEscolhido]}><Textarea key={retornoEscolhido} name="texto" required={retornoEscolhido !== "ok"} minLength={retornoEscolhido === "ok" ? undefined : 5} maxLength={2000} rows={3} /></Campo>
+    </JanelaDeAcao>
+    <ConfirmDialog open={concluindoTeste} title={retornoPendente ? "Concluir o chamado?" : "Concluir sem retorno do teste?"}
+      description={retornoPendente ? `O chamado é concluído depois do retorno “${ROTULOS_DO_RETORNO[retornoPendente.retorno]}”, e isso fica registrado. Quem pediu é avisado e pode pedir reabertura.` : "O chamado é concluído, e fica registrado que foi sem retorno do teste. Quem pediu é avisado e pode pedir reabertura."}
+      confirmLabel="Concluir o chamado" cancelLabel="Voltar" onCancel={() => setConcluindoTeste(false)}
+      onConfirm={() => { setConcluindoTeste(false); acao("teste", "teste_concluir", null); }} />
     <JanelaDeAcao titulo="Pedir reabertura" aberta={janela === "pedir_reabertura"} salvando={salvando === "janela"} erro={erroDaJanela} rotulo="Pedir reabertura" onFechar={fecharJanela}
       onEnviar={f => enviarDaJanela("pedir_reabertura", String(f.get("motivo")))}>
       <Campo label="Por que precisa reabrir?"><Textarea name="motivo" required minLength={5} maxLength={2000} rows={3} /></Campo>
@@ -265,6 +292,34 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
         <div className="min-w-0"><p className="font-semibold">{nome(reaberturaPendente.requestedById)} pediu a reabertura em {data(reaberturaPendente.createdAt)}</p><p className="whitespace-pre-wrap break-words text-fg-secondary">{reaberturaPendente.reason}</p></div>
         {p.gerenciar && p.escrever && <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => abrirJanela("recusar_reabertura")}>Recusar</Button><Button size="sm" onClick={() => abrirJanela("reabrir")}>Reabrir</Button></div>}
       </div>
+    </Aviso>}
+
+    {/* O teste da entrega (funcionalidade-853): o prazo, o que testar e, para quem responde, os retornos; para quem atende, prorrogar e concluir. */}
+    {emTeste(t.status) && t.testDueAt && <Aviso tom="atencao" icone={<FlaskConical />}>
+      <section aria-label="Teste da entrega" className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold">Teste da entrega · {estadoDoTesteAgora === "vencido" ? `o prazo era ${diaCurto(diaDoPrazo(t.testDueAt))}` : `até ${diaCurto(diaDoPrazo(t.testDueAt))}`}</p>
+          {estadoDoTesteAgora === "vencido" && <Selo tom="perigo" className="font-semibold">Teste vencido</Selo>}
+        </div>
+        {t.testInstructions && <p className="whitespace-pre-wrap break-words text-fg"><span className="font-medium">O que testar: </span>{t.testInstructions}</p>}
+        {retornoPendente && <p className="whitespace-pre-wrap break-words text-fg"><span className="font-medium">{retornoPendente.actorId ? nome(retornoPendente.actorId) : "Quem pediu"} respondeu “{ROTULOS_DO_RETORNO[retornoPendente.retorno]}” em {data(retornoPendente.createdAt)}: </span>{retornoPendente.texto}</p>}
+        <p className="text-fg-secondary">{p.responderTeste
+          ? "Teste a entrega e conte como foi. “Deu tudo certo” conclui o chamado; “Encontrei um problema” volta para o atendimento."
+          : conduzTeste ? (retornoPendente ? "Decida: prorrogue o prazo do teste ou conclua o chamado." : "Aguardando o retorno de quem pediu. Você pode prorrogar o prazo ou concluir sem o retorno.")
+          : "Quem pediu está testando a entrega e responde aqui."}</p>
+        {(p.responderTeste || conduzTeste) && <div className="flex flex-wrap gap-2 pt-1">
+          {p.responderTeste && <>
+            <Button size="sm" onClick={() => responderOTeste("ok")}><CheckCircle2 size={14} aria-hidden />Deu tudo certo</Button>
+            <Button size="sm" variant="secondary" onClick={() => responderOTeste("problema")}>Encontrei um problema</Button>
+            <Button size="sm" variant="secondary" onClick={() => responderOTeste("nao_testou")}>Não consegui testar</Button>
+            <Button size="sm" variant="secondary" onClick={() => responderOTeste("outro")}>Outro</Button>
+          </>}
+          {conduzTeste && <>
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => abrirJanela("teste_prorrogar")}><CalendarClock size={14} aria-hidden />Prorrogar</Button>
+            <Button size="sm" variant="secondary" disabled={busy} loading={salvando === "teste"} loadingLabel="Concluindo…" onClick={() => setConcluindoTeste(true)}>{retornoPendente ? "Concluir" : "Concluir sem retorno"}</Button>
+          </>}
+        </div>}
+      </section>
     </Aviso>}
 
     {/* Abaixo de 1280px o cartão vem antes da conversa (antes descia para depois dela inteira), com as seções lado a lado do `md` ao `xl`. */}
@@ -380,5 +435,36 @@ function EnviarParaOutroSetor({ destinos, salvando, erro, onFechar, onEnviar }: 
     <Campo label="Setor"><Select name="setor" required defaultValue=""><option value="" disabled>Selecione o setor</option>{destinos.map(st => <option key={st.code} value={st.code}>{st.label}</option>)}</Select></Campo>
     <Campo label={continuar ? "O que o outro setor precisa fazer" : "Motivo (opcional)"}><Textarea name="motivo" required={continuar} minLength={continuar ? 5 : undefined} maxLength={1000} rows={2} placeholder={continuar ? "Ex.: emitir a guia do INSS com os valores do anexo." : "Conte por que o chamado é do outro setor."} /></Campo>
     <p className="text-helper text-fg-muted">Os responsáveis atuais saem do chamado, a equipe do outro setor e quem abriu são avisados.</p>
+  </JanelaDeAcao>;
+}
+
+/** O que cada retorno faz com o chamado, dito na janela antes de enviar. */
+const EFEITO_NA_JANELA: Record<Retorno, string> = {
+  ok: "O chamado é concluído, e o seu retorno fica registrado no histórico.",
+  problema: "O chamado volta para o atendimento, com a sua descrição no histórico.",
+  nao_testou: "O chamado continua em teste, e quem atende decide se prorroga o prazo ou conclui.",
+  outro: "O chamado continua em teste, e quem atende decide o que fazer.",
+};
+const ROTULO_DO_TEXTO: Record<Retorno, string> = { ok: "Comentário (opcional)", problema: "O que aconteceu", nao_testou: "Por que não conseguiu testar", outro: "Conte como foi o teste" };
+
+/**
+ * O prazo do teste (26/11/2026, funcionalidade-853): os atalhos de 3, 5 e 10
+ * dias úteis, com a data em que cada um vence, ou outra data. Pedir leva o que
+ * testar; prorrogar, o motivo. Os dois textos são opcionais.
+ */
+function JanelaDoPrazoDoTeste({ prorrogar, prazos, atual, salvando, erro, onFechar, onEnviar }: { prorrogar: boolean; prazos: PrazosDoTeste; atual: string | null; salvando: boolean; erro: string; onFechar: () => void; onEnviar: (v: { ate: string; texto: string }) => void }) {
+  const [escolha, setEscolha] = useState<string>(String(prazos.atalhos[0]?.dias ?? "data"));
+  const outraData = escolha === "data";
+  return <JanelaDeAcao titulo={prorrogar ? "Prorrogar o teste" : "Entregar para teste"} aberta salvando={salvando} erro={erro} rotulo={prorrogar ? "Salvar prazo" : "Pedir teste"} onFechar={onFechar}
+    onEnviar={f => onEnviar({ ate: outraData ? String(f.get("ate") ?? "") : prazos.atalhos.find(a => String(a.dias) === escolha)?.ate ?? "", texto: String(f.get("texto") ?? "") })}>
+    <p className="text-ui text-fg-secondary">{prorrogar
+      ? `O prazo atual é ${atual ? diaCurto(atual) : "—"}. Quem pediu é avisado do novo prazo.`
+      : "Quem pediu testa a entrega até o prazo e conta como foi. Enquanto isso, o prazo de atendimento fica parado."}</p>
+    <RadioGroup<string> legenda="Prazo para testar" variante="linha" valor={escolha} onChange={setEscolha} opcoes={[
+      ...prazos.atalhos.map(a => ({ valor: String(a.dias), rotulo: `${a.dias} dias úteis`, descricao: `até ${diaCurto(a.ate)}` })),
+      { valor: "data", rotulo: "Outra data" },
+    ]} />
+    {outraData && <Campo label="Testar até"><CampoData name="ate" required min={prazos.hoje} max={prazos.maximo} /></Campo>}
+    <Campo label={prorrogar ? "Motivo (opcional)" : "O que testar (opcional)"}><Textarea name="texto" maxLength={1000} rows={3} placeholder={prorrogar ? "Ex.: quem pediu estava de férias." : "Ex.: gerar a guia de um cliente e conferir os valores."} /></Campo>
   </JanelaDeAcao>;
 }

@@ -687,6 +687,10 @@ enum HelpdeskStatus {
   /// depois da resposta (10/11/2026). No fim do enum de propósito: acrescentar
   /// no fim é só metadado no MySQL, sem reescrever a tabela.
   AGUARDANDO_TRIAGEM
+  /// A entrega está com quem pediu, para testar até `testDueAt` (26/11/2026,
+  /// funcionalidade-853). Só o "Pedir teste" põe o chamado aqui; no fim do enum
+  /// pelo mesmo motivo do valor de cima.
+  EM_TESTE
 }
 
 enum HelpdeskPriority {
@@ -812,6 +816,18 @@ model HelpdeskTicket {
   hubPending Boolean @default(false)
   hubAttempts Int @default(0)
   hubLastError String? @db.VarChar(300)
+  /// O período de teste da entrega (26/11/2026, funcionalidade-853): quem
+  /// atende pede o teste com o prazo e o que testar, e quem pediu responde
+  /// como foi. Valem enquanto o chamado está "Em teste"; depois ficam como o
+  /// último teste. O que aconteceu em cada passo (pedido, prorrogação,
+  /// retornos, conclusão, vencimento) fica nos eventos "teste" do chamado.
+  /// `testDueAt` é o fim do dia escolhido, em Brasília.
+  testDueAt DateTime?
+  testStartedAt DateTime?
+  testInstructions String? @db.Text
+  /// O último retorno que espera a decisão de quem atende ("nao_testou" ou
+  /// "outro"); nulo quando não há retorno pendente.
+  testFeedback String? @db.VarChar(20)
   tenant Tenant @relation(fields: [tenantId], references: [id])
   draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id])
   category HelpdeskCategory @relation(fields: [tenantId, categoryId], references: [tenantId, id])

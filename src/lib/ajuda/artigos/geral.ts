@@ -1178,6 +1178,15 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique no chamado para abrir o atendimento, com a conversa, o prazo e as informações do pedido.",
         ],
       },
+      // O período de teste (26/11/2026, funcionalidade-853).
+      {
+        titulo: "Como funciona o teste da entrega",
+        passos: [
+          "Ao entregar, quem atende clica em “Entregar para teste” (na situação ou no menu “…”), escolhe o prazo — 3, 5 ou 10 dias úteis, ou outra data — e, se quiser, conta o que testar. O chamado fica “Em teste” e o prazo de atendimento para.",
+          "Quem abriu o chamado vê no alto dele o bloco “Teste da entrega” e responde: “Deu tudo certo” conclui o chamado, “Encontrei um problema” volta para o atendimento, e “Não consegui testar” ou “Outro” deixam a decisão com quem atende, que prorroga o prazo ou conclui.",
+          "Se o prazo vence sem retorno, o chamado não conclui sozinho: fica marcado “Teste vencido” e o sino avisa. Quem atende pode prorrogar ou concluir sem retorno, e isso fica registrado.",
+        ],
+      },
       {
         titulo: "Como configurar quem atende e os prazos (gestão)",
         passos: [

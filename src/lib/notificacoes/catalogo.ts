@@ -63,6 +63,9 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   // O resultado da triagem que roda depois do envio (10/11/2026), para quem abriu.
   CHAMADO_TRIADO: p("solicitacao", "info", "Triagem do chamado concluída"),
   CHAMADO_SLA: a("prazo", "warning", "Prazo de chamado vencido"),
+  // O teste da entrega (26/11/2026, funcionalidade-853): a vez de quem pediu testar, e o prazo vencido sem retorno.
+  CHAMADO_TESTE: p("solicitacao", "warning", "Teste da entrega do chamado"),
+  CHAMADO_TESTE_VENCIDO: a("prazo", "warning", "Teste de chamado vencido"),
   // ── Para mim ──
   HANDOFF_RECEIVED: p("transferencia", "brand", "Transferência recebida"),
   HANDOFF_ASSIGNED: p("transferencia", "brand", "Transferência para você"),

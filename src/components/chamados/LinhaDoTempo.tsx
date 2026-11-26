@@ -1,4 +1,4 @@
-import { AlarmClock, ArrowRightLeft, CalendarClock, CircleDot, FilePlay, Flag, ListChecks, ListOrdered, Lock, Paperclip, Pencil, RotateCcw, ShieldCheck, ShieldX, Tag, Ticket, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { AlarmClock, ArrowRightLeft, CalendarClock, CircleDot, FilePlay, Flag, FlaskConical, ListChecks, ListOrdered, Lock, Paperclip, Pencil, RotateCcw, ShieldCheck, ShieldX, Tag, Ticket, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { IconeDoArquivo as IconeDosArquivos } from "@/components/arquivos/IconeDoArquivo";
 import { formatInstantDateTime, formatInstantTime } from "@/lib/format";
 import { Accordion } from "@/components/ui/Accordion";
@@ -24,7 +24,7 @@ export function LinkDoAnexo({ anexo }: { anexo: Pick<AnexoDaLinha, "id" | "fileN
   return <a href={`/api/chamados/anexos/${anexo.id}`} download className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1 text-helper text-fg-secondary transition-colors hover:border-border-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"><IconeDoArquivo nome={anexo.fileName} /><span className="min-w-0 truncate font-medium text-brand">{anexo.fileName}</span><span className="shrink-0 text-fg-muted">{tamanhoDoArquivo(anexo.sizeBytes)}</span>{anexo.internal && <Lock size={12} aria-label="Somente a equipe" className="shrink-0 text-warning-fg" />}</a>;
 }
 
-const ICONE_DO_EVENTO: Record<string, LucideIcon> = { created: Ticket, status: ArrowRightLeft, assignees: UserPlus, participants: Users, priority: Flag, checklist: ListChecks, deadline: CalendarClock, queue: ListOrdered, reopen_requested: RotateCcw, reopen_decided: RotateCcw, sla: AlarmClock, category: Tag, details: Pencil };
+const ICONE_DO_EVENTO: Record<string, LucideIcon> = { created: Ticket, status: ArrowRightLeft, assignees: UserPlus, participants: Users, priority: Flag, checklist: ListChecks, deadline: CalendarClock, queue: ListOrdered, reopen_requested: RotateCcw, reopen_decided: RotateCcw, sla: AlarmClock, category: Tag, details: Pencil, teste: FlaskConical };
 const Interno = () => <span className="inline-flex items-center gap-1 text-warning-fg"><Lock size={11} aria-hidden />Somente a equipe</span>;
 
 /**

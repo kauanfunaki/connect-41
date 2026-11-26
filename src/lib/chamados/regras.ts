@@ -5,20 +5,27 @@ export const MODULO = "helpdesk";
 // "Aguardando triagem" (10/11/2026): o chamado da tela nasce nela e sai quando a
 // triagem automática termina. Só a triagem tira o chamado dela — não é uma
 // situação que a equipe escolhe (`SITUACOES_MANUAIS`).
-export const STATUS = ["AGUARDANDO_TRIAGEM", "ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_USUARIO", "AGUARDANDO_APROVACAO", "AGUARDANDO_REQUERENTE", "STANDBY", "RESOLVIDO", "CANCELADO"] as const;
+//
+// "Em teste" (26/11/2026, funcionalidade-853): a entrega está com quem pediu,
+// para testar até o prazo que quem atende deu. Também não se escolhe no
+// seletor: entra pelo "Pedir teste", que exige o prazo (as regras do teste
+// moram em teste.ts).
+export const STATUS = ["AGUARDANDO_TRIAGEM", "ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_USUARIO", "AGUARDANDO_APROVACAO", "AGUARDANDO_REQUERENTE", "STANDBY", "EM_TESTE", "RESOLVIDO", "CANCELADO"] as const;
 export type Status = (typeof STATUS)[number];
-export const SITUACOES_MANUAIS = STATUS.filter(s => s !== "AGUARDANDO_TRIAGEM");
+export const SITUACOES_MANUAIS = STATUS.filter(s => s !== "AGUARDANDO_TRIAGEM" && s !== "EM_TESTE");
 export const emTriagem = (status: string) => status === "AGUARDANDO_TRIAGEM";
+export const emTeste = (status: string) => status === "EM_TESTE";
 export const PRIORIDADES = ["BAIXA", "MEDIA", "ALTA", "URGENTE"] as const;
 export type Prioridade = (typeof PRIORIDADES)[number];
 export const ROTULOS: Record<Status, string> = {
   AGUARDANDO_TRIAGEM: "Aguardando triagem",
   ABERTO: "Aberto", NA_FILA: "Na fila", EM_ANDAMENTO: "Em andamento", AGUARDANDO_USUARIO: "Aguardando usuário",
-  AGUARDANDO_APROVACAO: "Aguardando aprovação", AGUARDANDO_REQUERENTE: "Aguardando requerente", STANDBY: "Em espera", RESOLVIDO: "Resolvido", CANCELADO: "Cancelado",
+  AGUARDANDO_APROVACAO: "Aguardando aprovação", AGUARDANDO_REQUERENTE: "Aguardando requerente", STANDBY: "Em espera", EM_TESTE: "Em teste", RESOLVIDO: "Resolvido", CANCELADO: "Cancelado",
 };
 export const ROTULOS_PRIORIDADE: Record<Prioridade, string> = { BAIXA: "Baixa", MEDIA: "Média", ALTA: "Alta", URGENTE: "Urgente" };
 export const fechado = (status: string) => status === "RESOLVIDO" || status === "CANCELADO";
-export const pausado = (status: string) => ["AGUARDANDO_USUARIO", "AGUARDANDO_APROVACAO", "AGUARDANDO_REQUERENTE", "STANDBY"].includes(status);
+// O teste pausa o prazo de atendimento (funcionalidade-853): a equipe entregou, e o tempo agora é de quem pediu.
+export const pausado = (status: string) => ["AGUARDANDO_USUARIO", "AGUARDANDO_APROVACAO", "AGUARDANDO_REQUERENTE", "STANDBY", "EM_TESTE"].includes(status);
 export const aguardandoSolicitante = (status: string) => status === "AGUARDANDO_USUARIO" || status === "AGUARDANDO_REQUERENTE";
 
 // ── As trocas de situação que a tela oferece (18/11/2026, melhoria-782) ─────
