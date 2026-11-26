@@ -748,6 +748,16 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Sugestão, para seguir as cores que o setor já usava no Trello: roxo para Constituição, vermelho para Baixa, verde-limão para Alteração e Filial, amarelo para Alvará e Licenças, e rosa para os outros (regularização e avulsas).",
         ],
       },
+      {
+        titulo: "Ver o processo no Quadro de tarefas",
+        passos: [
+          "Todo processo vira um cartão no Quadro de tarefas do setor, sozinho, assim que é aberto. O padrão é o espaço “Processos”, na lista “Processos societários”; a coordenação do setor pode escolher outra lista em “Abertura automática”.",
+          "Para abrir o cartão, clique em “Ver no quadro”, no alto do processo, ou em “Quadro”, na linha do processo na fila. A lista abre com o cartão por cima.",
+          "No cartão, o selo “Automático · Processo nº” diz de onde ele veio, e “Abrir processo” volta para cá.",
+          "A coluna, o responsável, a prioridade e o prazo do cartão vêm do processo e andam sozinhos: registre no processo, e o cartão acompanha.",
+          "Comentário, etiqueta, anexo, checklist e capa ficam livres no cartão, para a equipe se organizar no quadro.",
+        ],
+      },
     ],
     dicas: [
       "Uma etapa com item obrigatório do checklist em aberto não pode ser concluída.",
@@ -756,7 +766,8 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       "Em “Taxas”, lance a guia da Junta, o DAM ou a taxa do Bombeiros quando sair. Ligada da 2ª apresentação em diante, a taxa conta como custo das voltas do processo.",
       "As horas lançadas em “Horas trabalhadas” entram nas horas de operação da Gestão.",
       "Em “Pergunte à Ceci”, no fim de “Processos”, pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para destravar — ou peça para abrir um processo. A Ceci lê os mesmos processos que você vê e não altera nada: toda mudança passa pelo seu clique na sugestão.",
-      "“Ver no kanban” mostra a mesma fila em colunas por situação. A coluna é a situação que os protocolos dizem: o cartão muda de coluna quando o desfecho é registrado no processo, e não arrastando.",
+      "“Ver no kanban” mostra a mesma fila em colunas por situação. A coluna é a situação que os protocolos dizem: o cartão muda de coluna quando o desfecho é registrado no processo, e não arrastando. O “Ver no quadro” de lá leva à lista dos processos no Quadro de tarefas.",
+      "O cartão do processo no quadro não conta na Gestão, no Meu dia nem nos alertas: o processo já conta, e o mesmo trabalho não entra duas vezes.",
     ],
   },
 
