@@ -2,7 +2,12 @@
 // nos arquivos puros ao lado (`mensal.ts`, `tabelas.ts`…); aqui só se junta o
 // que eles precisam e se guarda o que devolvem.
 
+import { avisosDeVencimento } from "./avisos";
+import { lerDadosEsocial } from "./esocial/cadastro";
+import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
+import { diasDeSuspensaoNoMes } from "./ocorrencias";
+import { afastamentosDosXml, afastamentosNoMes, type AfastamentoNoMes } from "./afastamentos";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
 import type { Prisma } from "@/generated/prisma/client";
@@ -154,6 +159,7 @@ export function vinculoDoMotor(v: {
   insalubridade: string;
   periculosidade: boolean;
   valeTransporte: boolean;
+  vtCustoDiario?: unknown;
   aprendiz: boolean;
   categoria?: string;
 }): VinculoDoMotor {
@@ -166,6 +172,7 @@ export function vinculoDoMotor(v: {
     insalubridade: (["NENHUM", "MINIMO", "MEDIO", "MAXIMO"].includes(v.insalubridade) ? v.insalubridade : "NENHUM") as Insalubridade,
     periculosidade: v.periculosidade,
     valeTransporte: v.valeTransporte,
+    vtCustoDiario: v.vtCustoDiario == null ? null : Number(v.vtCustoDiario),
     aprendiz: v.aprendiz,
     categoria: v.categoria ?? "101",
   };
@@ -249,6 +256,27 @@ export async function feriasDoMes(tenantId: string, personIds: string[], ano: nu
   return porPessoa;
 }
 
+/**
+ * Os afastamentos das pessoas que caem no mês (funcionalidade-749), lidos dos
+ * S-2230 gerados no DP 2 (os rejeitados ficam de fora).
+ */
+export async function afastamentosDoMes(tenantId: string, personIds: string[], ano: number, mes: number): Promise<Map<string, AfastamentoNoMes[]>> {
+  const porPessoa = new Map<string, AfastamentoNoMes[]>();
+  if (personIds.length === 0) return porPessoa;
+  const eventos = await getPrisma().dp2EventoEsocial.findMany({
+    where: { tenantId, tipo: "S-2230", personId: { in: personIds }, situacao: { not: "REJEITADO" } },
+    select: { personId: true, xml: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const xmls = new Map<string, string[]>();
+  for (const e of eventos) if (e.personId) xmls.set(e.personId, [...(xmls.get(e.personId) ?? []), e.xml]);
+  for (const [personId, lista] of xmls) {
+    const doMes = afastamentosNoMes(afastamentosDosXml(lista), ano, mes);
+    if (doMes.length > 0) porPessoa.set(personId, doMes);
+  }
+  return porPessoa;
+}
+
 /** Os períodos aquisitivos da pessoa com as férias gravadas (funcionalidade-745). */
 export async function periodosDaPessoa(tenantId: string, p: { id: string; admissionDate: Date | null; dismissalDate: Date | null }, hoje: Date = new Date()): Promise<PeriodoAquisitivo[]> {
   if (!p.admissionDate) return [];
@@ -296,6 +324,25 @@ export async function mediaDaPessoa(tenantId: string, personId: string, ate: str
     .filter((c) => competenciaDe(c.competencia.ano, c.competencia.mes) <= ate)
     .sort((a, b) => a.competencia.ano - b.competencia.ano || a.competencia.mes - b.competencia.mes)
     .map((c) => ({ competencia: competenciaDe(c.competencia.ano, c.competencia.mes), itens: (c.itens as unknown as ItemDoHolerite[]) ?? [] }));
+  // Os meses de antes do DP 2, do saldo inicial conferido (funcionalidade-747).
+  const desde = competenciaDe(de.getUTCFullYear(), de.getUTCMonth() + 1);
+  const saldo = await getPrisma().dp2SaldoInicialMedia.findMany({
+    where: { tenantId, personId, conferidoEm: { not: null }, competencia: { gte: desde, lte: ate } },
+    select: { competencia: true, valor: true, rubricaId: true },
+  });
+  if (saldo.length > 0) {
+    const rubricas = await getPrisma().dp2Rubrica.findMany({
+      where: { tenantId, id: { in: [...new Set(saldo.map((l) => l.rubricaId))] } },
+      select: { id: true, tipo: true, mediaFerias: true, mediaDecimo: true, mediaRescisao: true },
+    });
+    const porId = new Map(rubricas.map((r) => [r.id, r]));
+    const anteriores = mesesDoSaldoInicial(
+      saldo.flatMap((l) => (porId.has(l.rubricaId) ? [{ competencia: l.competencia, valor: Number(l.valor), rubrica: porId.get(l.rubricaId)! }] : [])),
+      new Set(doPeriodo.map((m) => m.competencia))
+    );
+    doPeriodo.push(...anteriores);
+    doPeriodo.sort((x, y) => x.competencia.localeCompare(y.competencia));
+  }
   return mediaDeVariaveis(doPeriodo, tipo);
 }
 
@@ -359,6 +406,22 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const { diasUteis, diasDeDescanso } = diasDoMes(comp.ano, comp.mes);
   // Férias gravadas que caem no mês (funcionalidade-745).
   const feriasDe = comp.tipo === "MENSAL" ? await feriasDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, FeriasNoMes[]>();
+  // Suspensões disciplinares do mês (funcionalidade-763).
+  const suspensoes =
+    comp.tipo === "MENSAL"
+      ? await getPrisma().dp2Ocorrencia.findMany({
+          where: { tenantId, personId: { in: pessoas.map((p) => p.id) }, tipo: "SUSPENSAO", data: { gte: new Date(Date.UTC(comp.ano, comp.mes - 2, 1)), lte: new Date(Date.UTC(comp.ano, comp.mes, 0)) } },
+          select: { personId: true, data: true, dias: true },
+        })
+      : [];
+  const suspensaoDe = (personId: string) =>
+    diasDeSuspensaoNoMes(
+      suspensoes.filter((s) => s.personId === personId).map((s) => ({ tipo: "SUSPENSAO" as const, data: s.data.toISOString().slice(0, 10), dias: s.dias })),
+      comp.ano,
+      comp.mes
+    );
+  // Afastamentos do mês, dos S-2230 (funcionalidade-749).
+  const afastamentosDe = comp.tipo === "MENSAL" ? await afastamentosDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, AfastamentoNoMes[]>();
 
   // Rescisão gravada com desligamento no mês (funcionalidade-746): as verbas do mês
   // estão na rescisão e vão no S-2299, então a pessoa sai da folha mensal.
@@ -411,6 +474,8 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         diasUteis,
         diasDeDescanso,
         ferias: feriasDe.get(p.id),
+        diasDeSuspensao: suspensaoDe(p.id),
+        afastamentos: afastamentosDe.get(p.id),
         outrasBasesInss: outrasDe(p.id),
       });
     } else {
@@ -550,4 +615,47 @@ async function calcularDecimoDaPessoa(
     diasTrabalhados: d.avos,
     alertas: d.alertas,
   };
+}
+
+// ─── Avisos (25/11/2026, funcionalidade-757) ────────────────────────────────
+
+/** Os avisos de vencimento dos colaboradores com contrato no DP 2 das empresas pedidas. */
+export async function avisosDasEmpresas(tenantId: string, companyIds: readonly string[], hoje: string) {
+  if (companyIds.length === 0) return [];
+  const vinculos = await getPrisma().dp2Vinculo.findMany({
+    where: { tenantId, companyId: { in: [...companyIds] }, person: { active: true } },
+    select: {
+      companyId: true,
+      dadosEsocial: true,
+      person: {
+        select: {
+          id: true,
+          name: true,
+          admissionDate: true,
+          dismissalDate: true,
+          dependentes: { select: { name: true, birthDate: true, relationship: true, isIRDependent: true, isSalarioFamilia: true } },
+          dp2Ferias: { select: { aquisitivoInicio: true, diasGozo: true, diasAbono: true, faltas: true, terco: true, tercoAbono: true } },
+        },
+      },
+    },
+  });
+  const dia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  return avisosDeVencimento(
+    vinculos.map((v) => {
+      const es = lerDadosEsocial(v.dadosEsocial);
+      return {
+        personId: v.person.id,
+        nome: v.person.name,
+        companyId: v.companyId,
+        admissao: dia(v.person.admissionDate),
+        desligamento: dia(v.person.dismissalDate),
+        tipoContrato: es.tipoContrato,
+        dataTermino: es.dataTermino,
+        estagioPrevisaoTermino: es.estagioPrevisaoTermino,
+        ferias: v.person.dp2Ferias.map((f) => ({ aquisitivoInicio: dia(f.aquisitivoInicio)!, diasGozo: f.diasGozo, diasAbono: f.diasAbono, faltas: f.faltas, terco: Number(f.terco), tercoAbono: Number(f.tercoAbono) })),
+        dependentes: v.person.dependentes.map((d) => ({ nome: d.name, nascimento: dia(d.birthDate), relacao: d.relationship, irrf: d.isIRDependent, salarioFamilia: d.isSalarioFamilia })),
+      };
+    }),
+    hoje
+  );
 }

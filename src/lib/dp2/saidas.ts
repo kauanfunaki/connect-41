@@ -18,6 +18,7 @@ import { BANCOS, gerarRemessa, problemaDoPagamento, type PagamentoDaRemessa } fr
 import { contabilizar, lerContasDaFolha, type CalculoContabil, type ContasDaFolha, type RubricaContabil } from "./contabilizacao";
 import { NOME_DO_TIPO_DE_COMPETENCIA, nomeDaCompetencia } from "./tela";
 import type { ItemDoHolerite } from "./mensal";
+import type { CalculoDoRelatorio } from "./relatoriosDaFolha";
 
 const n = (v: unknown) => Number(v ?? 0);
 
@@ -187,20 +188,36 @@ export async function contasDaFolha(tenantId: string): Promise<ContasDaFolha> {
   return lerContasDaFolha(linha?.contas);
 }
 
+/**
+ * O centro de custo do contrato de cada pessoa (funcionalidade-751), pelo
+ * código do BPO quando há, senão pelo nome. Sem centro, a pessoa fica de fora do mapa.
+ */
+export async function centrosDeCustoDasPessoas(tenantId: string, companyId: string, personIds: readonly string[]): Promise<Map<string, string>> {
+  if (personIds.length === 0) return new Map();
+  const prisma = getPrisma();
+  const vinculos = await prisma.dp2Vinculo.findMany({ where: { tenantId, personId: { in: [...personIds] }, costCenterId: { not: null } }, select: { personId: true, costCenterId: true } });
+  if (vinculos.length === 0) return new Map();
+  const centros = await prisma.costCenter.findMany({ where: { tenantId, companyId, id: { in: vinculos.map((v) => v.costCenterId!) } }, select: { id: true, name: true, code: true } });
+  const nome = new Map(centros.map((c) => [c.id, c.code?.trim() ? `${c.code.trim()} · ${c.name}` : c.name]));
+  return new Map(vinculos.flatMap((v) => (nome.has(v.costCenterId!) ? [[v.personId, nome.get(v.costCenterId!)!] as const] : [])));
+}
+
 export async function lancamentosDaCompetencia(tenantId: string, competenciaId: string) {
   const prisma = getPrisma();
   const comp = await prisma.dp2Competencia.findFirst({ where: { id: competenciaId, tenantId } });
   if (!comp) return null;
   const [calculos, rubricas, contas] = await Promise.all([
-    prisma.dp2Calculo.findMany({ where: { tenantId, competenciaId }, select: { itens: true, encargos: true, provisoes: true } }),
+    prisma.dp2Calculo.findMany({ where: { tenantId, competenciaId }, select: { personId: true, itens: true, encargos: true, provisoes: true } }),
     prisma.dp2Rubrica.findMany({ where: { tenantId }, select: { codigo: true, nome: true, contaDebito: true, contaCredito: true } }),
     contasDaFolha(tenantId),
   ]);
+  const centroDe = await centrosDeCustoDasPessoas(tenantId, comp.companyId, calculos.map((c) => c.personId));
   const mapa = new Map<string, RubricaContabil>(rubricas.map((r) => [r.codigo, r]));
   const entrada: CalculoContabil[] = calculos.map((c) => {
     const e = (c.encargos ?? {}) as Record<string, number>;
     const p = (c.provisoes ?? {}) as Record<string, number>;
     return {
+      centro: centroDe.get(c.personId) ?? null,
       itens: ((c.itens as unknown as ItemDoHolerite[]) ?? []).map((i) => ({ codigo: i.codigo, nome: i.nome, tipo: i.tipo, valor: i.valor })),
       encargos: { inssEmpresa: n(e.inssEmpresa), rat: n(e.rat), terceiros: n(e.terceiros) },
       provisoes: { ferias: n(p.ferias), tercoFerias: n(p.tercoFerias), decimo: n(p.decimo), encargosFerias: n(p.encargosFerias), encargosDecimo: n(p.encargosDecimo) },
@@ -217,4 +234,39 @@ export const DIAS_DO_LINK = 15;
 
 export function novoToken(): string {
   return randomBytes(24).toString("base64url");
+}
+
+// ─── Relatórios da folha (25/11/2026, funcionalidade-748) ──────────────────
+
+export async function dadosDosRelatorios(tenantId: string, competenciaId: string): Promise<{ titulo: string; nomeDoArquivo: string; calculos: CalculoDoRelatorio[] } | null> {
+  const prisma = getPrisma();
+  const comp = await prisma.dp2Competencia.findFirst({
+    where: { id: competenciaId, tenantId },
+    include: { company: { select: { name: true, tradeName: true, displayName: true } } },
+  });
+  if (!comp) return null;
+  const calculos = await prisma.dp2Calculo.findMany({ where: { tenantId, competenciaId }, include: { person: { select: { name: true, cpf: true } } } });
+  const n = (v: unknown) => Number(v ?? 0);
+  const referencia = `${String(comp.mes).padStart(2, "0")}/${comp.ano}`;
+  const empresa = nomeExibicao(comp.company);
+  return {
+    titulo: `${empresa} · ${NOME_DO_TIPO_DE_COMPETENCIA[comp.tipo] ?? comp.tipo} ${referencia}`,
+    nomeDoArquivo: `Relatorios folha ${referencia.replace("/", "-")} ${empresa}.xlsx`.replace(/[\/:*?"<>|]/g, ""),
+    calculos: calculos.map((c) => ({
+      nome: c.person.name,
+      cpf: c.person.cpf,
+      itens: (c.itens as unknown as ItemDoHolerite[]) ?? [],
+      proventos: n(c.proventos),
+      descontos: n(c.descontos),
+      liquido: n(c.liquido),
+      baseInss: n(c.baseInss),
+      inss: n(c.inss),
+      baseIrrf: n(c.baseIrrf),
+      irrf: n(c.irrf),
+      baseFgts: n(c.baseFgts),
+      fgts: n(c.fgts),
+      encargos: (c.encargos as CalculoDoRelatorio["encargos"]) ?? null,
+      provisoes: (c.provisoes as CalculoDoRelatorio["provisoes"]) ?? null,
+    })),
+  };
 }
