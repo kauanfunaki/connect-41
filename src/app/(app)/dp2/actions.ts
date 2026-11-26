@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
 import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
 import { lerGuiaDoFgts } from "@/lib/dp2/guiasDaFolha";
 import { guardarArquivo } from "@/lib/drive/servidor";
@@ -1497,6 +1498,39 @@ export async function cancelarPedidoDeEventosAction(_: EstadoDoDp2, fd: FormData
   });
   revalidarCompetencia(pedido.competenciaId);
   return { ok: true, texto: "Link cancelado: quem abrir verá que ele não vale mais." };
+}
+
+/**
+ * Lança as contas da folha fechada no Contas a pagar da empresa
+ * (funcionalidade-770): líquidos, DARF da DCTFWeb, FGTS e PIS. Lançar de novo
+ * atualiza as que seguem em aberto; as já pagas ficam como estão.
+ */
+export async function lancarContasAPagarAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const r = await lancarContasDaFolha(a.tenantId, competenciaId, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.contas_a_pagar_lancadas",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { criadas: r.criadas, atualizadas: r.atualizadas, jaPagas: r.jaPagas, semCategoria: r.semCategoria },
+  });
+  revalidatePath("/pagar");
+  const nome = { LIQUIDOS: "líquidos", DARF: "DARF", FGTS: "FGTS", PIS: "PIS" } as const;
+  const lista = (t: (keyof typeof nome)[]) => t.map((x) => nome[x]).join(", ");
+  const partes = [
+    r.criadas.length ? `Lançadas: ${lista(r.criadas)}.` : "",
+    r.atualizadas.length ? `Atualizadas: ${lista(r.atualizadas)}.` : "",
+    r.jaPagas.length ? `Já pagas, ficaram como estavam: ${lista(r.jaPagas)}.` : "",
+    r.semCategoria.length ? `Sem categoria no plano de contas (ficam provisórias para o BPO classificar): ${lista(r.semCategoria)}.` : "",
+  ].filter(Boolean);
+  return { ok: true, texto: `${partes.join(" ")} Veja em Contas a pagar.` };
 }
 
 export async function guardarHoleritesAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
