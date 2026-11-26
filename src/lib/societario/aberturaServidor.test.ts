@@ -101,7 +101,7 @@ beforeEach(() => {
 
 describe("a abertura pela tela continua igual", () => {
   it("cria o processo, as etapas e o checklist, com o que já temos marcado", async () => {
-    expect(await abrirProcessoNoServidor(QUEM, pedido())).toEqual({ ok: true, processoId: "process-1", endereco: "/processos/processo-1" });
+    expect(await abrirProcessoNoServidor(QUEM, pedido())).toEqual({ ok: true, processoId: "process-1", endereco: "/processos/pro-1" });
     expect(gravados("process")).toEqual([
       {
         tenantId: "t1",
@@ -187,7 +187,7 @@ describe("a abertura pela Ceci confere o que a tela garante na hora", () => {
 
   it("grava como a tela, com a auditoria dizendo que veio da proposta", async () => {
     const r = await abrirProcessoNoServidor(QUEM, pedido({ origem: pelaCeci(), pedidoAoCliente: "Olá!" }));
-    expect(r).toEqual({ ok: true, processoId: "process-1", endereco: "/processos/processo-1" });
+    expect(r).toEqual({ ok: true, processoId: "process-1", endereco: "/processos/pro-1" });
     expect(m.auditoria).toEqual([expect.objectContaining({ action: "process.open_ceci", entityId: "process-1", userId: "u-quem-abre" })]);
     expect(m.mensagens).toHaveLength(1);
   });

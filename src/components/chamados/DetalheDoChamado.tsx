@@ -37,7 +37,7 @@ import type { detalhe } from "@/lib/chamados/consultas";
 import { montarLinhaDoTempo } from "@/lib/chamados/linhaDoTempo";
 import { painelDoPrazo } from "@/lib/chamados/painelDoPrazo";
 import { TOM_DA_PRIORIDADE } from "@/lib/chamados/tons";
-import { idCurto } from "@/lib/enderecoCurto";
+import { endereco, idCurto } from "@/lib/enderecoCurto";
 import { TENTATIVAS_NO_HUB } from "@/lib/chamados/hub";
 
 type Chamado = Awaited<ReturnType<typeof detalhe>>;
@@ -182,7 +182,7 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
     caixa?.querySelector("textarea")?.focus({ preventScroll: true });
   }
   async function copiarLink() {
-    try { await navigator.clipboard.writeText(`${window.location.origin}/chamados/${idCurto("chamado", t.number)}`); toast.success("Link do chamado copiado."); }
+    try { await navigator.clipboard.writeText(`${window.location.origin}${endereco("chamado", t.number)}`); toast.success("Link do chamado copiado."); }
     catch { toast.error("Não foi possível copiar o link. Copie pela barra de endereço."); }
   }
 

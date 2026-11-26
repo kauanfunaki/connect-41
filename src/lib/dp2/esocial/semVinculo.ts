@@ -22,6 +22,43 @@ const data = (v: string | null | undefined) => (v && /^\d{4}-\d{2}-\d{2}$/.test(
 
 // ─── S-2300 Início ──────────────────────────────────────────────────────────
 
+/**
+ * Natureza da atividade do TSVE (S-2300 e S-2306): não vai para sócio,
+ * diretor, cooperado e estagiário (721, 722, 771, 901); nas outras, urbano.
+ */
+export function natAtividadeDoTsve(categoria: string): string | null {
+  return ["721", "722", "771", "901"].includes(categoria) ? null : "1";
+}
+
+/** O grupo infoComplementares do TSVE (igual no S-2300 e no S-2306). */
+function infoComplementaresDoTsve(t: TrabalhadorCompleto) {
+  const d = t.dados;
+  const estagiario = t.categoria === "901";
+  // Remuneração do contrato: no RPA sem valor fixo, "não aplicável" com a descrição.
+  const comValorFixo = t.salario > 0;
+  return el("infoComplementares", [
+    !estagiario && t.nomeDoCargo && d.cbo ? el("cargoFuncao", [el("nmCargo", t.nomeDoCargo.slice(0, 100)), el("CBOCargo", d.cbo)]) : null,
+    el("remuneracao", [
+      el("vrSalFx", decimal(comValorFixo ? t.salario : 0)),
+      el("undSalFixo", comValorFixo ? "5" : "7"),
+      el("dscSalVar", comValorFixo ? null : "Valor por servico prestado (RPA)"),
+    ]),
+    estagiario
+      ? el("infoEstagiario", [
+          el("natEstagio", d.estagioNatureza),
+          el("nivEstagio", d.estagioNivel),
+          el("areaAtuacao", d.estagioArea),
+          el("nrApol", d.estagioApolice),
+          el("dtPrevTerm", d.estagioPrevisaoTermino),
+          el("instEnsino", [el("cnpjInstEnsino", d.estagioCnpjInstituicao)]),
+          d.estagioCnpjAgente ? el("ageIntegracao", [el("cnpjAgntInteg", d.estagioCnpjAgente)]) : null,
+          // O CPF do supervisor vai dentro de supervisorEstagio (leiaute S-1.3).
+          d.estagioCpfSupervisor ? el("supervisorEstagio", [el("cpfSupervisor", d.estagioCpfSupervisor)]) : null,
+        ])
+      : null,
+  ]);
+}
+
 export function eventoS2300(e: EmpregadorEsocial, t: TrabalhadorCompleto, novoId: GeradorDeId): EventoGerado {
   const contrato = linkDoContrato(t.personId);
   const estagiario = t.categoria === "901";
@@ -39,14 +76,6 @@ export function eventoS2300(e: EmpregadorEsocial, t: TrabalhadorCompleto, novoId
     if (d.estagioCpfSupervisor && !cpfValido(d.estagioCpfSupervisor)) pendencias.push(falta("colaborador", `${t.nome}: CPF do supervisor do estágio inválido.`, contrato));
   }
 
-  // Remuneração do contrato: no RPA sem valor fixo, "não aplicável" com a descrição.
-  const comValorFixo = t.salario > 0;
-  const remuneracao = el("remuneracao", [
-    el("vrSalFx", decimal(comValorFixo ? t.salario : 0)),
-    el("undSalFixo", comValorFixo ? "5" : "7"),
-    el("dscSalVar", comValorFixo ? null : "Valor por servico prestado (RPA)"),
-  ]);
-
   const id = novoId();
   const xml = envelope("S-2300", id, [
     ideEventoNaoPeriodico(),
@@ -57,26 +86,40 @@ export function eventoS2300(e: EmpregadorEsocial, t: TrabalhadorCompleto, novoId
       el("matricula", t.matricula),
       el("codCateg", t.categoria),
       el("dtInicio", t.admissao),
-      el("natAtividade", "1"),
-      el("infoComplementares", [
-        !estagiario && t.nomeDoCargo && d.cbo ? el("cargoFuncao", [el("nmCargo", t.nomeDoCargo.slice(0, 100)), el("CBOCargo", d.cbo)]) : null,
-        remuneracao,
-        estagiario
-          ? el("infoEstagiario", [
-              el("natEstagio", d.estagioNatureza),
-              el("nivEstagio", d.estagioNivel),
-              el("areaAtuacao", d.estagioArea),
-              el("nrApol", d.estagioApolice),
-              el("dtPrevTerm", d.estagioPrevisaoTermino),
-              el("instEnsino", [el("cnpjInstEnsino", d.estagioCnpjInstituicao)]),
-              d.estagioCnpjAgente ? el("ageIntegracao", [el("cnpjAgntInteg", d.estagioCnpjAgente)]) : null,
-              el("cpfSupervisor", d.estagioCpfSupervisor),
-            ])
-          : null,
-      ]),
+      el("natAtividade", natAtividadeDoTsve(t.categoria)),
+      infoComplementaresDoTsve(t),
     ]),
   ]);
   return { tipo: "S-2300", referencia: `${digitos(t.cpf) || t.nome} · ${t.categoria}`, personId: t.personId, idEvento: id, xml, pendencias };
+}
+
+// ─── S-2306 Alteração contratual (25/11/2026, funcionalidade-756) ───────────
+
+/**
+ * A alteração do contrato do TSVE (sócio, autônomo, estagiário): cargo,
+ * remuneração e os dados do estágio como estão no contrato do DP 2 na data.
+ */
+export function eventoS2306(e: EmpregadorEsocial, t: TrabalhadorCompleto, dtAlteracao: string, novoId: GeradorDeId): EventoGerado {
+  const contrato = linkDoContrato(t.personId);
+  const d = t.dados;
+  const pendencias: Pendencia[] = [...pendenciasDoEmpregador(e)];
+  if (!cpfValido(t.cpf)) pendencias.push(falta("colaborador", `${t.nome}: CPF inválido ou ausente.`, linkDoCadastro(t.personId)));
+  if (!semVinculo(t.categoria)) pendencias.push(falta("colaborador", `${t.nome}: o S-2306 é de sócio, autônomo ou estagiário; empregado vai no S-2206.`, contrato));
+  if (!data(dtAlteracao)) pendencias.push(falta("colaborador", "Informe a data da alteração.", null));
+  if (t.categoria === "901") {
+    if (!d.estagioNatureza) pendencias.push(falta("colaborador", `${t.nome}: informe a natureza do estágio no contrato.`, contrato));
+    if (!d.estagioPrevisaoTermino) pendencias.push(falta("colaborador", `${t.nome}: informe a previsão de término do estágio no contrato.`, contrato));
+    if (!cnpjValido(d.estagioCnpjInstituicao)) pendencias.push(falta("colaborador", `${t.nome}: informe o CNPJ da instituição de ensino no contrato.`, contrato));
+  }
+  const id = novoId();
+  const xml = envelope("S-2306", id, [
+    ideEventoNaoPeriodico(),
+    ideEmpregador(e.cnpj),
+    // Com matrícula (houve S-2300 com ela), ela identifica; sem, a categoria.
+    el("ideTrabSemVinculo", [el("cpfTrab", digitos(t.cpf)), el("matricula", t.matricula), t.matricula ? null : el("codCateg", t.categoria)]),
+    el("infoTSVAlteracao", [el("dtAlteracao", data(dtAlteracao)), el("natAtividade", natAtividadeDoTsve(t.categoria)), infoComplementaresDoTsve(t)]),
+  ]);
+  return { tipo: "S-2306", referencia: `${digitos(t.cpf) || t.nome} · ${dtAlteracao}`, personId: t.personId, idEvento: id, xml, pendencias };
 }
 
 // ─── S-2399 Término ─────────────────────────────────────────────────────────
