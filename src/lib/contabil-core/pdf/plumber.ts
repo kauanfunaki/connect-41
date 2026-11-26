@@ -200,3 +200,74 @@ export function extrairTexto(chars: Caractere[]): string {
   const linhas = agruparObjetos(palavras, (p) => p.top, TOLERANCIA_Y, true);
   return linhas.map((l) => l.map((p) => p.text).join(" ")).join("\n");
 }
+
+/** `round()` do Python para `float`: o meio vai para o par (`round(2.5) == 2`). */
+export function arredondaPy(x: number): number {
+  const piso = Math.floor(x);
+  const resto = x - piso;
+  if (resto < 0.5) return piso;
+  if (resto > 0.5) return piso + 1;
+  return piso % 2 === 0 ? piso : piso + 1;
+}
+
+// As densidades padrão do `to_textmap` (DEFAULT_X_DENSITY e DEFAULT_Y_DENSITY): pontos por caractere e
+// por linha.
+const DENSIDADE_X = 7.25;
+const DENSIDADE_Y = 13;
+
+/**
+ * `page.extract_text(layout=True)` (ConcilPro, Fase D3a): o `to_textmap` com `layout=True` e
+ * `presorted=True`, a página inteira como grade (`layout_bbox` é a página, com a origem em 0, e
+ * `layout_width`/`layout_height` são a largura e a altura dela). As palavras ficam na ordem em que
+ * saíram; cada linha (palavras VIZINHAS com o mesmo grupo de `top`) desce `top / 13` linhas, cada
+ * palavra começa na coluna `x0 / 7.25` (com `round` do Python, meio para par), a linha é completada
+ * com espaços até a largura e o texto, com linhas em branco até a altura (sem a quebra final).
+ */
+export function extrairTextoEmLayout(chars: Caractere[], largura: number, altura: number): string {
+  if (!chars.length) return "";
+  const palavras = extrairPalavras(chars, true);
+  if (!palavras.length) return "";
+  const larguraEmCaracteres = Math.trunc(arredondaPy(largura / DENSIDADE_X));
+  const alturaEmLinhas = Math.trunc(arredondaPy(altura / DENSIDADE_Y));
+  const linhaEmBranco = " ".repeat(Math.max(0, larguraEmCaracteres));
+  const partes: string[] = [];
+  // O último caractere posto (o `_textmap[-1]`), ou nulo com o texto vazio.
+  const estado: { ultimo: string | null } = { ultimo: null };
+  const poe = (t: string) => {
+    if (!t) return;
+    partes.push(t);
+    estado.ultimo = t[t.length - 1];
+  };
+  let quebras = 0;
+  agruparObjetos(palavras, (p) => p.top, TOLERANCIA_Y, true).forEach((linha, i) => {
+    const antes = Math.max(i > 0 ? 1 : 0, arredondaPy(linha[0].top / DENSIDADE_Y) - quebras);
+    for (let k = 0; k < antes; k++) {
+      if (estado.ultimo === null || estado.ultimo === "\n") poe(linhaEmBranco);
+      poe("\n");
+    }
+    quebras += antes;
+    let tamanho = 0;
+    for (const palavra of linha) {
+      const espacos = Math.max(Math.min(1, tamanho), arredondaPy(palavra.x0 / DENSIDADE_X) - tamanho);
+      poe(" ".repeat(espacos));
+      tamanho += espacos;
+      for (const c of palavra.chars!) {
+        for (const letra of expandir(c.text)) {
+          poe(letra);
+          tamanho += 1;
+        }
+      }
+    }
+    poe(" ".repeat(Math.max(0, larguraEmCaracteres - tamanho)));
+  });
+  const depois = alturaEmLinhas - (quebras + 1);
+  for (let k = 0; k < depois; k++) {
+    if (k > 0) poe(linhaEmBranco);
+    poe("\n");
+  }
+  if (estado.ultimo === "\n") {
+    const fim = partes[partes.length - 1];
+    partes[partes.length - 1] = fim.slice(0, -1);
+  }
+  return partes.join("");
+}

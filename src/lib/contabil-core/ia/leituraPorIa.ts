@@ -94,6 +94,11 @@ export type PedidoDeLeitura = {
   texto: string;
   /** O documento: imagem (PNG/JPEG) ou PDF. */
   anexo?: { nome: string; mime: string; bytes: Uint8Array };
+  /**
+   * Vários documentos na mesma chamada, na ordem (no lugar de `anexo`): o lote de até 3 páginas da leitura
+   * do Razão de fornecedores por imagem (ConcilPro, D3a), que o original mandava numa chamada só.
+   */
+  anexos?: { nome: string; mime: string; bytes: Uint8Array }[];
   maxTokens: number;
   orcamento: Orcamento;
   /**
@@ -133,21 +138,20 @@ export async function lerPorIa(
   if (!(await ia.isAiConfigured(quem.tenantId))) return { ok: false, motivo: "sem_provedor", mensagem: SEM_PROVEDOR };
   pedido.orcamento.consumirChamada();
   const timeoutMs = pedido.orcamento.tempoDaChamadaMs;
+  const anexos = pedido.anexos ?? (pedido.anexo ? [pedido.anexo] : []);
   try {
     const texto = await ia.gerarTexto({
       tenantId: quem.tenantId,
       agentCode: pedido.agentCode,
       sistema: pedido.sistema,
       texto: pedido.texto,
-      anexos: pedido.anexo
-        ? [
-            {
-              nome: pedido.anexo.nome,
-              mime: pedido.anexo.mime,
-              base64: Buffer.from(pedido.anexo.bytes).toString("base64"),
-              imagem: pedido.anexo.mime.startsWith("image/"),
-            },
-          ]
+      anexos: anexos.length
+        ? anexos.map((a) => ({
+            nome: a.nome,
+            mime: a.mime,
+            base64: Buffer.from(a.bytes).toString("base64"),
+            imagem: a.mime.startsWith("image/"),
+          }))
         : undefined,
       maxTokens: pedido.maxTokens,
       timeoutMs,

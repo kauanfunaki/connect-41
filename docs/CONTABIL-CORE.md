@@ -1327,3 +1327,92 @@ Branch `feat/contabil-core-relatorios` (26/11/2026), empilhada sobre a D1. Só l
 - A planilha dos relatórios: com "ver" e sem auditoria (como a impressão), ou com "agir" e auditada (como as exportações)?
 - O lugar da aba (entre Conciliação e Configurações).
 - O período invertido: recusar com uma frase, em vez de sair vazio?
+
+## Fase D3a: a leitura do Razão de fornecedores (ConcilPro)
+
+Branch `feat/contabil-core-concilpro-leitura` (26/11/2026), empilhada sobre a D1. **Só a leitura:** sem banco, sem migration, sem rota e sem tela. Seção autocontida do Bloco D (a tabela de fases do bloco fica na seção dele).
+
+O ConcilPro lê o relatório "Razão" de fornecedores do sistema contábil e devolve, por fornecedor (cada bloco "Conta: <código> - <conta contábil> <nome>"), o saldo anterior, os totais declarados e os lançamentos (data, lote, histórico, contrapartida, débito, crédito, saldo, tipo da operação, número da nota e CNPJ do histórico). O envio do arquivo, a fila, as tabelas `cp_*`, a conciliação FIFO, as rotas, a tela e as exportações ficam para a D3b.
+
+| Onde | Porte de |
+|---|---|
+| `concilpro/texto.ts` (puro) | a extração do texto de `parser.py`: por palavras (`_extrair_pagina_por_palavras`), por caracteres (`_construir_runs`, `_runs_sobrepostos`, `_montar_linhas_de_runs`, `_extrair_pagina_por_chars`), a pontuação (`_pontuar_extracao`), a escolha da estratégia (`_escolher_estrategia`) e `_extrair_paginas` |
+| `pdf/plumber.ts` (`extrairTextoEmLayout`, `arredondaPy`) | o `page.extract_text(layout=True)` do pdfplumber 0.11 (o `to_textmap` com `layout=True`), a terceira estratégia, que faltava no porte do pdfplumber |
+| `concilpro/leitor.ts` (puro) | o resto de `parser.py`: `parse_valor`, `parse_data`, `classificar_tipo_operacao`, `_deduplicar_historico_linha`, `_preprocessar_bloco`, `detectar_formato_arquivo` (com o `zipfile.is_zipfile` do Python 3.14), `_deduplicar_lancamentos`, `consolidar_fornecedores_duplicados`, a normalização da resposta da IA (`_ia_decimal`, `_ia_data`, `_normalizar_lancamento_ia`), as colunas do cabeçalho (`_colunas_do_header`, `_coluna_do_valor`, `_valores_por_coluna`, `_corrigir_colunas_por_posicao`), a leitura sem IA (`_ler_linha_lancamento`, `_e_continuacao_de_historico`, `parsear_bloco_deterministico`), o fornecedor (`_identificar_fornecedor`, `_parece_nome_fornecedor`, `_construir_fornecedor_*`) e o laço dos blocos de `parsear_arquivo_razao` (`lerTextoDoRazao`). `calcular_hash_arquivo`, `extrair_numero_nf` e `extrair_cnpj` são os da B1 (`conciliacao/razaoPlanilha.ts`) |
+| `concilpro/consolidador.ts` (puro) | `consolidador.py`: `_serie_da_nota`, `consolidar_lancamentos_fornecedor` e `consolidar_todos_fornecedores` |
+| `concilpro/ia.ts` (servidor) | `ai_classifier.py`, com os mesmos prompts: `parsearBlocoFornecedorIa` (texto), `parsearBlocoFornecedorIaVisao` (imagem em lotes de 3, `ErroNoLoteDeImagem` = `VisionBatchError`) e `classificarLancamentosIncertos` |
+| `concilpro/razao.ts` (servidor) | `parsear_arquivo_razao` (o PDF pelo porte do pdfminer, a planilha pelo leitor da B1), `_renderizar_paginas_pdf` (as páginas como PDF de uma página), `extrair_texto_pdf` e `lerRazaoDeFornecedores`, que faz o que o processamento do envio fazia antes de gravar: ler, `consolidar_todos_fornecedores` e uma chamada de `classificar_lancamentos_incertos` com os incertos de todos os fornecedores |
+
+**Como lê (o do original):**
+
+- **Formato:** `%PDF` é PDF; o arquivo composto OLE2 é XLS; o zip com a pasta de trabalho é XLSX (os dois vão ao leitor de planilha da B1, `conciliacao/razaoPlanilha.ts`, sem IA); outro zip é recusado ("Formato 'ZIP' não suportado…"); o resto é tratado como PDF.
+- **O texto do PDF:** cada página sai em três estratégias (layout do pdfplumber, palavras em faixas de 5 pontos, caracteres reagrupados em runs com as cópias sobrepostas do histórico tiradas, o "Formato 6"), e UMA vale para o documento inteiro: a de mais linhas que começam com data e, no empate, a de menos tokens corrompidos (dígito e maiúscula misturados). A posição horizontal é preservada, porque é ela que separa débito de crédito.
+- **Os blocos:** o texto é cortado em "Conta:". O "Conta:" repetido no alto da página seguinte com o mesmo código continua o bloco. A linha de títulos da tabela vai na frente de cada bloco. Cada bloco passa por:
+  0. a leitura pelas colunas, sem IA: cada número pela borda direita da coluna do título (a folga é a metade do menor vão entre colunas, de 2 a 8 caracteres), a linha sem data e sem valor como continuação do histórico, e o bloco só é aceito se a soma fechar com o "Total da conta" impresso (a R$ 0,01). A conta sem movimento (totais zerados e nenhuma linha com data) também é aceita;
+  1. o texto do bloco (limpo do histórico repetido, o "Formato 4") ao agente de texto, com o débito e o crédito corrigidos depois pela coluna em que o número aparece;
+  2. as páginas do bloco ao agente de imagem, em lotes de até 3 páginas.
+  O bloco que nenhuma dá é descartado. Depois, o mesmo código de conta em vários blocos vira um fornecedor (os totais do último bloco, o saldo anterior do primeiro), e o lançamento lido duas vezes sai (mesma data, ou mesmo lote, com os mesmos valores e o mesmo saldo).
+- **A consolidação** (`consolidar_todos_fornecedores`): as compras com o mesmo número de nota, a mesma série e o mesmo dia viram uma, com o crédito somado; o total declarado zerado vira a soma.
+- **Os incertos** (DEBITO, CREDITO e OUTRO) vão juntos ao agente de classificação, que devolve o tipo e o número da nota que faltava.
+
+**A IA** é a da fundação do Connect (`ia/leituraPorIa.ts`, `executarAgente`), atrás da mesma chave do escritório (`TenantContabilCoreConfig.iaDocumentosFinanceiros`, desligada por padrão). Três agentes novos no catálogo (`src/lib/ia/catalogo.ts`), do setor `contabil` e desligados por padrão:
+
+| Agente | Faixa | No original | Chamada |
+|---|---|---|---|
+| `leitor_de_razao_texto` | rápida | `gpt-4o-mini`, `PARSE_SYSTEM_PROMPT` | o texto do bloco, até 16.000 tokens de saída, 90 s |
+| `leitor_de_razao_imagem` | padrão | `gpt-4o`, `VISION_SYSTEM_PROMPT` | até 3 páginas por chamada (o texto do bloco, até 800 caracteres, só no 1º lote), até 16.000 tokens, 120 s |
+| `classificador_de_razao` | rápida | `gpt-4o-mini`, `CLASSIFY_SYSTEM_PROMPT` | os incertos numa chamada, até 1.024 tokens; o original não tinha prazo (vale o padrão do cliente da OpenAI, 600 s) |
+
+- **Com a chave desligada** (ou sem provedor), nada vai à IA e a leitura determinística segue: o bloco que dependeria da IA é descartado, como no original sem a `OPENAI_API_KEY` (o `_get_client` devolvia nulo). O original só escrevia "IA desativada" no log; aqui a leitura devolve também um **diagnóstico** (`DiagnosticoDoRazao`: blocos, lidos pelas colunas, pelo texto, pela imagem, descartados) com a frase de onde ligar ("…Ligue, em Contábil Core › Configurações › Leitura de documentos por IA…", ou "…configure em Integrações › Inteligência artificial" sem provedor), para a D3b mostrar.
+- **A página para a IA de imagem vai como PDF de uma página** (pdf-lib), como na C1 e na C3, não como o PNG de 150 dpi do PyMuPDF: desenhar PDF em imagem exigiria dependência nova. Os lotes, a ordem e a quantidade de chamadas são os mesmos. A peça comum ganhou, de forma aditiva, `anexos` (vários documentos numa chamada), para o lote de 3 páginas continuar sendo UMA chamada.
+- **A resposta é lida como no original:** o `json.loads(..., parse_float=Decimal)` (`jsonPython`), sem tirar cercas de markdown (o original pedia `response_format: json_object`).
+
+**Gabarito:** `scripts/contabil-core/gabarito_concilpro.py`, plugin do pytest sobre `test_concilpro_parser.py`, `test_concilpro_correcoes.py` e `test_concilpro_planilha.py`. **1.310 registros, todos iguais** fora as divergências contadas:
+
+- **60 chamadas da suíte** do original (as funções de `parser.py` e `consolidador.py` que ela chama, com a entrada copiada antes da chamada), sanitizadas. O teste do lote de imagem que falha (`test_falha_em_um_batch_vision_invalida_toda_extracao`, que troca o `_visao_batch` por um falso) entra como cenário com a OpenAI simulada falhando na 2ª chamada ("Falha no batch Vision 2 de 3").
+- **1.077 chamadas das funções puras** (60 da suíte e as inventadas, semente 20261126): 215 de `classificar_tipo_operacao`, 122 de `_montar_linhas_de_runs`, 55 de `_deduplicar_historico_linha`, 45 de `_construir_runs`, 44 de `_construir_fornecedor_de_ia`, 39 de `_normalizar_lancamento_ia`, 38 de `_extrair_pagina_por_chars`, 38 de `_coluna_do_valor`, 37 de `_valores_por_coluna`, 36 de `_ler_linha_lancamento`, 46 de `_e_continuacao_de_historico`, 31 de `_corrigir_colunas_por_posicao`, 29 de `extrair_numero_nf` e 29 de `extrair_cnpj`, 28 de `_ia_decimal`, 24 de `parse_valor`, 22 de `_colunas_do_header`, 22 de `_ia_data`, 22 de `_serie_da_nota`, 21 de `detectar_formato_arquivo`, 19 de `parsear_bloco_deterministico`, 18 de `parse_data`, 16 de `_pontuar_extracao`, 15 de `_identificar_fornecedor`, 15 de `_parece_nome_fornecedor`, 12 de `_deduplicar_lancamentos`, 11 de `consolidar_lancamentos_fornecedor`, 10 de `consolidar_fornecedores_duplicados`, 10 de `_escolher_estrategia` e as demais. 15 delas são exceções do original, repetidas.
+- **27 PDFs de Razão inventados** (33 páginas, gerados pelo PyMuPDF com fornecedores e CNPJs fictícios), com o texto de cada página nas três estratégias, a escolhida (25 "layout" e 2 "chars") e o texto final, iguais ao pdfplumber caractere a caractere.
+- **138 leituras inteiras** (`parsear_arquivo_razao`, depois a consolidação e a classificação): 31 PDFs nas quatro combinações da chave da OpenAI e do `ALLOW_FINANCIAL_DATA_TO_OPENAI`, mais 7 arquivos que não são PDF de Razão (.xlsx e .xls pelo leitor da B1, ZIP, ZIP com prefixo, texto, vazio, PDF quebrado) com e sem a chave. Cobrem o caminho sem IA, o total que não fecha (texto, com a correção pela coluna), o bloco sem total e sem cabeçalho (texto e imagem), um fornecedor em 5 páginas (imagem em 2 lotes, com o 2º lote falhando ou incompleto), o fornecedor repetido com o lançamento lido duas vezes, a conta sem movimento, a conta sem código (o nome logo abaixo), os Formatos 4 e 6, o histórico em várias linhas com NF e CNPJ, a data impossível, as colunas deslocadas, o bloco que termina no fim da página, o bloco lido pelas colunas em duas páginas, a página em branco e as respostas da IA fora do formato. Ao todo, **194 chamadas à IA** (98 de texto, 86 de imagem e 10 de classificação), iguais no tipo, no sistema, no texto enviado, nas páginas, no `max_tokens`, no prazo, na ordem e na quantidade.
+- **68 chamadas diretas da IA** (20 de texto, 28 de imagem em lotes e 20 de classificação), com 47 chamadas à IA simulada.
+- A IA de verdade nunca é chamada: o `_get_client` devolve uma OpenAI falsa que responde por regras (o tipo da chamada e um trecho do texto) e grava cada chamada.
+- **Testes:** `concilpro/texto.test.ts` (260), `leitor.test.ts` (990) e `ia.test.ts` (70), com `gabarito/ler.ts` (as conversões do Python) e `gabarito/iaSimulada.ts` (a mesma IA falsa do lado do porte). A pasta do gabarito tem `.gitattributes` com `* -text` (2,3 MB).
+- **Para gerar de novo**, a partir da raiz do contabil-core, com a pasta `scripts/contabil-core` do Connect no caminho e o `GABARITO_PASTA` apontando para `src/lib/contabil-core/concilpro/gabarito`: `-p gabarito_concilpro tests/unit/test_concilpro_parser.py tests/unit/test_concilpro_correcoes.py tests/unit/test_concilpro_planilha.py`. O `GABARITO_NOMES` (fora do git) precisa dos nomes de fornecedores de `test_concilpro_parser.py` (das classes `TestConsolidacaoEntrePaginas` e `TestContaSemMovimento`, e o do histórico de `test_bloco_com_data_mas_sem_leitura_nao_vira_sem_movimento`), com trocas do mesmo tamanho (a coluna conta caracteres).
+
+**Conferência com arquivos reais** (IA desligada, só contagens, nada no git): 10 arquivos de Downloads (1 PDF de Razão, 6 .xlsx e 3 .xls), **todos iguais ao original**:
+
+- 7 lidos: 261 fornecedores e 8.318 lançamentos, os 261 totais iguais; 3 recusados com a mesma frase.
+- O PDF (63 páginas, estratégia "layout"): 22 fornecedores e 209 lançamentos lidos pelas colunas, em 0,9 s. Dos 61 blocos de fornecedor, **39 dependem da IA** (20 com linha de data que a leitura pelas colunas não lê, 19 cuja soma não fecha com o total) e, com a IA desligada, ficam de fora, no original e no porte.
+- A única diferença de forma: no bloco de planilha sem "Total da conta" e sem lançamento, o original devolve o `int` 0 do `sum()` vazio e o porte (B1) o `Decimal` 0. Na gravação os dois viram `Decimal("0")`.
+
+Divergências da D3a (as que mudam a saída são contadas nos testes):
+
+- **A chave do escritório vale para o ConcilPro.** O `_get_client` do original só olhava a `OPENAI_API_KEY`: o Razão ia à OpenAI mesmo com o `ALLOW_FINANCIAL_DATA_TO_OPENAI` desligado. Aqui, com a chave do escritório desligada, nada vai à IA (decisão do Bloco C). 31 cenários (chave presente e envio bloqueado): o porte não chama a IA e dá a saída do original sem a chave.
+- **Valor não finito da IA** (NaN, Infinity): o `Dec` não o representa, e o porte levanta `InvalidOperation` (no original, o NaN já levantava na comparação e o Infinity seguia como valor). 3 casos.
+- **PDF que não abre:** a mensagem é a do pdf.js, com o mesmo prefixo ("Erro ao extrair texto do PDF: …"). 6 casos.
+- **`extrair_texto_pdf`** faz o que diz (as páginas com texto, separadas por uma linha em branco). No original ela sempre falhava (ver os achados); ninguém a chama.
+- **IA:** a página como PDF de uma página; os documentos antes do texto (a ordem da fundação); no lote sem o texto do bloco, a linha fixa "Analise as imagens e extraia os lançamentos:" (a fundação exige texto); os modelos das faixas do catálogo, sem `temperature=0` e sem `response_format`; o nome de empresa do exemplo do "Formato 2" no prompt de texto trocado por um fictício ("LOJA FICTICIA DE MATERIAIS DE OBRAS", do mesmo tamanho). O prompt é conferido contra o do original, com a mesma troca.
+- **Diagnóstico:** o resultado da leitura do PDF traz `diagnostico` (que o original só escrevia no log). O resto do resultado tem as chaves e os valores do original, em camelCase, com o dinheiro em `Dec` e o `datetime` como o `str()` dele.
+- **`is_zipfile`:** o registro ZIP64 não é lido (não muda a resposta para arquivo que chega até aqui).
+
+**Achados sobre o original (reproduzidos de propósito):**
+
+- **O ConcilPro não respeita o `ALLOW_FINANCIAL_DATA_TO_OPENAI`**: com a chave da OpenAI configurada, o Razão de fornecedores (dados financeiros de cliente) vai à OpenAI mesmo com o envio bloqueado. Os outros leitores (extrato, nota, comprovante, cartão) conferem as duas.
+- **O cabeçalho do relatório vai à IA como se fosse um fornecedor.** As linhas antes do primeiro "Conta:" (empresa, CNPJ, período, títulos) formam um bloco. Com a IA ligada, todo PDF gasta uma chamada de texto e uma de imagem com a 1ª página nesse bloco, que nunca dá fornecedor (não tem "Conta:"). E se a imagem desse bloco vier sem a lista "lancamentos" ou falhar, o arquivo inteiro para (cenários `cinco-paginas-cabecalho-*`).
+- **A falha de um lote da IA de imagem interrompe o arquivo inteiro**, não só o bloco: o `VisionBatchError` não é tratado no laço. O mesmo para a resposta de texto fora do formato em `conciliacao`, `validacao` ou `saldo_anterior`, e para um primeiro lançamento que não é objeto (`AttributeError`, `TypeError`, `InvalidOperation` crus; 6 cenários).
+- **As páginas que vão à imagem são estimadas pela contagem de linhas**: a linha de títulos somada ao bloco e as linhas "Conta:" repetidas puladas deslocam o intervalo. O bloco que termina no fim da página leva também a página seguinte (cenário `bloco-no-fim-da-pagina`); o bloco longo pode deixar a última de fora.
+- **No bloco lido pelas colunas que atravessa a página, o cabeçalho da página seguinte** (empresa, folha, CNPJ, período e a linha de títulos) **entra no histórico** do último lançamento da página anterior, como continuação (cenário `bloco-em-duas-paginas`).
+- **`extrair_texto_pdf` sempre falha** com todo PDF que tem página: o laço usa uma variável `i` que não existe ("Erro ao extrair texto do PDF: name 'i' is not defined"). Ninguém a chama.
+- **`detectar_formato_arquivo` pode levantar:** o `is_zipfile` sobre os bytes (`BytesIO`) levanta `ValueError` ("negative seek value") quando o registro final de ZIP aponta para antes do começo do arquivo, e o envio vira erro (1 caso no gabarito).
+- **Não há orçamento por arquivo:** cada bloco que não fecha gasta até 2 chamadas (texto e imagem, mais 1 por lote de 3 páginas) e o arquivo, mais 1 de classificação. No Razão real em PDF seriam 40 blocos (os 39 e o cabeçalho), com prazos de 90 s e 120 s por chamada.
+- **Os testes do original têm nomes de fornecedores que parecem reais** (e um nome de empresa no prompt de texto): o gabarito sai sanitizado; vale limpar lá.
+
+**Precisam de decisão:**
+
+- **Respostas com cerca de markdown:** o original pedia `response_format: json_object` à OpenAI; a fundação não expõe isso. Com um provedor que devolva o JSON entre ```, o texto vira "nada" (bloco descartado) e a imagem vira `VisionBatchError`, que interrompe o arquivo inteiro. Aceitar a resposta cercada (como a nota da C1 faz)?
+- **O cabeçalho do relatório:** pular a IA no bloco sem "Conta:" (economiza 2 chamadas por arquivo e tira o risco de o arquivo inteiro falhar ali)?
+- **A falha de um lote de imagem:** continuar interrompendo o arquivo inteiro, ou descartar só o bloco?
+- **Orçamento por arquivo** (tempo e chamadas), como os outros leitores têm?
+- **Configurações:** o texto de "Leitura de documentos por IA" fala de nota e comprovante; com a D3b ele passa a valer também para o Razão de fornecedores.
+- **Os tetos dos três agentes novos:** o de texto e o de imagem copiaram os da leitura de fatura da C3 (R$ 50 e R$ 200 por mês); o de classificação ficou com R$ 20. Todos com 3.000 chamadas por mês.
+
+**Fora da D3a (vai para a D3b):** as tabelas `cp_*` e a migration, o envio do arquivo e a fila (`/upload` e o processamento em segundo plano), `conciliacao_intel.py` (FIFO), as rotas de `src/api/v1/concilpro.py`, a tela, as exportações e a carga.
