@@ -1325,9 +1325,10 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Em “Empresa”, no topo, escolha a empresa. Só aparecem as empresas com a conta do Omie ligada em Integrações.",
           "Clique em “Nova NFS-e”. A janela lê os tomadores e os serviços do Omie da empresa.",
-          "Escolha o “Tomador” e o “Serviço” e preencha o “Valor” e a “Categoria no Omie”. Se o serviço estiver sem código municipal e sem código da LC 116 no Omie, informe-os nos campos que aparecem.",
-          "Se quiser, escreva a “Descrição do serviço na nota”; em branco, vale a do cadastro do serviço no Omie.",
-          "Clique em “Revisar e emitir”, confira o resumo e clique em “Emitir nota”. Nada é enviado antes dessa confirmação.",
+          "Escolha o “Tomador” e o “Serviço” e preencha o “Valor” e a “Categoria no Omie”. Se o serviço estiver sem código municipal e sem código da LC 116 no Omie, os da OS mais recente com ele já vêm em “Códigos fiscais desta nota”: abra para conferir ou trocar.",
+          "Se quiser, escreva a “Descrição na nota”; em branco, vale a do cadastro do serviço no Omie.",
+          "Confira a “Prévia da nota”, ao lado dos campos: ela mostra a nota como vai sair e muda a cada campo.",
+          "Marque “Entendo que isto emite uma nota de verdade na prefeitura.” e clique em “Emitir nota”. Nada é enviado antes disso, e mudar um campo desmarca a caixa.",
         ],
       },
       {
@@ -1341,7 +1342,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "A nota sai com a data do faturamento, no mês corrente: o Omie não recebe competência pela API. Para outra competência, emita pela tela do Omie.",
-      "Cliente com faturamento bloqueado no Omie fica fora da lista de tomadores. A lista traz os primeiros 1.000 clientes; se não achar, use a busca no Omie que aparece embaixo do campo.",
+      "Cliente com faturamento bloqueado no Omie fica fora da lista de tomadores. A lista traz os primeiros 1.000 clientes; se não achar, use “Não está na lista? Buscar no Omie”, embaixo do campo.",
       "Só o administrador do setor emite e cancela NFS-e; os demais acompanham o que foi pedido.",
       "A conta do Omie de cada empresa (App Key e App Secret) é cadastrada em Integrações, por quem administra o escritório.",
     ],

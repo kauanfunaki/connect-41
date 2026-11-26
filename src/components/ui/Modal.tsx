@@ -10,6 +10,12 @@ type Props = {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /**
+   * Algo pequeno logo depois do título, na mesma linha — o selo da empresa na
+   * "Nova NFS-e" (melhoria-855, 26/11/2026). Fica fora do <h2>: não entra no
+   * nome da janela.
+   */
+  aoLadoDoTitulo?: React.ReactNode;
   maxWidth?: string; // ex: "max-w-lg" — default abaixo
   /** Fundo desfocado em vez de só escurecido — para janelas de navegação, como a troca de setor. */
   desfocar?: boolean;
@@ -26,7 +32,7 @@ type Props = {
 // na hidratação fica no lugar — `document` não existe lá — e muda no navegador.
 const semAssinatura = () => () => {};
 
-export function Modal({ open, onClose, title, maxWidth = "max-w-md", desfocar = false, children }: Props) {
+export function Modal({ open, onClose, title, aoLadoDoTitulo, maxWidth = "max-w-md", desfocar = false, children }: Props) {
   const panelRef = useDialog(open, onClose);
   const titleId = useId();
   const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
@@ -48,8 +54,9 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", desfocar = 
         {...(title ? { "aria-labelledby": titleId } : { "aria-label": "Diálogo" })}
         className={`c41-surgir relative w-full ${maxWidth} text-left bg-surface-elevated border border-border-strong rounded-lg shadow-lg max-h-[calc(100dvh-2rem)] overflow-y-auto`}
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-2">
+        <div className="flex items-center justify-between gap-2 px-5 pt-5 pb-2">
           {title && <h2 id={titleId} className="text-dialog-title font-semibold text-fg">{title}</h2>}
+          {aoLadoDoTitulo && <span className="flex min-w-0">{aoLadoDoTitulo}</span>}
           <IconButton onClick={onClose} aria-label="Fechar" className="ml-auto">
             <X size={16} />
           </IconButton>

@@ -143,7 +143,9 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   return comEmpresa(
     <PageContainer>
       {cabecalho(
-        podeEmitir ? <NovaNfse companyId={companyId} empresaNome={empresa.nome} competenciaAtual={competenciaDoInstante(agora)} /> : undefined
+        podeEmitir ? (
+          <NovaNfse companyId={companyId} empresaNome={empresa.nome} empresaCnpj={empresa.cnpj} competenciaAtual={competenciaDoInstante(agora)} />
+        ) : undefined
       )}
 
       <FiltroDaEmpresa foco={foco} />
