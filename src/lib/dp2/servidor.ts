@@ -6,6 +6,7 @@ import { avisosDeVencimento } from "./avisos";
 import { lerDadosEsocial } from "./esocial/cadastro";
 import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
+import { afastamentosDosXml, afastamentosNoMes, type AfastamentoNoMes } from "./afastamentos";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
 import type { Prisma } from "@/generated/prisma/client";
@@ -252,6 +253,27 @@ export async function feriasDoMes(tenantId: string, personIds: string[], ano: nu
   return porPessoa;
 }
 
+/**
+ * Os afastamentos das pessoas que caem no mês (funcionalidade-749), lidos dos
+ * S-2230 gerados no DP 2 (os rejeitados ficam de fora).
+ */
+export async function afastamentosDoMes(tenantId: string, personIds: string[], ano: number, mes: number): Promise<Map<string, AfastamentoNoMes[]>> {
+  const porPessoa = new Map<string, AfastamentoNoMes[]>();
+  if (personIds.length === 0) return porPessoa;
+  const eventos = await getPrisma().dp2EventoEsocial.findMany({
+    where: { tenantId, tipo: "S-2230", personId: { in: personIds }, situacao: { not: "REJEITADO" } },
+    select: { personId: true, xml: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const xmls = new Map<string, string[]>();
+  for (const e of eventos) if (e.personId) xmls.set(e.personId, [...(xmls.get(e.personId) ?? []), e.xml]);
+  for (const [personId, lista] of xmls) {
+    const doMes = afastamentosNoMes(afastamentosDosXml(lista), ano, mes);
+    if (doMes.length > 0) porPessoa.set(personId, doMes);
+  }
+  return porPessoa;
+}
+
 /** Os períodos aquisitivos da pessoa com as férias gravadas (funcionalidade-745). */
 export async function periodosDaPessoa(tenantId: string, p: { id: string; admissionDate: Date | null; dismissalDate: Date | null }, hoje: Date = new Date()): Promise<PeriodoAquisitivo[]> {
   if (!p.admissionDate) return [];
@@ -381,6 +403,8 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const { diasUteis, diasDeDescanso } = diasDoMes(comp.ano, comp.mes);
   // Férias gravadas que caem no mês (funcionalidade-745).
   const feriasDe = comp.tipo === "MENSAL" ? await feriasDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, FeriasNoMes[]>();
+  // Afastamentos do mês, dos S-2230 (funcionalidade-749).
+  const afastamentosDe = comp.tipo === "MENSAL" ? await afastamentosDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, AfastamentoNoMes[]>();
 
   // Rescisão gravada com desligamento no mês (funcionalidade-746): as verbas do mês
   // estão na rescisão e vão no S-2299, então a pessoa sai da folha mensal.
@@ -433,6 +457,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         diasUteis,
         diasDeDescanso,
         ferias: feriasDe.get(p.id),
+        afastamentos: afastamentosDe.get(p.id),
         outrasBasesInss: outrasDe(p.id),
       });
     } else {
