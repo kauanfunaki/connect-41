@@ -39,7 +39,7 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, excluirAlocacaoAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, excluirAlocacaoAction, gerarEventoDaTransferenciaAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -173,7 +173,23 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     getPrisma().dp2EntregaDeEpi.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, include: { person: { select: { name: true } }, epi: { select: { nome: true, ca: true } } }, orderBy: [{ data: "desc" }, { createdAt: "desc" }], take: 50 }),
   ]);
   const hojeNoEpi = new Date().toISOString().slice(0, 10);
-  const nomeDaEmpresaOutra = new Map(outrasEmpresas.map((c) => [c.id, nomeExibicao(c)]));
+  // O nome das empresas das transferências, mesmo as que hoje estão fora do grupo.
+  const empresasDasTransferencias = transferencias.length
+    ? await getPrisma().company.findMany({
+        where: { tenantId: tela.tenantId, id: { in: [...new Set(transferencias.flatMap((t) => [t.companyId, t.deCompanyId]))] } },
+        select: { id: true, name: true, tradeName: true, displayName: true },
+      })
+    : [];
+  const nomeDaEmpresaOutra = new Map([...outrasEmpresas, ...empresasDasTransferencias].map((c) => [c.id, nomeExibicao(c)]));
+  // Os eventos do eSocial já gerados para as transferências (S-2299 da origem e S-2200 da sucessão).
+  const eventosDaTransferencia = transferencias.length
+    ? await getPrisma().dp2EventoEsocial.findMany({
+        where: { tenantId: tela.tenantId, personId: { in: transferencias.map((t) => t.personId) }, tipo: { in: ["S-2299", "S-2200"] }, OR: [{ referencia: { contains: "transferência" } }, { referencia: { contains: "sucessão" } }] },
+        select: { personId: true, tipo: true, companyId: true, situacao: true },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const situacaoDoEvento = (personId: string, tipo: string, companyId: string) => eventosDaTransferencia.find((e) => e.personId === personId && e.tipo === tipo && e.companyId === companyId)?.situacao ?? null;
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
 
@@ -927,14 +943,15 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
         </Secao>
       )}
 
-      {tela.podeAgir && pessoas.some((p) => p.dp2Vinculo && !p.dismissalDate) && outrasEmpresas.length > 0 && (
+      {((tela.podeAgir && pessoas.some((p) => p.dp2Vinculo && !p.dismissalDate) && outrasEmpresas.length > 0) || transferencias.length > 0) && (
         <Secao titulo="Transferir para outra empresa" apoio="O contrato passa para a matriz ou outra filial do grupo sem rescisão: admissão, férias, médias e histórico vão junto.">
+          {tela.podeAgir && pessoas.some((p) => p.dp2Vinculo && !p.dismissalDate) && outrasEmpresas.length > 0 && (
           <FormularioDoDp2
             acao={transferirColaboradorAction}
             rotulo="Transferir"
             rotuloEnviando="Transferindo…"
             variante="secondary"
-            confirmar={{ titulo: "Transferir o colaborador?", texto: "Ele sai desta empresa e passa para a escolhida, com o mesmo contrato. Os eventos do eSocial (S-2299 motivo 11 e S-2200 com sucessão) saem depois.", rotulo: "Transferir" }}
+            confirmar={{ titulo: "Transferir o colaborador?", texto: "Ele sai desta empresa e passa para a escolhida, com o mesmo contrato. No mês da transferência, cada empresa calcula os dias dela. Os eventos do eSocial (S-2299 motivo 11 e S-2200 com sucessão) saem pelos botões da lista.", rotulo: "Transferir" }}
           >
             <input type="hidden" name="companyId" value={empresaAtual} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -972,15 +989,34 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               </CampoForm>
             </div>
           </FormularioDoDp2>
+          )}
           {transferencias.length > 0 && (
             <ul className="mt-4 flex flex-col gap-1 text-fs-3">
-              {transferencias.map((t) => (
-                <li key={t.id}>
-                  {formatCalendarDate(t.data)} · {t.person.name}:{" "}
-                  {t.deCompanyId === empresaAtual ? `foi para ${nomeDaEmpresaOutra.get(t.companyId) ?? "outra empresa"}` : `veio de ${nomeDaEmpresaOutra.get(t.deCompanyId) ?? "outra empresa"}`}
-                  <span className="text-fg-muted"> · {t.motivo}</span>
-                </li>
-              ))}
+              {transferencias.map((t) => {
+                const s2299 = situacaoDoEvento(t.personId, "S-2299", t.deCompanyId);
+                const s2200 = situacaoDoEvento(t.personId, "S-2200", t.companyId);
+                return (
+                  <li key={t.id}>
+                    <span>
+                      {formatCalendarDate(t.data)} · {t.person.name}:{" "}
+                      {t.deCompanyId === empresaAtual ? `foi para ${nomeDaEmpresaOutra.get(t.companyId) ?? "outra empresa"}` : `veio de ${nomeDaEmpresaOutra.get(t.deCompanyId) ?? "outra empresa"}`}
+                      <span className="text-fg-muted"> · {t.motivo}</span>
+                    </span>
+                    {tela.podeAgir && (
+                      <div className="mt-1 mb-2 flex flex-wrap items-start gap-2">
+                        <FormularioDoDp2 acao={gerarEventoDaTransferenciaAction} rotulo={s2299 ? `S-2299 (${s2299.toLowerCase()})` : "Gerar S-2299 (origem)"} rotuloEnviando="Gerando…" variante="secondary" tamanho="sm">
+                          <input type="hidden" name="transferenciaId" value={t.id} />
+                          <input type="hidden" name="lado" value="ORIGEM" />
+                        </FormularioDoDp2>
+                        <FormularioDoDp2 acao={gerarEventoDaTransferenciaAction} rotulo={s2200 ? `S-2200 (${s2200.toLowerCase()})` : "Gerar S-2200 (destino)"} rotuloEnviando="Gerando…" variante="secondary" tamanho="sm">
+                          <input type="hidden" name="transferenciaId" value={t.id} />
+                          <input type="hidden" name="lado" value="DESTINO" />
+                        </FormularioDoDp2>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Secao>

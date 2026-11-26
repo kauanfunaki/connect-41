@@ -3,13 +3,15 @@ import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
 import { ehUuid, exportacaoSchema, primeiroErro } from "@/lib/contabil-core/entradas";
-import { gerarArquivoDoDominio } from "@/lib/contabil-core/servidor/exportacao";
+import { gerarExportacao } from "@/lib/contabil-core/servidor/exportacao";
 
 export const runtime = "nodejs";
 
-// O arquivo de importação de lançamentos do Domínio (Fase 2, 09/11/2026), gerado na hora e devolvido
-// como download. Os avisos (conta sem código reduzido, lançamento sem par) vão num cabeçalho, como no
-// original, para a tela mostrar sem o contador precisar abrir o arquivo.
+// As exportações do Contábil Core, geradas na hora e devolvidas como download: o arquivo do Domínio (Fase 2,
+// 09/11/2026; sem `tipo`, é ele) e, na Fase D1 (26/11/2026), os lançamentos, o extrato com os filtros da
+// tela, as baixas de notas e a conferência, em CSV, XLSX ou TXT (só o Domínio), como o
+// `POST /exportacao/gerar` do original. Os avisos (conta sem código reduzido, lançamento sem par) vão num
+// cabeçalho, como no original, para a tela mostrar sem o contador precisar abrir o arquivo.
 export async function GET(req: NextRequest) {
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -19,15 +21,21 @@ export async function GET(req: NextRequest) {
   const empresaId = p.get("empresa") ?? "";
   if (!ehUuid(empresaId)) return NextResponse.json({ error: "Empresa não informada." }, { status: 400 });
   const v = exportacaoSchema.safeParse({
+    tipo: p.get("tipo"),
     mes: p.get("mes") ?? "",
     agenciaId: p.get("agencia") || null,
     formato: p.get("formato") ?? "",
     usarHistoricoExtrato: p.get("historicoExtrato") === "1",
     incluirContasInativas: p.get("inativas") === "1",
+    status: p.get("status") || null,
+    busca: p.get("busca") || null,
+    dc: p.get("dc") || null,
+    valorMin: p.get("valorMin") || null,
+    valorMax: p.get("valorMax") || null,
   });
   if (!v.success) return NextResponse.json({ error: primeiroErro(v.error) }, { status: 400 });
 
-  const r = await gerarArquivoDoDominio(ctx.tenantId, ctx.userId, empresaId.toLowerCase(), v.data);
+  const r = await gerarExportacao(ctx.tenantId, ctx.userId, empresaId.toLowerCase(), v.data);
   if (!r.ok) return NextResponse.json({ error: r.erro }, { status: 400 });
   await logAudit({
     tenantId: ctx.tenantId,
@@ -35,9 +43,10 @@ export async function GET(req: NextRequest) {
     action: "contabil.core.exportacao.gerada",
     entityType: "CoreEmpresa",
     entityId: empresaId.toLowerCase(),
-    metadata: { nome: r.valor.nome, linhas: r.valor.linhas, formato: v.data.formato, mes: v.data.mes },
+    metadata: { nome: r.valor.nome, tipo: r.valor.exportacao, linhas: r.valor.linhas, formato: v.data.formato, mes: v.data.mes },
   });
-  return new NextResponse(r.valor.conteudo, {
+  const corpo = typeof r.valor.conteudo === "string" ? r.valor.conteudo : Buffer.from(r.valor.conteudo);
+  return new NextResponse(corpo, {
     headers: {
       "Content-Type": r.valor.tipo,
       "Content-Disposition": `attachment; filename="${r.valor.nome}"`,

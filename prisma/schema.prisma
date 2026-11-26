@@ -7398,6 +7398,9 @@ model Dp2Transferencia {
   personId    String
   data        DateTime @db.Date
   motivo      String   @db.VarChar(200)
+  /// A matrícula do eSocial na empresa de origem, guardada na transferência:
+  /// vai no S-2299 da origem e no matricAnt do S-2200 do destino.
+  matriculaAnterior String? @db.VarChar(30)
   criadoPorId String?
   createdAt   DateTime @default(now())
 

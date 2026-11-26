@@ -130,7 +130,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
     }),
     prisma.dp2Comparativo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id } }),
     listarRubricas(ctx.tenantId),
-    colaboradoresDaCompetencia(ctx.tenantId, comp.companyId, comp.ano, comp.mes),
+    colaboradoresDaCompetencia(ctx.tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo),
     prisma.dp2PedidoDeEventos.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.dp2Remessa.findMany({
       where: { tenantId: ctx.tenantId, competenciaId: id },

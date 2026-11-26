@@ -76,10 +76,10 @@ function pendenciasDoContrato(t: TrabalhadorCompleto, sindicato: SindicatoDoVinc
   return p;
 }
 
-function infoCeletista(t: TrabalhadorCompleto, sindicato: SindicatoDoVinculo, comAdmissao: boolean): No | null {
+function infoCeletista(t: TrabalhadorCompleto, sindicato: SindicatoDoVinculo, comAdmissao: boolean, tpAdmissao = "1"): No | null {
   return el("infoCeletista", [
     comAdmissao ? el("dtAdm", t.admissao) : null,
-    comAdmissao ? el("tpAdmissao", "1") : null,
+    comAdmissao ? el("tpAdmissao", tpAdmissao) : null,
     comAdmissao ? el("indAdmissao", "1") : null,
     el("tpRegJor", "1"),
     el("natAtividade", "1"),
@@ -164,9 +164,21 @@ export function blocoDoTrabalhador(t: TrabalhadorCompleto): No | null {
 
 // ─── S-2200 Admissão ────────────────────────────────────────────────────────
 
-export function eventoS2200(e: EmpregadorEsocial, t: TrabalhadorCompleto, sindicato: SindicatoDoVinculo, novoId: GeradorDeId): EventoGerado {
+/**
+ * Sucessão do vínculo (funcionalidade-771): o empregado veio de outra empresa
+ * do mesmo grupo sem rescisão. O S-2200 sai com tpAdmissao 2, a admissão da
+ * empresa de origem (dtAdm) e o grupo sucessaoVinc com o CNPJ e a matrícula
+ * anteriores e a data da transferência.
+ */
+export type SucessaoDoVinculo = { cnpjAnterior: string | null; matriculaAnterior: string | null; data: string; observacao: string | null };
+
+export function eventoS2200(e: EmpregadorEsocial, t: TrabalhadorCompleto, sindicato: SindicatoDoVinculo, novoId: GeradorDeId, sucessao: SucessaoDoVinculo | null = null): EventoGerado {
   const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoVinculo(t), ...pendenciasDoContrato(t, sindicato), ...pendenciasPessoais(t)];
   if (!t.admissao) pendencias.push(falta("colaborador", `${t.nome}: sem data de admissão no cadastro.`, linkDoCadastro(t.personId)));
+  if (sucessao) {
+    if (digitos(sucessao.cnpjAnterior).length !== 14) pendencias.push(falta("empresa", "A empresa de origem da transferência está sem CNPJ.", null));
+    if (!sucessao.matriculaAnterior) pendencias.push(falta("colaborador", `${t.nome}: falta a matrícula do eSocial na empresa de origem.`, linkDoCadastro(t.personId)));
+  }
 
   const id = novoId();
   const xml = envelope("S-2200", id, [
@@ -178,11 +190,27 @@ export function eventoS2200(e: EmpregadorEsocial, t: TrabalhadorCompleto, sindic
       el("tpRegTrab", "1"),
       el("tpRegPrev", "1"),
       el("cadIni", "N"),
-      el("infoRegimeTrab", [infoCeletista(t, sindicato, true)]),
+      el("infoRegimeTrab", [infoCeletista(t, sindicato, true, sucessao ? "2" : "1")]),
       infoContrato(t, e.cnpj),
+      sucessao
+        ? el("sucessaoVinc", [
+            el("tpInsc", "1"),
+            el("nrInsc", digitos(sucessao.cnpjAnterior)),
+            el("matricAnt", sucessao.matriculaAnterior?.slice(0, 30)),
+            el("dtTransf", sucessao.data),
+            el("observacao", sucessao.observacao?.slice(0, 255)),
+          ])
+        : null,
     ]),
   ]);
-  return { tipo: "S-2200", referencia: `${digitos(t.cpf) || t.nome} · ${t.matricula ?? "sem matrícula"}`, personId: t.personId, idEvento: id, xml, pendencias };
+  return {
+    tipo: "S-2200",
+    referencia: `${digitos(t.cpf) || t.nome} · ${t.matricula ?? "sem matrícula"}${sucessao ? " · sucessão" : ""}`,
+    personId: t.personId,
+    idEvento: id,
+    xml,
+    pendencias,
+  };
 }
 
 // ─── S-2206 Alteração contratual ────────────────────────────────────────────
@@ -340,6 +368,40 @@ export function eventoS2299(e: EmpregadorEsocial, t: { personId: string; nome: s
   ]);
   return { tipo: "S-2299", referencia: `${digitos(t.cpf) || t.nome} · ${d.data}`, personId: t.personId, idEvento: id, xml, pendencias };
 }
+
+/**
+ * O S-2299 da transferência para empresa do mesmo grupo (funcionalidade-771):
+ * motivo 11 (Tabela 19), o último dia na empresa (a véspera da transferência)
+ * e a empresa sucessora no grupo sucessaoVinc. Não há verbas rescisórias: o
+ * contrato continua na outra empresa.
+ */
+export function eventoS2299Transferencia(
+  e: EmpregadorEsocial,
+  t: { personId: string; nome: string; cpf: string | null; matricula: string | null },
+  d: { ultimoDia: string; cnpjSucessora: string | null; observacao: string | null },
+  novoId: GeradorDeId
+): EventoGerado {
+  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoVinculo(t)];
+  if (digitos(d.cnpjSucessora).length !== 14) pendencias.push(falta("empresa", "A empresa de destino da transferência está sem CNPJ.", null));
+  const id = novoId();
+  const xml = envelope("S-2299", id, [
+    ideEventoNaoPeriodico(),
+    ideEmpregador(e.cnpj),
+    ideVinculo(t),
+    el("infoDeslig", [
+      el("mtvDeslig", MOTIVO_TRANSFERENCIA),
+      el("dtDeslig", d.ultimoDia),
+      el("indPagtoAPI", "N"),
+      el("pensAlim", "0"),
+      el("observacoes", d.observacao ? [el("observacao", d.observacao.slice(0, 255))] : null),
+      el("sucessaoVinc", [el("tpInsc", "1"), el("nrInsc", digitos(d.cnpjSucessora))]),
+    ]),
+  ]);
+  return { tipo: "S-2299", referencia: `${digitos(t.cpf) || t.nome} · ${d.ultimoDia} · transferência`, personId: t.personId, idEvento: id, xml, pendencias };
+}
+
+/** Tabela 19, motivo 11: transferência para empresa do mesmo grupo, sem rescisão. */
+export const MOTIVO_TRANSFERENCIA = "11";
 
 /** A chave de cada verba do cálculo de rescisão do DP 2 → o papel da rubrica. */
 export const PAPEL_DA_VERBA: Record<string, string> = {

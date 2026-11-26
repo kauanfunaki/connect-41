@@ -32,7 +32,7 @@ O time não consegue importar o extrato num sistema e classificar no outro, porq
 | **A: núcleo** | cadastros (empresas, plano de contas, agências, contrapartes), extrato, importações, Regras, NEO, registros e exportação para o Domínio | numa vez só, com a carga das tabelas do bloco |
 | **B: conciliação** | conciliação bancária (Razão × extrato, SISPAG), revisões manuais e financeiro | depois do A |
 | **C: documentos** | notas fiscais, comprovantes e cartões | junto com o A ou depois dele |
-| **D: independentes** | ConcilPro, Open Banking, aplicações financeiras, relatórios e painel | cada um por conta própria |
+| **D: independentes** | ajustes do porte (D0), exportações restantes, "Conflitos e qualidade" do NEO, painel e carteira (D1), relatórios (D2) e ConcilPro (D3). Open Banking e aplicações financeiras ficam fora (ver "Bloco D") | cada um por conta própria |
 
 ### Fases do Bloco A
 
@@ -336,7 +336,7 @@ Os leitores (`notas/xml.ts`, com a assinatura em `notas/assinatura.ts`, e `notas
 - **Achados sobre o original:**
   - **A assinatura de uma NF-e real nunca confere no original.** Com o `signxml` 5.2 e o `lxml` 6.1, a assinatura no padrão da NF-e (`<Signature xmlns="…xmldsig#">`, sem prefixo) sai sempre "assinatura não confere (InvalidInput)". O lxml canonicaliza o `SignedInfo` como raiz e deixa um `xmlns=""` falso. Só a assinatura com prefixo `ds:` chega a ser conferida.
   - O porte reproduz isso de propósito: toda NF-e real entra como `xml_nao_verificado`, como no original, e a carga (C4) não muda de procedência.
-  - Corrigir é uma decisão à parte, que vale para os dois sistemas.
+  - Corrigir é uma decisão à parte, que vale para os dois sistemas. **Decidido (Angelo, 26/11/2026): fica como está.**
   - **Certificado vencido:** o `signxml` confere a validade no momento da importação, não na emissão. Uma nota assinada por certificado já vencido entra como `xml_nao_verificado` ("InvalidCertificate"), ao contrário do que diz um comentário do original. O porte segue o comportamento real.
 
 Divergências da C1:
@@ -352,8 +352,8 @@ Divergências da C1:
 - **Página de PDF para a IA de visão:** vai como PDF de uma página, não como PNG de 200 dpi, porque desenhar PDF em imagem exigiria dependência nova. A ordem, o orçamento e a contagem de chamadas são os mesmos.
 - **Exceção crua do original vira recusa com frase:** a falha do provedor na leitura por imagem, o PDF ilegível ou sem páginas (no original, `FileDataError`/`EmptyFileError` do PyMuPDF, erro 500) e a codificação desconhecida.
 - **Codificações:** as de 1 byte fora da lista (latin-1, cp1252, iso8859-15, ascii e utf-8) são recusadas como desconhecidas. O DTD em UTF-16 é recusado com a frase do DTD.
-- **Fica como no original, mas merece decisão:** a nota cadastrada à mão nasce com a procedência `xml_assinado` (o padrão do `NotaFiscalCreate`, que a tela do original não mudava).
-- **Fora da C1:** o uso das notas pelo NEO (`_selecionar_nota_candidata`, a contraparte pela nota e o número da nota no histórico) vai para a C2, junto dos comprovantes, porque o motor usa os dois do mesmo jeito. A exportação das notas (`nfe_entrada`, `nfse_tomado`…) e os números do painel ficam para o Bloco D.
+- **Fica como no original (decidido pelo Angelo em 26/11/2026):** a nota cadastrada à mão nasce com a procedência `xml_assinado` (o padrão do `NotaFiscalCreate`, que a tela do original não mudava).
+- **Fora da C1:** o uso das notas pelo NEO (`_selecionar_nota_candidata`, a contraparte pela nota e o número da nota no histórico) vai para a C2, junto dos comprovantes, porque o motor usa os dois do mesmo jeito. A exportação das notas (`nfe_entrada`, `nfse_tomado`…) e os números do painel vieram na Fase D1 (ver "Fase D1").
 - **Tela:**
   - **O texto do cancelamento** diz que a associação sai junto, como o serviço faz. O original dizia que ela seria mantida.
   - **O dia da emissão:** a nota sem hora (a NFS-e só com a data e o cadastro à mão) é gravada à meia-noite UTC, como no original, e aparece no dia gravado; o original a mostrava no dia anterior.
@@ -410,7 +410,7 @@ Divergências da C1:
   - O comprovante: só para débito, valor a até R$ 0,01 e pago a até 3 dias.
   - Só quando há EXATAMENTE um; dois ou mais, nenhum.
   - A janela é a do PostgreSQL: o dia do extrato menos e mais N dias vira a meia-noite (UTC) daqueles dias, e as pontas entram.
-- **A contraparte** (`resolverContraparte`): a nota candidata (o emitente no débito, o destinatário no crédito), depois o documento do comprovante candidato, depois o documento impresso no histórico e por último o nome. O número da nota vai para o histórico gerado ("PGTO REF NF 4321 - …") quando a contraparte veio da nota; pelo documento do histórico, não (a nota é de outro CNPJ). Pelo nome, vai, como no original (ver os achados).
+- **A contraparte** (`resolverContraparte`): a nota candidata (o emitente no débito, o destinatário no crédito), depois o documento do comprovante candidato, depois o documento impresso no histórico e por último o nome. O número da nota vai para o histórico gerado ("PGTO REF NF 4321 - …") só quando a contraparte veio da nota; pelo documento do histórico e pelo nome, não (a nota é de outro CNPJ). Pelo nome, o original levava o número: desde a D0 é divergência deliberada (ver "Fase D0").
 - **Com regra**, a contraparte é só medida (modo sombra): a decisão grava a contraparte, a conta, a origem (agora também `nota_fiscal` e `comprovante`) e a divergência de conta, e a classificação é a da regra.
 - **A ligação:** quem classifica (pela regra ou pela contraparte) liga os dois candidatos, depois das partidas, na mesma transação do lançamento, por `updateMany` que exige o documento ainda livre (`transacaoId` nulo; a nota, também "pendente"). É o lugar do `with_for_update(skip_locked=True)`: se outra pessoa ou outra execução ligou o documento nesse meio-tempo, ele simplesmente não é ligado. Ligado ou não, sai do conjunto da execução (os consumidos). As contagens `comprovantesAssociados` e `notasAssociadas` contam só o que de fato ligou, e a aba NEO as mostra no resumo da execução.
 
@@ -418,7 +418,7 @@ Divergências da C1:
 
 - `gabarito_comprovantes.py` (o leitor): 350 chamadas, todas iguais. 43 de `_parse_valor`, 18 de `_parse_data`, 173 de `_parse_por_regex`, 18 de `_parece_nota_fiscal`, 30 de `_comprovante_from_item`, 6 de `_extrair_linhas` (o texto do pdfplumber em PDFs gerados) e 62 leituras inteiras com a IA simulada. Destas, 16 são as da suíte do original, gravadas automaticamente e repetidas pelo plugin (com a entrada original o resultado tem de ser o da suíte; a sanitizada vai para o gabarito). As outras 46 cobrem as quatro combinações das chaves da IA, o orçamento esgotado, a página que traz o valor, a nota reconhecida pela IA e a falha do provedor. As chamadas à IA (texto ou imagem, o texto enviado) são as mesmas.
 - `gabarito_comprovantes_servico.py` (o serviço): 524 casos, todos iguais. 55 da suíte (29 cadastros, 6 associações, 2 desassociações, 2 exclusões, 3 leituras, 10 listas e 3 buscas por arquivo), 430 inventados e 39 chamadas diretas do `ComprovanteCreate`. A saída sai do serviço original num SQLite montado só com a entrada; o arquivo não vai para o gabarito (o SHA-256 dos bytes fica no lugar). O banco montado ordena a lista como o PostgreSQL (o pagamento sem data PRIMEIRO na ordem decrescente) e devolve as datas com o fuso; para a conferência com a suíte vale a ordem do SQLite.
-- `gabarito_neo_documentos.py` (o NEO): 300 casos, todos iguais. 16 da suíte `test_neo.py` (4 execuções do `processar` com nota ou comprovante, 2 escolhas de comprovante, 2 de nota, 4 associações diretas, 1 resolução de contraparte e 3 medições da sombra) e 284 mundos inventados, sorteados em volta das tolerâncias, da direção da nota, dos dois candidatos, do número no histórico e da sombra, inclusive as pontas da janela uma a uma (3/4 e 7/8 dias, à meia-noite, um segundo depois e às 23h59). Ao todo, 19 comprovantes e 34 notas ligados. O teste (`motor/neoDocumentos.test.ts`) repete o laço do servidor sobre a entrada e confere as contagens, o status de cada transação, a decisão gravada, a partida da classificação e a ligação de cada documento. O banco montado compara a janela de datas como o PostgreSQL (o SQLite deixava de fora o pagamento à meia-noite do último dia).
+- `gabarito_neo_documentos.py` (o NEO): 300 casos, todos iguais na C2. Desde a D0, 3 deles divergem de propósito (o número da nota pela via do nome), contados um a um no teste; o gabarito não foi regerado. 16 da suíte `test_neo.py` (4 execuções do `processar` com nota ou comprovante, 2 escolhas de comprovante, 2 de nota, 4 associações diretas, 1 resolução de contraparte e 3 medições da sombra) e 284 mundos inventados, sorteados em volta das tolerâncias, da direção da nota, dos dois candidatos, do número no histórico e da sombra, inclusive as pontas da janela uma a uma (3/4 e 7/8 dias, à meia-noite, um segundo depois e às 23h59). Ao todo, 19 comprovantes e 34 notas ligados. O teste (`motor/neoDocumentos.test.ts`) repete o laço do servidor sobre a entrada e confere as contagens, o status de cada transação, a decisão gravada, a partida da classificação e a ligação de cada documento. O banco montado compara a janela de datas como o PostgreSQL (o SQLite deixava de fora o pagamento à meia-noite do último dia).
 - Para gerar de novo, o `GABARITO_NOMES` (fora do git) precisa também dos nomes reais do teste do leitor do original (o comprovante do Sicredi em `test_comprovantes_pdf_parser.py`), inclusive o trecho do CNPJ que aparece junto do nome do destinatário.
 - **Rotas:** `api/contabil-core/comprovantes/route.test.ts`, 15 testes (permissão, empresa e id conferidos, a consulta, o cadastro em JSON e em formulário, os códigos com os detalhes do duplicado, o download e as ações auditadas iguais às do serviço).
 - **Arquivos reais (só contagens, nada no git):** os 4 comprovantes de Downloads (2 PDFs e 2 imagens), com a IA desligada, deram a mesma saída no original e no porte: os 2 PDFs lidos pelos rótulos (com as mesmas linhas do pdfplumber) e as 2 imagens recusadas com a mesma frase.
@@ -426,8 +426,8 @@ Divergências da C1:
 
 **Achados sobre o original (reproduzidos de propósito):**
 
-- **O número de nota de outro CNPJ vai para o histórico pela via do nome.** `_resolver_contraparte_candidata` explica que o `numero_nf` NÃO viaja pela via do documento no histórico, porque chegar ali significa que a nota candidata é de outro CNPJ. Mas a via do nome, logo abaixo, devolve o `numero_nf` junto. Uma transação sem regra cuja nota candidata é de um CNPJ sem contraparte cadastrada, e cujo histórico traz o nome de uma contraparte, sai com "PGTO REF NF <número daquela nota> - <a contraparte do nome>". O porte faz igual; corrigir é decisão à parte.
-- **A nota emitida para destinatário sem CNPJ** tem direção "crédito" e é candidata, mas não dá documento para a contraparte: a resolução cai no histórico e no nome, levando o número (pelo item acima).
+- **O número de nota de outro CNPJ vai para o histórico pela via do nome.** `_resolver_contraparte_candidata` explica que o `numero_nf` NÃO viaja pela via do documento no histórico, porque chegar ali significa que a nota candidata é de outro CNPJ. Mas a via do nome, logo abaixo, devolve o `numero_nf` junto. Uma transação sem regra cuja nota candidata é de um CNPJ sem contraparte cadastrada, e cujo histórico traz o nome de uma contraparte, sai com "PGTO REF NF <número daquela nota> - <a contraparte do nome>". **Corrigido na D0** (decisão do Angelo, 26/11/2026): virou divergência deliberada, ver "Fase D0".
+- **A nota emitida para destinatário sem CNPJ** tem direção "crédito" e é candidata, mas não dá documento para a contraparte: a resolução cai no histórico e no nome. O original levava o número pelo nome (item acima); desde a D0, não leva.
 - **A regra liga os candidatos mesmo quando eles apontam para outra contraparte** (a ligação não depende da resolução): é o desenho do original, e o porte segue.
 - **A suíte do original roda em SQLite**, que compara a janela de datas como texto: o comprovante pago à meia-noite do último dia (o que o leitor grava) fica de fora na suíte e entra na produção (PostgreSQL). E a lista de comprovantes põe o sem data por último na suíte e primeiro na produção. O porte segue a produção, e os gabaritos foram montados assim.
 - **O cadastro aceitava** a transação desfeita, qualquer conteúdo em base64 (sem conferir o formato) e texto mais longo que a coluna (erro 500 no PostgreSQL); a leitura do arquivo pedia só leitura no módulo.
@@ -471,12 +471,12 @@ Divergências da C2:
 - **Unicidade:** as quatro do original são TOTAIS e continuam como índices únicos comuns: (cartão, competência), a transação que quitou a fatura, (fatura, hash do PDF) e a distribuição por fatura. Não há `chaveAtiva`. O serviço confere a competência só entre as faturas vivas, como lá; a coluna recusa o resto (P2002 vira a mesma frase).
 - **CHECKs:** o enum do status da fatura, a bandeira, os dias de 1 a 28, o status do documento, o gasto não negativo e a versão não negativa. Ficam de fora a parcela (o leitor do original grava "00/03" como parcela 0) e o limite do cartão (o `CartaoUpdate` aceita negativo). O gasto pode ser 0,00: "0,004" passa no esquema e arredonda na coluna, lá e aqui.
 - **Os ids da compra importada são os do original** (`uuid5(fatura, sha256 da identidade)`; na confirmação do documento, `uuid5(documento, "<versão>:<n>")`): o mesmo CSV ou PDF reenviado não duplica, também depois da carga.
-- **Travas:** o que o original fazia com `with_for_update` sobre a fatura (alterar, pagar, desvincular, lançar, importar, remover gasto, e toda a distribuição e os documentos) roda numa transação que trava a linha da fatura (`SELECT … FOR UPDATE`); o pagamento também é travado. A versão da distribuição avança por `updateMany` condicionado à versão vista (`_avancar`).
+- **Travas:** o que o original fazia com `with_for_update` sobre a fatura (alterar, pagar, desvincular, lançar, importar, remover gasto, e toda a distribuição e os documentos) roda numa transação que trava a linha da fatura (`SELECT … FOR UPDATE`); o pagamento também é travado. A consulta da distribuição (`obter`) deixou de travar na D0 (ver "Fase D0"). A versão da distribuição avança por `updateMany` condicionado à versão vista (`_avancar`).
 - **A distribuição usa a composição do NEO da Fase 3.** `alterarComposicao` foi partida em duas (`alterarComposicaoNaTransacao`), para a aplicação compor o pagamento na mesma transação em que grava a aplicação, como o original. O pagamento pendente é classificado antes na conta do primeiro componente (`classificar_manualmente_lote`: valor suspeito e falta de histórico recusam). Desfazer devolve a composição de antes (ou cancela o lançamento com `cancelarLancamento`, que solta notas e comprovantes); se a classificação mudou no NEO depois, só com "preservar a classificação atual". A aplicação guarda o `NeoComposicaoResponse` inteiro em `antes` e o hash, com as chaves do original, para a carga.
 - **O hash da classificação** (`hashDaClassificacao`) é o `sha256(repr((id, valor, data, dc, status, agência, [partidas])))` do Python byte a byte: o hash gravado pelo original continua conferindo depois da carga.
 - **Documentos:** o PDF (até 25 MiB; até 32 documentos e 100 MiB por fatura) vai para `storage/contabil-core/faturas/<tenantId>/<id>.pdf` e a linha nasce "processando". A leitura roda depois da resposta (`after` do Next, o `BackgroundTasks` do original), fora de qualquer transação, e grava "revisar" ou "falhou" só se o documento ainda estiver na mesma tentativa ("processando" e o mesmo `updatedAt`). A leitura presa há mais que o prazo da imagem (300 s) mais 60 s aparece como "falhou" ("A leitura foi interrompida; tente novamente.") e pode ser reenviada, como o `leitura_expirada` do original. Nenhuma compra entra sem a revisão: a fonte principal substitui os gastos (pede "substituir" quando já há gastos), a complementar só fica guardada.
 - **A IA é a da C1** (`ia/leituraPorIa.ts`): `leitor_de_fatura_texto` (faixa rápida, a camada 2 do leitor) e `leitor_de_fatura_imagem` (faixa padrão, a leitura por imagem do documento), do setor `contabil` e desligados por padrão, com a MESMA chave do escritório (`TenantContabilCoreConfig.iaDocumentosFinanceiros`). A página escaneada vai como PDF de uma página. A fundação ganhou, de forma aditiva, o aviso de resposta cortada (`exigirFim` em `gerarTexto`, `RespostaIncompletaDaIa`), para a frase "A leitura por imagem veio incompleta…" (o `finish_reason != "stop"` do original).
-- **Fora do módulo:** excluir a conta contábil usada por um gasto de cartão vivo é recusado (`excluirConta`, "N gasto(s) de cartão"), e a importação do plano conta o gasto de cartão (também o excluído, como `_tem_movimentacao`) entre as contas movimentadas, que não mudam de natureza. A trava de agência do original (`_referencias_restantes` do reapontamento da conta sintética) não tem onde entrar: o Connect não portou o reapontamento. A exclusão da empresa apaga as cinco tabelas antes das transações e do plano, e os PDFs depois do commit (`arquivosDaEmpresa`, pasta `contabil-core/faturas`). O original não usa cartões na exportação, no painel, no cancelamento do NEO nem no desfazer da importação: não há o que levar ao Bloco D.
+- **Fora do módulo:** excluir a conta contábil usada por um gasto de cartão vivo é recusado (`excluirConta`, "N gasto(s) de cartão"), e a importação do plano conta o gasto de cartão (também o excluído, como `_tem_movimentacao`) entre as contas movimentadas, que não mudam de natureza. A trava de agência do original (`_referencias_restantes` do reapontamento da conta sintética) entrou com o reapontamento, na D0: o gasto de cartão na sintética a mantém viva. A exclusão da empresa apaga as cinco tabelas antes das transações e do plano, e os PDFs depois do commit (`arquivosDaEmpresa`, pasta `contabil-core/faturas`). O original não usa cartões na exportação, no painel, no cancelamento do NEO nem no desfazer da importação: não há o que levar ao Bloco D.
 - **Auditoria:** a rota registra; cada escrita devolve a lista de auditorias (a aplicação e o desfazer levam também a do NEO, antes da da fatura):
 
   | Ação no Connect | No original |
@@ -517,7 +517,7 @@ Divergências da C3:
 
 - **PDF em disco, não na coluna** (decisão da B4). A carga (C4) tira os bytes de `fatura_documentos.conteudo`, grava em `storage/contabil-core/faturas/<tenantId>/<id>.pdf` e preenche `storageKey` e `tamanho`; o `hash_arquivo` vem como está. As outras quatro tabelas vêm sem conversão (os ids, o `resultado`, as `distribuicoes` e a `aplicacao` com o hash).
 - **As exceções cruas do original viram recusa com frase** (a lista dos achados). Contadas nos testes: no serviço, 11 de coluna (`alemDaColuna`), 7 do `decimal`, 3 de CSV, 2 de compra removida, 1 do validador e 3 do esquema (o `true` como dia, o limite e o valor acima do banco); no leitor, 3 cenários de `parse_pdf` (`RESPOSTA_FORA_DO_FORMATO`).
-- **A empresa inexistente** é "não encontrada" antes de tudo (1 caso). **A transação desfeita não paga a fatura** ("Transação não encontrada para esta empresa."), como nas notas e nos comprovantes; o original não olhava o `deleted_at`.
+- **A empresa inexistente** é "não encontrada" antes de tudo (1 caso). **A transação desfeita não paga a fatura** ("Transação não encontrada para esta empresa."), como nas notas e nos comprovantes; o original não olhava o `deleted_at`. A recusa foi mantida por decisão do Angelo (26/11/2026).
 - **PDF sem páginas:** o PyMuPDF abre e recusa por "Quantidade de páginas…"; o pdf.js não abre, e cai na falha genérica (1 caso).
 - **Mensagens:** as recusas genéricas do pydantic viram frases em português. As frases da IA desligada dizem onde ligar no Connect ("Leitura por imagem não autorizada na configuração: ligue em Contábil Core › Configurações › Leitura de documentos por IA…").
 - **Respostas:** o dinheiro sai sempre com 2 casas (o original devolvia o limite como foi enviado, "50000", e o gasto arredondado meio para par); as exclusões devolvem `{ ok: true, <chave>: null }` (o original respondia 204); a lista de faturas traz o resumo da transação que pagou.
@@ -526,14 +526,118 @@ Divergências da C3:
 - **A leitura em segundo plano** não é interrompida pelo prazo (300 + 10 s): o resultado chega e é descartado se a tentativa mudou, como lá.
 - **`contaBancaria`** (a conta sintética do banco, quando a agência não tem conta) é criada numa transação própria, antes da aplicação: se a aplicação for recusada depois, a conta sintética fica, como na classificação manual do Connect.
 - **Reler o documento** fica na auditoria (o original não registrava).
-- **Tela:** editar e ativar/inativar o cartão e reabrir a fatura fechada sem pagamento são novos (o serviço já aceitava); os pagamentos possíveis vêm de uma rota própria (débitos vivos com o valor exato, até 100); motivo e confirmações em diálogos (o original usava `window.prompt`/`confirm`); um botão só para importar CSV ou PDF (o PDF vai ao leitor direto; a revisão fica em "Enviar PDF para revisão"); o PDF baixa como "fatura.pdf"; as somas da tela são em centavos. A tela consulta a distribuição a cada 2 s enquanto um documento é lido, e `obter` trava a fatura como o original: pesa, mas funciona (ver as decisões).
+- **Tela:** editar e ativar/inativar o cartão e reabrir a fatura fechada sem pagamento são novos (o serviço já aceitava); os pagamentos possíveis vêm de uma rota própria (débitos vivos com o valor exato, até 100); motivo e confirmações em diálogos (o original usava `window.prompt`/`confirm`); um botão só para importar CSV ou PDF (o PDF vai ao leitor direto; a revisão fica em "Enviar PDF para revisão"); o PDF baixa como "fatura.pdf"; as somas da tela são em centavos. A tela consulta a distribuição a cada 2 s enquanto um documento é lido; desde a D0 essa consulta não trava a fatura (o original travava).
 
-**Precisam de decisão:**
+**Precisavam de decisão (todas resolvidas pelo Angelo em 26/11/2026, ver "Bloco D"):**
 
-- `obter` trava a fatura (`for_update`, como o original) e a tela consulta a cada 2 s durante a leitura: tirar a trava da leitura?
-- O reapontamento da conta sintética (`ReapontamentoService`) não foi portado; a trava dos gastos de cartão dele fica para quando vier.
-- `editarConta` do Connect não recusa mudar a natureza (tipo e S/A) de conta movimentada, como o `atualizar` do original; com os cartões, o gasto também contaria. É anterior à C3.
-- A transação desfeita pagar a fatura: o porte recusa (como C1 e C2); o original aceitava.
+- ~~`obter` trava a fatura (`for_update`, como o original) e a tela consulta a cada 2 s durante a leitura: tirar a trava da leitura?~~ **Resolvido:** a consulta não trava mais; as escritas continuam travando (D0).
+- ~~O reapontamento da conta sintética (`ReapontamentoService`) não foi portado; a trava dos gastos de cartão dele fica para quando vier.~~ **Resolvido:** portado na D0, com o gasto de cartão entre as referências restantes.
+- ~~`editarConta` do Connect não recusa mudar a natureza (tipo e S/A) de conta movimentada, como o `atualizar` do original; com os cartões, o gasto também contaria. É anterior à C3.~~ **Resolvido:** fica como está.
+- ~~A transação desfeita pagar a fatura: o porte recusa (como C1 e C2); o original aceitava.~~ **Resolvido:** a recusa se mantém.
+
+## Bloco D: independentes
+
+### Decisões (Angelo, 26/11/2026)
+
+- **Fases do Bloco D:**
+
+  | Fase | Branch | O que entra |
+  |---|---|---|
+  | D0 | `feat/contabil-core-ajustes-d0` | Ajustes do porte decididos nesta data: o número da nota no histórico, o reapontamento da conta sintética e a trava da leitura da fatura. Sem migration. Ver "Fase D0". |
+  | D1 | | As exportações restantes (lançamentos em CSV, extrato, as quatro de notas e a conferência), "Conflitos e qualidade" do NEO, o painel e a carteira. |
+  | D2 | `feat/contabil-core-relatorios` | Os relatórios (DRE, Balancete e Livro Caixa), portados como estão no original. Sem migration. Ver "Fase D2". |
+  | D3 | | O ConcilPro, mais a carga das tabelas dele. |
+
+- **Ficam fora, sem previsão:** Open Banking (Pluggy) e aplicações financeiras. Entram só se surgir necessidade.
+- **Ficam como estão:**
+  - a assinatura de NF-e real que nunca confere no original (C1): toda NF-e real continua entrando como `xml_nao_verificado`;
+  - a nota cadastrada à mão nascendo `xml_assinado` (C1);
+  - `editarConta` permitindo mudar a natureza (tipo e S/A) de conta movimentada (anterior à C3).
+- **Corrige-se** o número da nota no histórico pela via do nome (C2). Ver a D0.
+- **Porta-se** o reapontamento da conta sintética (`ReapontamentoService`). Ver a D0.
+- **Tira-se** a trava da leitura da fatura (C3). Ver a D0.
+- **Mantém-se** a recusa da transação desfeita no pagamento da fatura (C3), como nas notas (C1) e nos comprovantes (C2).
+
+### Fase D0: ajustes
+
+| Onde | O quê |
+|---|---|
+| `motor/neo.ts` (`resolverContraparte`) | o número da nota só vai para o histórico quando a contraparte veio da própria nota candidata |
+| `cadastro/reapontamento.ts` (puro) | `ReapontamentoService.reapontar` (`src/domain/agencias/service.py:228-343`): o laço, as referências restantes e o relatório, sobre `BancoDoReapontamento` |
+| `servidor/cadastros.ts` (`reapontarContasSinteticas`) | o banco do reapontamento (Prisma, numa transação) e a auditoria |
+| `api/contabil-core/agencias/reapontar-contas-sinteticas` | `POST /empresas/{id}/agencias/reapontar-contas-sinteticas` (`src/api/v1/agencias.py:104-124`) |
+| `CorrigirContaDoRazao.tsx`, em Configurações › Contas bancárias | o botão "Corrigir conta do razão", a confirmação e o relatório de `AgenciasTab.tsx` |
+| `servidor/faturas.ts` (`obterDistribuicao`) | a consulta da distribuição sem `FOR UPDATE` |
+
+**1. O número da nota no histórico (divergência deliberada).** `resolverContraparte` não leva mais o `numeroNf` pela via do nome, só pela própria nota candidata (pelo documento do histórico já não levava). A transação sem regra cuja nota candidata é de um CNPJ sem contraparte cadastrada, e cujo histórico traz o nome de outra contraparte, sai com "PGTO REF <contraparte do nome>", e não mais com o número de uma nota que não é dela.
+
+- O gabarito da C2 (`motor/gabarito/documentos/`) NÃO foi regerado: continua sendo a saída do original.
+- O teste (`motor/neoDocumentos.test.ts`) conta os casos que agora divergem, um a um: 3 dos 300 (os inventados 46, 117 e 249, todos de `processar`). Em cada um, a única diferença aceita é o "NF <número> - " a menos no histórico da partida classificada pelo nome. O resultado, os status, as decisões e os documentos ligados são os mesmos. Nenhum caso de `resolver` nem da sombra mudou.
+
+**2. O reapontamento da conta sintética.** Quando a conta bancária não tem conta contábil, o NEO cria a conta `1.1.B.<16 primeiros hex do id da agência>` sem código reduzido e a vincula à conta bancária (`contaBancaria`, o `_obter_conta_bancaria` do original). O Domínio usa o código reduzido, e a exportação cai no código `1.1.B.…`, que ele não importa (com o aviso "Contas sem código reduzido"). Vincular a conta certa conserta os lançamentos novos; o reapontamento move os que já estão gravados.
+
+- **O que faz:** para cada conta bancária viva da empresa com conta contábil vinculada (também as inativas, como o original), acha a sintética viva com o código dela e move para a conta vinculada:
+  - as partidas (`core_registros`), todas, também as canceladas, como o original;
+  - as decisões do NEO, pela conta e pela conta da contraparte (uma decisão com as duas na sintética conta 2, como lá).
+
+  Depois conta as referências restantes. Sem nenhuma, desativa a sintética como o Connect desativa conta (`deletedAt` e `codigoAtivo` nulo). Devolve o relatório por conta bancária, com os campos do original em camelCase: `agencia`, `contaSintetica`, `registrosMovidos`, `decisoesMovidas`, `sinteticaDesativada` e `referenciasRestantes`.
+- **Referências restantes** (a sintética fica viva e o relatório diz o quê):
+
+  | Chave | O que conta | Origem |
+  |---|---|---|
+  | `regras` | regras do NEO na sintética, também as inativas e as apagadas | original |
+  | `contrapartes` | contrapartes na sintética, também as apagadas | original |
+  | `lancamentosCartao` | gastos de cartão na sintética, também os apagados (a trava que a C3 deixou pendente) | original |
+  | `agencias` | outra conta bancária viva vinculada à sintética | só no Connect |
+  | `contasFilhas` | conta viva do plano com a sintética como pai | só no Connect |
+  | `distribuicoesFatura` | distribuição de fatura viva com um componente salvo na sintética (JSON) | só no Connect |
+
+  Nenhuma tabela que só o Connect tem aponta para conta do plano. As conciliações (B2 a B4) leem a conta vinculada da agência na hora e guardam o código, não o id; notas, comprovantes e faturas não têm conta. As três últimas linhas são referências que o original também tinha nas tabelas dele, mas não contava:
+  - a conta bancária e a conta filha são as mesmas que `excluirConta` do Connect recusa;
+  - o componente da distribuição é o mesmo que `aplicar` recusaria depois ("Escolha contas analíticas desta empresa, não excluídas").
+
+  Desativar a sintética com elas deixaria uma referência órfã, que é o que a própria rotina diz querer evitar.
+- **Transação e travas:** tudo numa transação Prisma. As contas bancárias vinculadas da empresa são travadas no começo (`SELECT … FOR UPDATE`), para ninguém trocar o vínculo no meio. A desativação é um `updateMany` condicionado à conta ainda viva. Cada gravação é filtrada pelo tenant e pela empresa.
+- **Acesso:** "gerir", como as outras escritas de conta bancária (`salvarAgenciaAction`, `mudarAtivaDaAgenciaAction`). O original pedia `agencias.write`.
+- **Auditoria:** `contabil.core.contas_sinteticas.reapontadas` ("moveu para a conta contábil vinculada os lançamentos da conta bancária sintética na empresa"), na empresa, com a razão social e, por conta bancária, os ids (agência, de, para) e a linha do relatório. Só quando o relatório não vem vazio. O original só registrava em log (`agencias.reapontamento`).
+- **Tela:** em Configurações › Contas bancárias, para quem pode "gerir" e quando há conta bancária. O botão "Corrigir conta do razão" abre a confirmação (`ConfirmDialog`), que explica a sintética e avisa que a ação **reescreve registros contábeis já lançados**; "Corrigir agora" chama a rota. Relatório vazio vira o aviso "Nada a corrigir". Senão, o diálogo "Contas corrigidas" mostra cada conta bancária, o que foi movido e, quando a sintética ficou, por quê.
+- **Exportação:** conferida no ensaio. Antes, as 3 linhas do Domínio saem com `1.1.B.…` na coluna do banco e com o aviso; depois, com o código reduzido da conta vinculada, sem aviso e com o resto da linha igual.
+
+Divergências do reapontamento (contadas no teste):
+
+- **A conta bancária ainda vinculada à PRÓPRIA sintética é pulada** (3 casos). É o estado em que o NEO a deixa enquanto ninguém vincula a conta certa. O original "movia" as partidas para a mesma conta (contando-as como movidas) e desativava a sintética que a conta bancária ainda usava; na execução seguinte, o NEO criava outra sintética com o mesmo código, e as partidas antigas ficavam numa conta excluída. Aqui não há o que corrigir, e a tela diz "Nada a corrigir".
+- **As três referências só do Connect** mantêm a sintética (3 casos: outra conta bancária, conta filha e distribuição de fatura). A conta filha apagada e a distribuição de fatura apagada não contam, e esses casos saem iguais ao original.
+- **A sintética é achada pelo código byte a byte** (`codigoAtivo`, o SHA-256), porque a collation do MySQL não diferencia maiúscula e acharia "1.1.b.ABC…". Com o código em outra caixa, nada a corrigir, como no PostgreSQL (1 caso, igual).
+- **Ordem do relatório:** pelas contas bancárias (banco, agência, número e id). O original não ordenava; o teste compara pela conta sintética.
+- **Empresa:** o original movia e contava sem filtrar a empresa (a conta é de uma empresa só, então isso só mudaria com referência cruzada, que nenhuma tela cria). Aqui toda leitura e gravação é do tenant e da empresa, e a empresa de outro escritório é "não encontrada".
+- **Resposta:** `{ ok: true, relatorio }`.
+
+Achados sobre o original (reproduzidos):
+
+- O reapontamento move **todas** as partidas da sintética, não só as da conta bancária dela (1 caso no gabarito, igual). Só faz diferença se outra conta bancária tiver lançado na sintética de uma primeira, o que só acontece vinculando à mão a conta `1.1.B.…` de outra; aí a sintética fica, pela referência `agencias`.
+- A conta vinculada já excluída recebe as partidas assim mesmo (1 caso, igual). No Connect isso só aparece por carga, porque `excluirConta` recusa conta vinculada a conta bancária.
+- **Merece decisão:** o hash da classificação do pagamento de uma fatura (`hashDaClassificacao`, C3) inclui a conta de todas as partidas da transação, também a do banco. Reapontar a sintética de um pagamento com distribuição aplicada deixa a aplicação "DESATUALIZADA", e desfazê-la passa a pedir "preservar a classificação atual". É assim nos dois sistemas; o porte não recalcula o hash guardado.
+
+**3. A consulta da fatura não trava (divergência deliberada).** `obterDistribuicao` lê numa transação, para ver um retrato consistente, mas sem `FOR UPDATE` na fatura e no pagamento (`naFatura(…, travar = false)` e `vista(…, travar = false)`). A tela a repete a cada 2 s enquanto um documento é lido, e a trava fazia a consulta esperar as escritas e segurá-las.
+
+- Todos os outros chamadores de `naFatura`, `vista` e `lerPagamento` são escritas (salvar, aplicar e desfazer a distribuição; adicionar, reler e confirmar documento) e continuam travando como antes.
+- `obterFatura`, `listarLancamentos` e o download do PDF já liam sem trava.
+- O ensaio confere, com a fatura travada por outra transação, que a consulta responde e que a escrita continua esperando.
+
+**4. A transação desfeita no pagamento da fatura continua recusada.** Sem mudança de código.
+
+**Testes:**
+
+- `cadastro/reapontamento.test.ts`, sobre o gabarito `cadastro/gabarito/reapontamento/` (`scripts/contabil-core/gabarito_reapontamento.py`): 52 casos e 78 linhas de relatório, todos iguais fora as divergências contadas (3 da conta bancária vinculada à própria sintética e 3 das referências só do Connect).
+  - 2 da suíte (`test_agencias.py`: o caminho normal e a regra que mantém a sintética).
+  - 50 inventados (semente 20261126): de uma a quatro contas bancárias, sem sintética, sintética já desativada, conta bancária sem vínculo, apagada e inativa, o código em outra caixa, regra (ativa, inativa e apagada), contraparte e gasto de cartão (vivos e apagados), decisões pela conta e pela conta da contraparte, partidas canceladas, a outra empresa, a conta vinculada excluída e as partidas de outra conta bancária.
+  - A saída sai do `ReapontamentoService` original rodando num SQLite montado só com a entrada; o plugin confere que o banco montado repete a suíte. O teste roda o mesmo laço do servidor (`reapontar`) sobre a mesma entrada.
+- `api/contabil-core/agencias/reapontar-contas-sinteticas/route.test.ts`, 7 testes: "gerir", a empresa conferida, a auditoria (e nenhuma quando não há o que corrigir), a empresa de outro escritório, o erro que não vaza e a ação com frase.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-reapontamento.ts`, com 22 conferências, rodado 3 vezes seguidas. Percorre o NEO criando a sintética, o Domínio antes e depois, corrigir antes de vincular (nada a corrigir), vincular e corrigir (partidas e decisão movidas, sintética desativada), corrigir de novo (nada a corrigir), a sintética com regra e gasto de cartão (fica, com o motivo, e repetir não move nada), o isolamento entre escritórios e empresas, a consulta da fatura com a fatura travada e, no fim, a exclusão das empresas.
+
+  ```
+  node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-reapontamento.ts
+  ```
 
 ## Arquitetura no Connect
 
@@ -991,3 +1095,235 @@ O gabarito (`extrato/gabarito.json`) ganhou as funções do `planilha_parser`, o
 - o módulo não aparece para ninguém enquanto não for ligado.
 
 **Não entra:** telas de trabalho, gravação no banco, PDF e planilha de extrato, carga.
+
+## Fase D1: exportações, "Conflitos e qualidade", painel e carteira
+
+Branch `feat/contabil-core-exportacoes-painel` (26/11/2026). Só lê o banco: **sem migration**. Seção autocontida do Bloco D (a tabela de fases do bloco fica na seção dele).
+
+| Onde | Porte de |
+|---|---|
+| `exportacao/arquivos.ts` (puro) | `ExportacaoService` (`src/domain/exportacao/service.py`) sem o banco: as recusas de `exportar`, `_registros_vigentes`, `_exportar_lancamentos` (`_lancamentos_csv` e `_lancamentos_xlsx`), `_exportar_extrato`, `_exportar_notas` e `_exportar_conferencia` (com `_valor_assinado` e `_sanitize_cnpj`). O Domínio continua em `motor/exportacao.ts` |
+| `exportacao/planilha.ts` | `_new_workbook` e `_dicts_to_xlsx` (`formatos.py`), com o exceljs |
+| `servidor/exportacao.ts` | as leituras de cada tipo (tenant e empresa conferidos, já recortadas pelo período) e o registro em `core_exportacoes`. `gerarArquivoDoDominio` (Fase 2) passou a usar o mesmo caminho |
+| `api/contabil-core/exportacao` | `POST /exportacao/gerar`: os tipos e os formatos novos, na rota da Fase 2 (sem `tipo`, continua sendo o Domínio) |
+| `painel/painel.ts` (puro) | `consultar_divergencias` (`neo/consultas.py`) depois da leitura, `StatsService.obter` depois das contagens e `listar_carteira` depois do agrupamento, mais o `round` do Python (`arredondaPy`) |
+| `servidor/painel.ts` | as leituras: as decisões medidas da sombra, as contagens das estatísticas (contagens e `GROUP BY` por mês no MySQL) e o agrupamento da carteira |
+| `api/contabil-core/neo/divergencias`, `painel` e `carteira` | `GET /neo/divergencias` (`neo.read`), `GET /stats` (`stats.read`) e `GET /carteira` |
+| escolha do arquivo na aba Registros (`Exportar.tsx`) e botões da aba Extrato (`ExportarExtrato`) | as "Exportações Especializadas" da tela Registros e o "Exportar" da tela Extrato do original |
+| vista "Conflitos e qualidade" da aba NEO (`ConflitosQualidade.tsx`) | `ConflitosQualidadeTab` da página Classificação |
+| aba "Painel" (`Painel.tsx`) | a tela `Dashboard` (a carteira operacional e as estatísticas da empresa) |
+
+**Exportações:**
+
+| Tipo | Formatos | O que sai |
+|---|---|---|
+| `lancamentos` | CSV, XLSX | as partidas vivas (a cancelada não sai), das contas bancárias ativas (ou todas, com a opção), na ordem da data do lançamento |
+| `lancamentos_importacao` | TXT, CSV, XLSX | o arquivo do Domínio da Fase 2; o XLSX é novo no Connect (o original já tinha) |
+| `extrato` | CSV, XLSX | as transações com os filtros da aba Extrato (competência, conta, situação e busca; a rota aceita também D/C e a faixa de valor), na ordem da tela, sem a paginação |
+| `nfe_entrada`, `nfe_saida`, `nfse_tomado`, `nfse_prestado` | CSV, XLSX | as notas vivas do tipo emitidas na competência, com a empresa como destinatária (entrada, tomada) ou emitente (saída, prestada), e a transação ligada. O CNPJ da empresa inválido é recusado com a frase do original |
+| `conferencia` | CSV, XLSX | uma linha por transação viva (mais uma por documento além do primeiro), com as notas e os comprovantes ligados, o total, a divergência assinada (o débito é negativo) e a situação (Pendente, Conciliado, Divergente) |
+
+- **Mesmas colunas, ordem, formatação de número e data e recusas do original:**
+  - o CSV com BOM, vírgula e `\r\n`;
+  - o dinheiro com o texto do `Decimal` (`1500.00`);
+  - `data_lancamento` como o `isoformat()` do instante (`2026-01-10T00:00:00+00:00`), a data do extrato como `dd/mm/aaaa`, a da nota em UTC (`aaaa-mm-dd`);
+  - a conta do extrato com a descrição do original (`ITAU 7531 13579 2`);
+  - toda célula de texto passa pela `celulaSegura`;
+  - as recusas: "Formato deve ser 'csv', 'xlsx' ou 'txt'.", "Tipo de exportação inválido: '…'.", "O formato 'txt' só está disponível para 'lancamentos_importacao' por enquanto." e a do CNPJ da empresa.
+- **XLSX:** o exceljs no lugar do openpyxl. O gabarito compara o CONTEÚDO lido de volta (o título da folha, o valor de cada célula, texto ou número, o negrito do cabeçalho e os formatos), não os bytes: as duas bibliotecas escrevem o XML de jeitos diferentes. O `\r` vai como `_x000D_`, a forma do OOXML: escrito cru, a leitura do XML o trocaria por quebra de linha.
+- **Período:** a competência (`bounds_do_mes`: do primeiro ao último instante do mês, em UTC; nas colunas de data, os dias do mês). Só o extrato sai sem ela, como a aba Extrato filtra.
+- **Acesso e auditoria:** como na exportação da Fase 2. Pede "agir" (o `exportacao.execute`) e registra `contabil.core.exportacao.gerada`, agora com o `tipo` nos detalhes (a frase da auditoria passou a "gerou um arquivo de exportação do Contábil Core"). Cada exportação fica em `core_exportacoes` (formato, período e total). O artigo de ajuda do módulo ganhou os passos das exportações, do Painel e de "Conflitos e qualidade".
+- **Tela:** a aba Registros ganhou a escolha do arquivo, com os formatos de cada um, a conta bancária só onde vale e a opção do histórico do banco só no Domínio. A aba Extrato ganhou "Excel" e "CSV", que levam os filtros da tela.
+
+**"Conflitos e qualidade":**
+
+- **O que mede:** quando uma regra classifica, o NEO mede em paralelo a conta que a contraparte daria e grava se as duas divergem (`contaDivergente` em `core_neo_decisoes`, desde a Fase 2 e a C2).
+- **O que a consulta resume:** as decisões MEDIDAS (verdadeiro e falso; nulo é "não medido"), recortadas pelo mês e pela conta bancária da transação:
+  - avaliadas, divergentes e o percentual (o `round(…, 2)` do Python);
+  - o valor total;
+  - os pares de contas, pela soma decrescente;
+  - a amostra dos 10 maiores valores.
+- **Onde fica:** é a segunda vista da aba NEO (`?vista=conflitos`, ao lado de "Pendências"), no padrão da Conciliação (B4). Ela mede o que o NEO decidiu, e no Connect as regras e as contrapartes, que formavam com ela a página Classificação do original, já são abas próprias.
+- **O NEO não mudou:** só se lê a decisão gravada. Pede "ver".
+
+**Painel e carteira:** a aba "Painel" é a primeira do módulo e a que abre (era a tela inicial do original). Pede "ver" (o `stats.read`).
+
+- **Carteira do escritório:** as empresas ativas do Contábil Core no escritório, com as transações vivas da competência (importadas, classificadas, pendências, erros e o valor pendente), as de mais pendências primeiro.
+  - A empresa sem extrato no mês aparece zerada.
+  - A linha abre a empresa no NEO (ou em Importações, quando não há extrato).
+  - "Todas as empresas" é o escritório: no Connect não há permissão por empresa no módulo, e quem vê o módulo vê as mesmas empresas do seletor de empresa.
+- **Números da empresa:** o resumo (transações, com e sem lançamento vivo, partidas, notas, comprovantes e o percentual), a classificação por conta bancária ativa e a atividade dos últimos 12 meses (transações, partidas, comprovantes e notas por mês).
+- **Partes fora do porte:** nenhum número do painel nem da carteira do original depende de Open Banking, aplicações financeiras, ConcilPro ou relatórios. O `StatsService` e o `listar_carteira` só leem transações, partidas, notas, comprovantes e contas bancárias, e a tela `Dashboard` só mostra os dois. Nada foi zerado nem omitido.
+
+**Gabaritos:**
+
+- `gabarito_exportacao.py` (as exportações): **750 casos, todos iguais** fora as divergências contadas.
+  - 60 da suíte (`test_exportacao.py`): 50 chamadas de `exportar` e 10 dos exportadores chamados direto.
+  - 651 inventados (semente 20261126, 16 mundos): período por competência e por datas com fuso; contas ativas, inativas e apagadas; partidas vigentes e canceladas, composições e lançamento sem par; notas de cada recorte e direção, com o CNPJ com e sem máscara, e o CNPJ da empresa inválido; conferência com e sem nota e comprovante; valores negativos e de 13 dígitos; os filtros do extrato com acento e curinga.
+  - 39 diretos: 9 de `_dicts_to_csv` e `_dicts_to_xlsx` e 30 do `ExportJobCreate`.
+  - 202 são planilhas e 36 são recusas. Os mundos ficam em `exportacao-mundos.json`; a pasta tem `.gitattributes` com `* -text`.
+- `gabarito_painel.py` (divergências, estatísticas e carteira): **275 casos, todos iguais** fora as divergências contadas. 12 da suíte (2 de divergências, 8 de estatísticas e 2 de carteira) e 263 inventados (112, 51 e 100), mais 13 testes do `round` do Python.
+- **Como a saída é gravada:** o serviço original roda num SQLite montado só com a entrada, e o plugin confere que ele repete a suíte de verdade.
+  - O banco montado se comporta como o PostgreSQL da produção nos instantes (comparados em UTC, com o fuso na volta) e no `ilike` (minúscula Unicode, `%` e `_` curingas).
+  - As razões sociais da suíte não são gravadas: viram "EMPRESA NN LTDA", na mesma ordem. O `GABARITO_NOMES` não foi preciso.
+- **Para gerar de novo,** a partir da raiz do contabil-core, com a pasta `scripts/contabil-core` do Connect no caminho e o `GABARITO_DIR` apontando para a pasta `gabarito` de cada um:
+  - `-p gabarito_exportacao tests/integration/test_exportacao.py tests/unit/test_exportacao_historico.py`;
+  - `-p gabarito_painel tests/integration/test_neo.py tests/integration/test_stats.py tests/integration/test_fase3_backend.py -k "divergencias or stats or carteira"`.
+- **Rotas:** `exportacao/route.test.ts` (4 testes), `neo/divergencias/route.test.ts` (3), `painel/route.test.ts` (3) e `carteira/route.test.ts` (3): permissão, empresa conferida, os filtros repassados, a resposta e, na exportação, a auditoria.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-exportacoes-painel.ts`, com 25 conferências, rodado 3 vezes seguidas.
+  - Cria duas empresas "Ensaio D1" e importa um OFX inventado em cada uma.
+  - Roda o NEO com uma regra que diverge da conta da contraparte, uma que concorda e uma sem contraparte; depois cadastra notas e um comprovante e os liga.
+  - Gera cada exportação (lançamentos em CSV e XLSX, o Domínio em TXT e XLSX, o extrato com a busca e sem competência, as quatro baixas e a conferência) e confere a recusa do TXT, a conta inativa, o lançamento cancelado e o registro em `core_exportacoes`.
+  - Consulta as divergências, o painel (inclusive a virada do mês no fuso do escritório) e a carteira.
+  - Confere o isolamento entre escritórios e empresas e, no fim, apaga tudo pela exclusão da empresa.
+
+  `node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-exportacoes-painel.ts`
+
+Divergências da D1 (as que mudam a saída são contadas nos testes):
+
+- **Busca do extrato:** é a da aba Extrato do Connect (o `contains` do MySQL, que ignora acento e maiúscula, com `%` e `_` como texto), para o arquivo bater com a tela. No original era o `ilike` (distingue acento; `%` e `_` são curingas). 7 casos no gabarito; com o `ilike` no lugar, saem iguais.
+- **Empates de ordem:**
+  - a conferência ordena só pela data no original (o empate fica com o plano do banco); aqui desempata pela ordem do extrato (lote, posição e id). 32 casos, conferidos bloco a bloco por dia;
+  - na carteira, o empate de pendências e de razão social desempata pelo id (26 casos);
+  - nos pares de contas das divergências, pelos códigos e ids (nenhum caso no gabarito);
+  - nas partidas e nas notas, por criação e id (a divergência 1 da Fase 2);
+  - a conta bancária do painel sai por banco, agência e número. O original não ordena; é a ordem que o SQLite da suíte devolve (nenhum caso).
+- **Validação da rota:** a competência "0000-01" (o pydantic aceita o ano zero) e a vazia (aqui, "sem competência"), 2 casos. As frases de recusa são as do Connect, e os erros de validação são 400 (no original, 422).
+- **Período:** a rota recebe a competência, como a exportação do Domínio da Fase 2, e não as datas livres do original. O pedido sem competência só vale para o extrato.
+- **Mês corrente** (a série do painel e a carteira sem competência): o do escritório. No original era o de UTC; os dois diferem das 21h à meia-noite do último dia do mês. O ensaio confere a virada.
+- **Carteira:** sem a permissão por empresa do original (ver acima). A ordem alfabética é a do português (`Intl.Collator`), não a do PostgreSQL.
+- **Rótulos:** o "Conciliados" do painel do original virou "Com lançamento": é a transação com partida viva, não a conciliação bancária, que no Connect é outra aba. A atividade mensal sai numa tabela, do mês mais recente para o mais antigo (no original, um gráfico de barras), e a classificação por conta bancária usa as barras de situação dos painéis do Connect.
+- **Resposta:**
+  - as rotas novas devolvem camelCase, com o dinheiro como texto de duas casas;
+  - a recusa do CNPJ inválido vai só com a frase, sem os detalhes (`empresa_id`, `cnpj`);
+  - o nome do arquivo baixado é `<tipo>-<cnpj>-<competência>.<formato>` (no original, `<tipo>_<empresa>.<formato>`).
+
+**Achados sobre o original (reproduzidos de propósito):**
+
+- **As divergências contam decisão de transação desfeita e decisão antiga.** A consulta não olha o `deleted_at` da transação, e a decisão é registro: reclassificar ou desfazer a importação deixa as medições antigas valendo no total e no percentual.
+- **As notas usam UTC no corte e na data.** A NF-e emitida depois das 21h do último dia do mês (horário de Brasília) cai no mês seguinte, e a data impressa é a de UTC: no ensaio, a NFS-e de 20/01 às 22h30 sai como 21/01. A tela de Notas do Connect mostra o dia no fuso do escritório.
+- **A tela Registros mandava a data final no fuso do navegador** (`T23:59:59` local convertido para UTC), e a conferência usa o `.date()` desse instante: o arquivo levava um dia a mais.
+- **O painel conta a conta bancária apagada que ficou ativa:** `_por_agencia` olha só o `ativa`.
+- **A nota mostra a transação ligada mesmo desfeita:** a transação é lida só pelo id.
+- **Ordens sem desempate** na conferência, nos pares de contas, na conta bancária do painel e na carteira.
+
+**Precisam de decisão:**
+
+- As divergências: contar só a decisão vigente de transação viva?
+- As baixas de notas: cortar a competência e imprimir a data pelo dia do escritório, com a regra da tela de Notas (a nota à meia-noite UTC fica no dia gravado)?
+- O painel: tirar a conta bancária apagada da classificação por conta?
+- O Painel como aba inicial do módulo (antes era Importações).
+- A carteira mostra todas as empresas do escritório a quem vê o módulo.
+- Datas livres na exportação (o original aceitava `data_de` e `data_ate`), além da competência?
+
+## Fase D2: relatórios (DRE, Balancete e Livro Caixa)
+
+Branch `feat/contabil-core-relatorios` (26/11/2026), empilhada sobre a D1. Só lê o banco: **sem migration**. Decisão do Angelo: portar os relatórios do original **como estão**, dentro do módulo. O DRE próprio do Connect (`src/lib/dre`) calcula de outra forma e não foi usado nem alterado.
+
+| Onde | Porte de |
+|---|---|
+| `relatorios/relatorios.ts` (puro) | `RelatoriosService` (`src/domain/relatorios/service.py`) depois das somas: `dre`, `balancete` e `livro_caixa`, com o `nivel` de `PlanoConta` e a `descricao` de `AgenciaBancaria` (a mesma `descricaoDaAgencia` da D1) |
+| `relatorios/planilha.ts` | a planilha de cada relatório (novo no Connect), pela `gerarPlanilhaDeTabelas` das outras exportações em Excel do Connect |
+| `servidor/relatorios.ts` | as leituras: as somas das partidas e das transações no MySQL (`SUM` de `DECIMAL`, exato), as contas e as contas bancárias, sempre do tenant e da empresa |
+| `api/contabil-core/relatorios/[relatorio]` | `GET /relatorios/dre`, `/balancete` e `/livro-caixa` (`src/api/v1/relatorios.py`, `relatorios.read`), mais `formato=xlsx` |
+| aba "Relatórios" (`Relatorios.tsx`, `ImprimirRelatorio.tsx`) | a página `Relatorios.tsx` do original |
+
+**O que cada relatório faz (igual ao original):**
+
+- **DRE:** soma as partidas VIVAS da empresa no período por conta e D/C. Entram só as contas de tipo receita (saldo C − D), custo e despesa (D − C), também a conta apagada com movimento (o legado). Os grupos saem na ordem Receitas, Custos, Despesas, cada um pela ordem do código. Resultado líquido = receitas − custos − despesas. Ativo, passivo, patrimônio líquido, "resultado" e tipos fora da lista não entram.
+- **Balancete de Verificação:** toda conta viva do plano (com ou sem movimento) e a apagada que teve movimento no período, pela ordem do código, com débitos, créditos e o saldo devedor OU credor. Os totais somam só as linhas do relatório.
+- **Livro Caixa:** por conta bancária viva (ativa ou inativa), as TRANSAÇÕES vivas do extrato no período, classificadas ou não, na ordem da data e, no mesmo dia, do id da transação. O crédito soma e o débito subtrai. Com data inicial, o saldo inicial é a soma de tudo o que veio antes; sem ela, zero.
+- **Hierarquia:** o original NÃO soma as analíticas nas sintéticas. A sintética aparece no Balancete com o próprio movimento (zero, já que não recebe lançamento), e o `nivel` (o número de partes do código) só dá o recuo na tela. Portado assim.
+- **Partidas desfeitas:** o original filtra só `deleted_at` (a partida cancelada e as da importação desfeita saem). É o `_registros_vigentes` da exportação sem o filtro das contas bancárias inativas: DRE e Balancete não olham a conta bancária. Portado igual.
+- **Período:** datas, inclusivas e opcionais.
+  - Nas partidas, vai do começo de `de` ao último milissegundo de `ate`, em UTC (`instantesDoPeriodo`). É o que a tela do original mandava: `data_de` à meia-noite e `data_ate` às `23:59:59.999`, sem fuso. O asyncpg lê o instante sem fuso no fuso do processo, e o contêiner do original não define fuso (UTC).
+  - A partida é gravada na data da transação, à meia-noite UTC. Então o dia do relatório é o dia do extrato, e o fuso do escritório não entra.
+  - No Livro Caixa, são datas do extrato, como no original.
+
+**Gabarito** (`gabarito_relatorios.py`): **391 casos, todos iguais**, sem nenhuma divergência na saída.
+
+- 13 da suíte (`test_relatorios.py`): 6 da DRE, 4 do Balancete e 3 do Livro Caixa.
+- 378 inventados (semente 20261126, 14 mundos × 9 períodos × 3 relatórios):
+  - um plano com sintéticas e analíticas de ativo, passivo, patrimônio líquido, receita, custo, despesa, resultado e um tipo fora da lista; contas apagadas, com e sem movimento; o mesmo código numa conta viva e numa apagada; uma conta de outra empresa;
+  - partidas vivas e canceladas, em dias nas bordas do período e com horas diferentes da meia-noite UTC, e partidas de outra empresa;
+  - sete contas bancárias (ativa, inativa, apagada, sem dígito e com dígito vazio, de outra empresa) com transações vivas e desfeitas, várias no mesmo dia;
+  - valores de um centavo a 13 dígitos (somas de 16 dígitos) e zero;
+  - os períodos: sem datas, só a inicial, só a final, o mês, um dia, a virada do mês e do ano, um período vazio e o invertido;
+  - o último mundo sem movimento nenhum.
+- **Como a saída é gravada:** como na D1, o serviço original roda num SQLite montado só com a entrada, e o plugin confere que o banco montado repete a suíte de verdade. Onde o SQLite difere da produção:
+  - os instantes são comparados em UTC (o `_instalar_pg` da D1);
+  - o `SUM` é exato. O SQLite guarda `Numeric` como `REAL` e soma em ponto flutuante, o que perde centavos com valores de 13 dígitos. No banco montado, o `sum()` é trocado por uma soma em `Decimal`, como o `numeric` do PostgreSQL.
+- Os textos passam pelo sanitizador. O `GABARITO_NOMES` não foi preciso: a suíte só tem nomes de exemplo. A razão social não é gravada. A pasta tem `.gitattributes` com `* -text`.
+- **Empates exercitados:**
+  - 106 casos com o mesmo código em duas linhas (50 no Balancete, 56 na DRE);
+  - 117 com mais de uma conta bancária;
+  - 61 com mais de uma transação no mesmo dia.
+
+  O teste conta como divergências a ordem dos códigos empatados e a das contas bancárias: 0 e 0 (ver abaixo).
+- **Para gerar de novo,** a partir da raiz do contabil-core, com a pasta `scripts/contabil-core` do Connect no caminho e o `GABARITO_DIR` apontando para `src/lib/contabil-core/relatorios/gabarito`: `-p gabarito_relatorios tests/integration/test_relatorios.py`.
+- **Rota:** `relatorios/[relatorio]/route.test.ts` (5 testes):
+  - "ver" e os três relatórios, com o período repassado;
+  - sem datas e com uma ponta só;
+  - a planilha;
+  - as recusas: relatório desconhecido, data inválida, data com hora, ano zero, outro formato, empresa malformada, 403 e 401;
+  - a empresa de outro escritório (404).
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-relatorios.ts`, com 21 conferências, rodado 7 vezes seguidas, todas certas, sem sobra no banco.
+  - Cria duas empresas "Ensaio D2" e um plano com sintéticas e analíticas.
+  - Cadastra duas contas bancárias com OFX inventado e uma inativa sem extrato. O OFX tem um lançamento em fevereiro, outros nas bordas de março, um sem regra, um centavo, um valor de 98 milhões e um em abril. Roda o NEO.
+  - Confere a DRE, o Balancete (débitos = créditos) e o Livro Caixa de março contra o esperado; sem período, num período vazio e só com o fim; a planilha da DRE e a do Livro Caixa.
+  - Desfaz uma classificação: sai da DRE e do Balancete, e o Livro Caixa (que lê o extrato) não muda. Desfaz a importação de uma conta bancária: sai dos três.
+  - Confere o isolamento entre empresas e escritórios e, no fim, apaga tudo pela exclusão da empresa.
+
+  `node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-relatorios.ts`
+
+**Tela:** a aba "Relatórios", entre Conciliação e Configurações. Pede "ver" (o `relatorios.read`).
+
+- Os três relatórios são vistas da aba (`?vista=balancete` e `?vista=livro-caixa`; a DRE abre), com o filtro "Período" (`de` e `ate` na URL). A empresa é a do seletor do módulo, e o "Gerar Relatório" do original virou o "Filtrar".
+- O que cada vista mostra:
+  - a DRE: os quatro totais em cartões e uma tabela por grupo;
+  - o Balancete: a tabela, com o recuo pelo nível, e a linha de totais;
+  - o Livro Caixa: uma tabela por conta bancária, com o saldo inicial, o final e os totais do período.
+
+  As mensagens de vazio são as do original.
+- **Imprimir:** o `window.print` do original, com o cabeçalho que só aparece no papel (o relatório, a empresa e o período). O papel é desenhado num portal no `<body>`, como o relatório do Tributário.
+- **Excel (novo no Connect):** a página do original só imprimia.
+  - A planilha leva os mesmos números da tela: a DRE (as linhas e o resultado), o Balancete (as linhas e os totais) e o Livro Caixa (os lançamentos e os saldos por conta bancária), com o dinheiro como número e a aba "Filtros".
+  - Pede "ver", como a tela, e não vai para a auditoria, como a impressão. As exportações da D1 pedem "agir" e são auditadas.
+- O original não desenha gráfico nesta página.
+- O artigo de ajuda do módulo ganhou "Como gerar a DRE, o Balancete e o Livro Caixa".
+
+**Divergências da D2:**
+
+- **Empates de ordem:**
+  - o mesmo código em duas contas (a viva e a apagada do legado): o original ordena só pelo código, e o empate fica com a ordem do plano do banco; aqui, o id desempata;
+  - as contas bancárias do Livro Caixa: o original não ordena; aqui, banco, agência, número e id.
+
+  O teste conta as duas: 0 e 0 casos. No SQLite do gabarito, a ordem coincidiu com a do Connect: o `GROUP BY` sai pelo id da conta, e as contas bancárias saem pelo índice único de banco, agência e número. No PostgreSQL da produção, essas ordens não são garantidas.
+- **Período:** a rota recebe datas (`de` e `ate`, "AAAA-MM-DD"), como o Livro Caixa do original.
+  - Na DRE e no Balancete, o original aceitava também a hora (`datetime`). Aqui é sempre o dia inteiro, que é o que a tela do original mandava.
+  - Data inválida, data com hora e o ano zero são 400 (no original, 422).
+  - O período invertido é aceito e sai vazio, como lá.
+- **Resposta:** camelCase, o dinheiro como texto de duas casas (o `str` do `Decimal`), as datas do período como "AAAA-MM-DD" e sem o `empresa_id`. Uma rota só (`/relatorios/[relatorio]`) para os três.
+- **Planilha:** nova, ver acima.
+
+**Achados sobre o original (reproduzidos de propósito):**
+
+- **Sem hierarquia:** a sintética não soma as analíticas, nem na DRE nem no Balancete. O Balancete mostra a sintética zerada logo acima das filhas com movimento.
+- **O Livro Caixa é o extrato, não o razão:** traz a transação sem classificação, e desfazer a classificação não o muda.
+  - O saldo é calculado das transações importadas, a partir de zero. Não usa o saldo informado pelo banco (`saldoApos`) nem o saldo declarado do lote.
+  - Só é o saldo real da conta se o extrato foi importado desde a abertura.
+- **No mesmo dia, o Livro Caixa ordena pelo id da transação** (um UUID aleatório), e não pela ordem do extrato (`ordem`). O saldo do fim do dia é o certo, mas os acumulados no meio do dia não seguem o extrato.
+- **DRE e Balancete não olham a conta bancária:** a partida de conta bancária inativa ou apagada entra. A exportação de lançamentos, ao contrário, deixa a inativa de fora. O Livro Caixa mostra a conta inativa e deixa a apagada de fora, com as transações dela.
+- **A partida numa conta do plano de outra empresa** some do relatório, sem aviso, e também dos totais do Balancete. Nenhuma tela do Connect cria esse caso.
+- **O fim do período dependia do fuso do servidor:** a tela mandava `23:59:59.999` sem fuso, e o asyncpg lê no fuso do processo (UTC no contêiner do original).
+- **A ordem das contas bancárias e a dos empates de código** não são garantidas no PostgreSQL.
+- **`test_relatorio_contrapartes.py` e `test_relatorio_regras.py` não são destes relatórios:** são os leitores das planilhas de cadastro (a relação de clientes e fornecedores do sistema fiscal e o modelo de regras), já portados na Fase 3b.
+
+**Precisam de decisão:**
+
+- A hierarquia: as sintéticas devem somar as analíticas no Balancete (e a DRE ganhar os subtotais)?
+- O Livro Caixa: ordenar o dia pela ordem do extrato (`ordem`) em vez do id? Partir do saldo informado pelo banco, quando houver?
+- DRE e Balancete: deixar de fora a conta bancária inativa ou apagada, como a exportação de lançamentos?
+- A planilha dos relatórios: com "ver" e sem auditoria (como a impressão), ou com "agir" e auditada (como as exportações)?
+- O lugar da aba (entre Conciliação e Configurações).
+- O período invertido: recusar com uma frase, em vez de sair vazio?

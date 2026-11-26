@@ -1,4 +1,4 @@
-import { BookOpen, CreditCard, FileCheck, FileText, Inbox, Receipt, Scale, SlidersHorizontal, Tags, Users, Zap } from "lucide-react";
+import { BookOpen, CreditCard, FileCheck, FileText, Inbox, LayoutDashboard, Receipt, Scale, SlidersHorizontal, Tags, TrendingUp, Users, Zap } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -7,7 +7,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { formatCnpj } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
-import { ehUuid } from "@/lib/contabil-core/entradas";
+import { ehUuid, relatorioSchema } from "@/lib/contabil-core/entradas";
 import { ABAS, mesAtual, ROTULO_DO_REGIME, type Aba } from "@/lib/contabil-core/tela";
 import { empresasParaLigar, listarEmpresas, regimeDoCadastro } from "@/lib/contabil-core/servidor/cadastros";
 import { LigarEmpresa } from "@/components/contabil-core/Formularios";
@@ -22,8 +22,10 @@ import {
   AbaImportacoes,
   AbaNeo,
   AbaNotas,
+  AbaPainel,
   AbaRegistros,
   AbaRegras,
+  AbaRelatorios,
   type ContextoDaAba,
 } from "@/components/contabil-core/Abas";
 
@@ -33,9 +35,10 @@ export const dynamic = "force-dynamic";
 // O módulo segue desligado até a virada do Bloco A (docs/CONTABIL-CORE.md); enquanto isso o time usa o
 // Contábil Core, e esta tela serve para conferir o porte com dados de teste e com a carga ensaiada.
 
-type Busca = { empresa?: string; aba?: string; mes?: string; agencia?: string; busca?: string; pagina?: string; status?: string; vista?: string };
+type Busca = { empresa?: string; aba?: string; mes?: string; agencia?: string; busca?: string; pagina?: string; status?: string; vista?: string; de?: string; ate?: string };
 
 const ROTULO_DA_ABA: Record<Aba, { rotulo: string; icone: React.ReactNode }> = {
+  painel: { rotulo: "Painel", icone: <LayoutDashboard size={16} aria-hidden /> },
   importacoes: { rotulo: "Importações", icone: <Inbox size={16} aria-hidden /> },
   extrato: { rotulo: "Extrato", icone: <FileText size={16} aria-hidden /> },
   neo: { rotulo: "NEO", icone: <Zap size={16} aria-hidden /> },
@@ -46,6 +49,7 @@ const ROTULO_DA_ABA: Record<Aba, { rotulo: string; icone: React.ReactNode }> = {
   comprovantes: { rotulo: "Comprovantes", icone: <FileCheck size={16} aria-hidden /> },
   cartoes: { rotulo: "Cartões", icone: <CreditCard size={16} aria-hidden /> },
   conciliacao: { rotulo: "Conciliação", icone: <Scale size={16} aria-hidden /> },
+  relatorios: { rotulo: "Relatórios", icone: <TrendingUp size={16} aria-hidden /> },
   configuracoes: { rotulo: "Configurações", icone: <SlidersHorizontal size={16} aria-hidden /> },
 };
 
@@ -88,7 +92,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
   }
 
   const empresa = empresas.find((e) => ehUuid(q.empresa) && e.id === q.empresa.toLowerCase()) ?? empresas[0];
-  const aba: Aba = (ABAS as readonly string[]).includes(q.aba ?? "") ? (q.aba as Aba) : "importacoes";
+  const aba: Aba = (ABAS as readonly string[]).includes(q.aba ?? "") ? (q.aba as Aba) : "painel";
   const mes = q.mes && /^\d{4}-(0[1-9]|1[0-2])$/.test(q.mes) ? q.mes : null;
   const c: ContextoDaAba = {
     tenantId: ctx.tenantId,
@@ -101,7 +105,10 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
     pagina: Math.max(1, Number.parseInt(q.pagina ?? "1", 10) || 1),
     status: q.status ?? null,
     mesAtual: mesAtual(),
-    vista: q.vista === "financeiro" ? "financeiro" : null,
+    vista: q.vista === "financeiro" || q.vista === "conflitos" || q.vista === "balancete" || q.vista === "livro-caixa" ? q.vista : null,
+    // O período dos relatórios (Fase D2): cada ponta vale só se for uma data válida.
+    de: relatorioSchema.safeParse({ de: q.de }).data?.de ?? null,
+    ate: relatorioSchema.safeParse({ ate: q.ate }).data?.ate ?? null,
   };
 
 
@@ -127,6 +134,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
         ativa={aba}
         abas={ABAS.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
       />
+      {aba === "painel" && <AbaPainel c={c} />}
       {aba === "importacoes" && <AbaImportacoes c={c} />}
       {aba === "extrato" && <AbaExtrato c={c} />}
       {aba === "neo" && <AbaNeo c={c} />}
@@ -137,6 +145,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
       {aba === "comprovantes" && <AbaComprovantes c={c} />}
       {aba === "cartoes" && <AbaCartoes c={c} />}
       {aba === "conciliacao" && <AbaConciliacao c={c} />}
+      {aba === "relatorios" && <AbaRelatorios c={c} />}
       {aba === "configuracoes" && <AbaConfiguracoes c={c} />}
     </PageContainer>
   );

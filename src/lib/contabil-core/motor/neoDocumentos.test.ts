@@ -9,6 +9,12 @@
 //
 // Aqui o laço do servidor (`servidor/neo.ts`) é repetido sobre a entrada com as funções puras do motor
 // (`decidir`, `DocumentosDoNeo`, `pernas`). Se um caso falhar, o porte está errado, e não o gabarito.
+//
+// Divergência deliberada (D0, decisão do Angelo em 26/11/2026): o número da nota vai para o histórico só
+// quando a contraparte veio da própria nota candidata. O original o levava também pela via do nome (a
+// nota candidata, de OUTRO CNPJ, emprestava o número). O gabarito NÃO foi regerado: os casos em que isso
+// muda são contados um a um, e neles a única diferença aceita é o "NF <número> - " a menos no histórico
+// da classificação por nome.
 
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -186,6 +192,35 @@ function processar(e: any) {
 
 const doTipo = (tipo: string) => casos.filter((c) => c.tipo === tipo);
 
+/** Os casos que divergem de propósito do gabarito (o número da nota que o original levava pela via do nome). */
+const numeroPeloNome = { processar: [] as number[], resolver: [] as number[], sombra: [] as number[] };
+
+/** "PGTO REF NF 123 - FULANO" → "PGTO REF FULANO": o histórico que o original geraria sem o número. */
+function semNumeroDaNota(historico: string): string | null {
+  const m = /^(PGTO|REC) REF NF \S+ - ([\s\S]*)$/.exec(historico);
+  return m ? `${m[1]} REF ${m[2]}` : null;
+}
+
+/**
+ * As partidas esperadas com a divergência aplicada: na transação classificada PELO NOME (motivo "via nome")
+ * cujo histórico do original trazia o número da nota, o porte o gera sem o número. Devolve também quantas
+ * transações mudaram.
+ */
+function partidasSemNumeroPeloNome(esperado: any): { partidas: Record<string, any>; mudadas: number } {
+  const partidas: Record<string, any> = {};
+  let mudadas = 0;
+  for (const [id, p] of Object.entries<any>(esperado.depois.partidas)) {
+    const d = esperado.depois.decisoes[id];
+    const sem = p.tipo_regra === "contraparte" && d?.estrategia === "contraparte" && / via nome /.test(d.motivo ?? "") ? semNumeroDaNota(p.historico) : null;
+    if (sem === null) partidas[id] = p;
+    else {
+      partidas[id] = { ...p, historico: sem };
+      mudadas++;
+    }
+  }
+  return { partidas, mudadas };
+}
+
 describe("NEO com notas e comprovantes: processar (gabarito)", () => {
   test("o gabarito traz casos da suíte do original e documentos ligados", () => {
     expect(casos.filter((c) => c.origem === "suite").length).toBeGreaterThan(0);
@@ -199,7 +234,10 @@ describe("NEO com notas e comprovantes: processar (gabarito)", () => {
     expect(obtido.depois.status).toEqual(c.saida.depois.status);
     expect(obtido.depois.decisoes).toEqual(c.saida.depois.decisoes);
     // A partida da classificação de cada transação classificada nesta execução (a do banco fica de fora).
-    expect(obtido.depois.partidas).toEqual(c.saida.depois.partidas);
+    // Onde o original levava o número da nota pela via do nome, a única diferença aceita é ele a menos.
+    const { partidas, mudadas } = partidasSemNumeroPeloNome(c.saida);
+    if (mudadas) numeroPeloNome.processar.push(c.id);
+    expect(obtido.depois.partidas).toEqual(partidas);
     expect(obtido.depois.notas).toEqual(c.saida.depois.notas);
     expect(obtido.depois.comprovantes).toEqual(c.saida.depois.comprovantes);
   });
@@ -233,9 +271,18 @@ describe("NEO com notas e comprovantes: candidata, contraparte e sombra (gabarit
     const vinculos: Vinculos = { nota: n ? nota(n) : null, comprovante: cp ? comprovante(cp) : null };
     const { achada } = resolverContraparte(ctx, t, vinculos);
     if (tipo === "resolver") {
-      expect(achada ? { contraparte_id: achada.contraparte.id, origem: achada.origem, numero_nf: achada.numeroNf } : null).toEqual(c.saida.contraparte);
+      // Pelo nome, o número da nota não vem mais (a divergência da D0).
+      const esperado = c.saida.contraparte;
+      const divergente = esperado?.origem === "nome" && esperado.numero_nf !== null;
+      if (divergente) numeroPeloNome.resolver.push(c.id);
+      expect(achada ? { contraparte_id: achada.contraparte.id, origem: achada.origem, numero_nf: achada.numeroNf } : null).toEqual(
+        divergente ? { ...esperado, numero_nf: null } : esperado,
+      );
       return;
     }
+    const esperado = c.saida.sombra;
+    const sem = esperado?.origem === "nome" ? semNumeroDaNota(esperado.historico_sugerido) : null;
+    if (sem !== null) numeroPeloNome.sombra.push(c.id);
     expect(
       achada
         ? {
@@ -246,6 +293,13 @@ describe("NEO com notas e comprovantes: candidata, contraparte e sombra (gabarit
             historico_sugerido: gerarHistoricoSugerido(t.dc, achada.contraparte.razaoSocial, achada.numeroNf),
           }
         : null,
-    ).toEqual(c.saida.sombra);
+    ).toEqual(sem === null ? esperado : { ...esperado, historico_sugerido: sem });
+  });
+});
+
+describe("NEO com notas e comprovantes: divergências deliberadas", () => {
+  // Roda depois dos casos (o vitest executa os testes de um arquivo na ordem).
+  test("o número da nota pela via do nome: os casos contados um a um", () => {
+    expect(numeroPeloNome).toEqual({ processar: [46, 117, 249], resolver: [], sombra: [] });
   });
 });

@@ -10,9 +10,10 @@ import { texto as textoDec } from "@/lib/contabil-core/motor/decimal";
 import { listarExtrato, listarRegistros, POR_PAGINA, ultimoMesComLancamento } from "@/lib/contabil-core/servidor/consultas";
 import { moeda, moedaComSinal, ROTULO_DO_TIPO_DE_CONTA, rotuloDaAgencia, rotuloDaConta } from "@/lib/contabil-core/tela";
 import { AlternarAgencia, AlternarIaParaDocumentos, AlternarRegra, CancelarClassificacao, DesfazerImportacao, ExcluirConta } from "./Botoes";
+import { CorrigirContaDoRazao } from "./CorrigirContaDoRazao";
 import { EnvioDeExtrato } from "./EnvioDeExtrato";
 import { ImportarCadastro } from "./ImportarCadastro";
-import { Exportar } from "./Exportar";
+import { Exportar, ExportarExtrato } from "./Exportar";
 import { Conciliacao } from "./Conciliacao";
 import { ConciliacaoFinanceiro } from "./ConciliacaoFinanceiro";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -24,6 +25,15 @@ import { Notas } from "./Notas";
 import { Comprovantes } from "./Comprovantes";
 import { Cartoes } from "./Cartoes";
 import { iaLiberadaParaDocumentos } from "@/lib/contabil-core/servidor/notas";
+import { carteiraDoEscritorio, consultarDivergencias, estatisticasDaEmpresa } from "@/lib/contabil-core/servidor/painel";
+import { ConflitosQualidade } from "./ConflitosQualidade";
+import { CarteiraDoEscritorio, NumerosDaEmpresa } from "./Painel";
+import { empresaDoTenant } from "@/lib/contabil-core/servidor/base";
+import { relatorioDaEmpresa } from "@/lib/contabil-core/servidor/relatorios";
+import { RELATORIOS, rotuloDoPeriodo, TITULO_DO_RELATORIO, type QualRelatorio } from "@/lib/contabil-core/relatorios/planilha";
+import type { Balancete, Dre, LivroCaixa } from "@/lib/contabil-core/relatorios/relatorios";
+import { BalanceteDaEmpresa, DreDaEmpresa, LivroCaixaDaEmpresa } from "./Relatorios";
+import { ImprimirRelatorio } from "./ImprimirRelatorio";
 
 // As abas do Contábil Core (Fase 2, 09/11/2026). Componentes de servidor: leem pelo serviço (que
 // confere tenant e empresa) e passam para o navegador só o que a tela mostra.
@@ -39,8 +49,11 @@ export type ContextoDaAba = {
   pagina: number;
   status: string | null;
   mesAtual: string;
-  /** Dentro da aba Conciliação: "financeiro" abre a conferência do financeiro (Fase B4). */
+  /** Dentro da aba Conciliação: "financeiro" abre a conferência do financeiro (Fase B4); na aba NEO, "conflitos" abre "Conflitos e qualidade" (Fase D1). */
   vista: string | null;
+  /** O período dos relatórios (Fase D2), em datas "AAAA-MM-DD" já conferidas; nula é "sem limite". */
+  de: string | null;
+  ate: string | null;
 };
 
 const TH = "py-2 pr-3 font-medium";
@@ -77,6 +90,30 @@ function Paginacao({ c, aba, total }: { c: ContextoDaAba; aba: string; total: nu
       </span>
       {c.pagina < paginas && <Link href={href(c.pagina + 1)} className="text-brand hover:underline">Próxima</Link>}
     </nav>
+  );
+}
+
+// ─── Painel ───────────────────────────────────────────────────────────────
+
+// Bloco D, Fase D1 (26/11/2026): o `Dashboard` do original. A carteira do escritório na competência (todas as
+// empresas do Contábil Core, como o seletor de empresa) e os números da empresa aberta. Só lê: aparece para quem
+// vê o módulo (o `stats.read` do original).
+export async function AbaPainel({ c }: { c: ContextoDaAba }) {
+  const competencia = c.mes ?? c.mesAtual;
+  const [carteira, estatisticas] = await Promise.all([carteiraDoEscritorio(c.tenantId, competencia), estatisticasDaEmpresa(c.tenantId, c.empresaId)]);
+  return (
+    <div className="flex flex-col gap-8">
+      <section>
+        <h2 className="text-base font-semibold">Carteira do escritório</h2>
+        <p className="mb-2 text-sm text-fg-muted">O trabalho da competência em cada empresa, com as de mais pendências primeiro.</p>
+        <Filtros empresaId={c.empresaId} aba="painel" mes={competencia} />
+        <CarteiraDoEscritorio mes={competencia} itens={carteira.itens} atual={c.empresaId} />
+      </section>
+      <section>
+        <h2 className="mb-3 text-base font-semibold">Esta empresa</h2>
+        {estatisticas.ok ? <NumerosDaEmpresa e={estatisticas.valor} /> : <Aviso tom="atencao">{estatisticas.erro}</Aviso>}
+      </section>
+    </div>
   );
 }
 
@@ -160,15 +197,21 @@ export async function AbaExtrato({ c }: { c: ContextoDaAba }) {
   ]);
   return (
     <div>
-      <Filtros
-        empresaId={c.empresaId}
-        aba="extrato"
-        mes={c.mes}
-        agenciaId={c.agenciaId}
-        agencias={opcoesDeAgencia}
-        busca={c.busca}
-        status={c.status}
-      />
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <Filtros
+          empresaId={c.empresaId}
+          aba="extrato"
+          mes={c.mes}
+          agenciaId={c.agenciaId}
+          agencias={opcoesDeAgencia}
+          busca={c.busca}
+          status={c.status}
+        />
+        {/* Fase D1: o arquivo traz as MESMAS linhas da tela (os filtros vão junto), sem a paginação. */}
+        {c.podeAgir && total > 0 && (
+          <ExportarExtrato empresaId={c.empresaId} mes={c.mes} agenciaId={c.agenciaId} busca={c.busca} status={c.status} />
+        )}
+      </div>
       {itens.length === 0 ? (
         <p className="text-sm text-fg-muted">Nenhuma transação nesta seleção.</p>
       ) : (
@@ -216,6 +259,37 @@ export async function AbaExtrato({ c }: { c: ContextoDaAba }) {
 // ─── NEO ──────────────────────────────────────────────────────────────────
 
 export async function AbaNeo({ c }: { c: ContextoDaAba }) {
+  // "Conflitos e qualidade" (Fase D1) era a terceira aba da página Classificação do original; aqui é a segunda
+  // vista da aba NEO, porque mede o que o NEO decidiu (a conta da regra × a da contraparte). Na URL, para voltar.
+  const conflitos = c.vista === "conflitos";
+  const href = (vista: string | null) => `/contabil-core?${new URLSearchParams({ empresa: c.empresaId, aba: "neo", ...(vista ? { vista } : {}) })}`;
+  const vistas = (
+    <SegmentedControl
+      label="O que ver no NEO"
+      tocavel
+      active={conflitos ? "conflitos" : "pendencias"}
+      items={[
+        { key: "pendencias", label: "Pendências", href: href(null) },
+        { key: "conflitos", label: "Conflitos e qualidade", href: href("conflitos") },
+      ]}
+    />
+  );
+  if (conflitos) {
+    const [{ opcoesDeAgencia }, divergencias] = await Promise.all([opcoes(c), consultarDivergencias(c.tenantId, c.empresaId, { mes: c.mes, agenciaId: c.agenciaId })]);
+    return (
+      <div className="flex flex-col gap-4">
+        {vistas}
+        <div>
+          <Filtros empresaId={c.empresaId} aba="neo" vista="conflitos" mes={c.mes} agenciaId={c.agenciaId} agencias={opcoesDeAgencia} />
+          {divergencias.ok ? <ConflitosQualidade d={divergencias.valor} /> : <Aviso tom="atencao">{divergencias.erro}</Aviso>}
+        </div>
+      </div>
+    );
+  }
+  return <PendenciasDoNeo c={c} vistas={vistas} />;
+}
+
+async function PendenciasDoNeo({ c, vistas }: { c: ContextoDaAba; vistas: React.ReactNode }) {
   const [{ opcoesDeAgencia, opcoesDeConta }, pendencias, fila] = await Promise.all([
     opcoes(c),
     listarPendencias(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes, busca: c.busca }),
@@ -225,6 +299,7 @@ export async function AbaNeo({ c }: { c: ContextoDaAba }) {
   const naTela = new Set(pendencias.map((p) => p.id));
   return (
     <div className="flex flex-col gap-4">
+      {vistas}
       <Filtros empresaId={c.empresaId} aba="neo" mes={c.mes} agenciaId={c.agenciaId} agencias={opcoesDeAgencia} busca={c.busca} />
       {c.podeAgir && <ProcessarNeo empresaId={c.empresaId} agenciaId={c.agenciaId} mes={c.mes} />}
       <FilaDoNeo
@@ -490,6 +565,46 @@ export async function AbaConciliacao({ c }: { c: ContextoDaAba }) {
   );
 }
 
+// ─── Relatórios ───────────────────────────────────────────────────────────
+
+// Bloco D, Fase D2 (26/11/2026): a página Relatórios do original, com os três relatórios como vistas da aba (a
+// DRE abre) e o período em datas, na URL. Só lê: aparece para quem vê o módulo (o `relatorios.read`).
+export async function AbaRelatorios({ c }: { c: ContextoDaAba }) {
+  const qual: QualRelatorio = c.vista === "balancete" || c.vista === "livro-caixa" ? c.vista : "dre";
+  const periodo = { de: c.de, ate: c.ate };
+  const href = (vista: QualRelatorio) =>
+    `/contabil-core?${new URLSearchParams({ empresa: c.empresaId, aba: "relatorios", ...(vista === "dre" ? {} : { vista }), ...(c.de ? { de: c.de } : {}), ...(c.ate ? { ate: c.ate } : {}) })}`;
+  const [empresa, r] = await Promise.all([empresaDoTenant(c.tenantId, c.empresaId), relatorioDaEmpresa(qual, c.tenantId, c.empresaId, periodo)]);
+  const planilha = `/api/contabil-core/relatorios/${qual}?${new URLSearchParams({ empresa: c.empresaId, formato: "xlsx", ...(c.de ? { de: c.de } : {}), ...(c.ate ? { ate: c.ate } : {}) })}`;
+  return (
+    <div className="flex flex-col gap-4">
+      <SegmentedControl
+        label="Qual relatório"
+        tocavel
+        active={qual}
+        items={RELATORIOS.map((k) => ({ key: k, label: TITULO_DO_RELATORIO[k], href: href(k) }))}
+      />
+      <div>
+        <Filtros empresaId={c.empresaId} aba="relatorios" vista={qual === "dre" ? null : qual} periodo={periodo} />
+        <p className="mb-3 text-micro text-fg-muted">
+          {qual === "livro-caixa"
+            ? "As transações do extrato de cada conta bancária, classificadas ou não, com o saldo acumulado. O saldo inicial é o que veio antes do período."
+            : "As partidas vivas do razão no período (a classificação desfeita não entra), por conta. A conta sintética mostra só o próprio movimento: não soma as analíticas."}
+        </p>
+        {!r.ok || !empresa ? (
+          <Aviso tom="atencao">{r.ok ? "Empresa não encontrada no Contábil Core." : r.erro}</Aviso>
+        ) : (
+          <ImprimirRelatorio titulo={TITULO_DO_RELATORIO[qual]} empresa={`${empresa.razaoSocial} · ${formatCnpj(empresa.cnpj)}`} periodo={rotuloDoPeriodo(periodo)} planilha={planilha}>
+            {qual === "dre" && <DreDaEmpresa r={r.valor as Dre} />}
+            {qual === "balancete" && <BalanceteDaEmpresa r={r.valor as Balancete} />}
+            {qual === "livro-caixa" && <LivroCaixaDaEmpresa r={r.valor as LivroCaixa} />}
+          </ImprimirRelatorio>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Configurações ────────────────────────────────────────────────────────
 
 export async function AbaConfiguracoes({ c }: { c: ContextoDaAba }) {
@@ -511,7 +626,12 @@ export async function AbaConfiguracoes({ c }: { c: ContextoDaAba }) {
       <section>
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-base font-semibold">Contas bancárias</h2>
-          {c.podeGerir && <FormularioDaAgencia empresaId={c.empresaId} contas={opcoesDeConta} />}
+          {c.podeGerir && (
+            <div className="flex flex-wrap gap-2">
+              {agencias.length > 0 && <CorrigirContaDoRazao empresaId={c.empresaId} />}
+              <FormularioDaAgencia empresaId={c.empresaId} contas={opcoesDeConta} />
+            </div>
+          )}
         </div>
         {agencias.length === 0 ? (
           <p className="text-sm text-fg-muted">Nenhuma conta bancária cadastrada.</p>

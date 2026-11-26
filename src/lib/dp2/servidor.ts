@@ -3,6 +3,7 @@
 // que eles precisam e se guarda o que devolvem.
 
 import { salarioNoMes } from "./reajuste";
+import { periodoNaEmpresa } from "./transferencia";
 import { avisosDeVencimento } from "./avisos";
 import { lerDadosEsocial } from "./esocial/cadastro";
 import { mesesDoSaldoInicial } from "./saldoInicial";
@@ -200,10 +201,19 @@ export function vinculoDoMotor(v: {
  * Os colaboradores da empresa que contam na competência: os dela no cadastro
  * de pessoas, admitidos até o fim do mês e não desligados antes do começo.
  */
-export async function colaboradoresDaCompetencia(tenantId: string, companyId: string, ano: number, mes: number) {
+/**
+ * Os colaboradores da folha da empresa no mês. Na folha mensal, a
+ * transferência entre empresas do grupo (funcionalidade-771) divide o mês:
+ * quem saiu da empresa no mês entra até a véspera da transferência, e quem
+ * chegou entra a partir do dia dela (admissão e desligamento do trecho, para o
+ * proporcional). As outras folhas (13º) seguem a empresa atual do contrato.
+ */
+export async function colaboradoresDaCompetencia(tenantId: string, companyId: string, ano: number, mes: number, tipo: string = "MENSAL") {
   const inicio = new Date(Date.UTC(ano, mes - 1, 1));
   const fim = new Date(Date.UTC(ano, mes, 0));
-  return getPrisma().person.findMany({
+  const prisma = getPrisma();
+  const select = { id: true, name: true, cpf: true, currentCompanyId: true, admissionDate: true, dismissalDate: true, currentSalary: true, dp2Vinculo: true } as const;
+  const atuais = await prisma.person.findMany({
     where: {
       tenantId,
       currentCompanyId: companyId,
@@ -212,9 +222,38 @@ export async function colaboradoresDaCompetencia(tenantId: string, companyId: st
       OR: [{ admissionDate: null }, { admissionDate: { lte: fim } }],
       AND: [{ OR: [{ dismissalDate: null }, { dismissalDate: { gte: inicio } }] }],
     },
-    select: { id: true, name: true, cpf: true, admissionDate: true, dismissalDate: true, currentSalary: true, dp2Vinculo: true },
+    select,
     orderBy: { name: "asc" },
   });
+  type Linha = (typeof atuais)[number] & { transferencia: { entrou: string | null; saiu: string | null } | null };
+  const semTransferencia = (p: (typeof atuais)[number]): Linha => ({ ...p, transferencia: null });
+  if (tipo !== "MENSAL") return atuais.map(semTransferencia);
+  const comPassagem = await prisma.dp2Transferencia.findMany({ where: { tenantId, OR: [{ companyId }, { deCompanyId: companyId }] }, select: { personId: true } });
+  if (comPassagem.length === 0) return atuais.map(semTransferencia);
+  const ids = [...new Set(comPassagem.map((t) => t.personId))];
+  const jaNaLista = new Set(atuais.map((p) => p.id));
+  const [passagens, quemSaiu] = await Promise.all([
+    prisma.dp2Transferencia.findMany({ where: { tenantId, personId: { in: ids } }, select: { personId: true, data: true, deCompanyId: true, companyId: true } }),
+    prisma.person.findMany({ where: { tenantId, id: { in: ids.filter((id) => !jaNaLista.has(id)) }, isInternal: false, type: "COLABORADOR" }, select }),
+  ]);
+  const isoDe = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  const dataDe = (s: string | null) => (s ? new Date(`${s}T00:00:00.000Z`) : null);
+  const linhas: Linha[] = [];
+  for (const p of [...atuais, ...quemSaiu]) {
+    const daPessoa = passagens.filter((t) => t.personId === p.id).map((t) => ({ data: isoDe(t.data)!, deCompanyId: t.deCompanyId, paraCompanyId: t.companyId }));
+    if (daPessoa.length === 0) {
+      linhas.push(semTransferencia(p));
+      continue;
+    }
+    const periodo = periodoNaEmpresa(daPessoa, { companyIdAtual: p.currentCompanyId ?? "", admissao: isoDe(p.admissionDate), desligamento: isoDe(p.dismissalDate) }, companyId, ano, mes);
+    if (!periodo) continue;
+    if (!periodo.entrou && !periodo.saiu) {
+      linhas.push(semTransferencia(p));
+      continue;
+    }
+    linhas.push({ ...p, admissionDate: dataDe(periodo.admissao), dismissalDate: dataDe(periodo.desligamento), transferencia: { entrou: periodo.entrou, saiu: periodo.saiu } });
+  }
+  return linhas.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
 
 /** Todos os colaboradores da empresa (ativos primeiro), com o vínculo do DP 2. */
@@ -406,7 +445,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const [linhasDeRubrica, cfg, pessoas, eventos, outrasBases, ajustes] = await Promise.all([
     listarRubricas(tenantId),
     configDaEmpresa(tenantId, comp.companyId),
-    colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes),
+    colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo),
     prisma.dp2Evento.findMany({ where: { tenantId, competenciaId }, include: { rubrica: true } }),
     // Outras bases de INSS de quem tem mais de um vínculo (funcionalidade-769).
     prisma.dp2OutraBaseInss.findMany({ where: { tenantId, competenciaId }, select: { personId: true, remuneracao: true } }),
@@ -528,6 +567,13 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         afastamentos: afastamentosDe.get(p.id),
         outrasBasesInss: outrasDe(p.id),
       });
+      // Transferência no mês (funcionalidade-771): o fim do trecho não é desligamento.
+      if (p.transferencia) {
+        const br = (d: string) => d.split("-").reverse().join("/");
+        c.alertas = c.alertas.filter((a) => !a.startsWith("Desligamento no mês"));
+        if (p.transferencia.saiu) c.alertas.push(`Transferido(a) para outra empresa do grupo em ${br(p.transferencia.saiu)}: esta folha paga até a véspera, sem rescisão.`);
+        if (p.transferencia.entrou) c.alertas.push(`Veio de outra empresa do grupo em ${br(p.transferencia.entrou)}: esta folha paga a partir do dia da transferência.`);
+      }
     } else {
       c = await calcularDecimoDaPessoa(tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo === "DECIMO_1" ? 1 : 2, p, vinculo, rubricas, tab.tabelas, cfg.empresa);
     }

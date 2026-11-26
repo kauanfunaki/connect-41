@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { geradorDeId, type EmpregadorEsocial } from "./eventos";
-import { eventoS2200, eventoS2206, eventoS2230, eventoS2298, eventoS2299, MOTIVO_DO_DESLIGAMENTO, type TrabalhadorCompleto } from "./naoPeriodicos";
+import { eventoS2200, eventoS2206, eventoS2230, eventoS2298, eventoS2299, eventoS2299Transferencia, MOTIVO_DO_DESLIGAMENTO, type TrabalhadorCompleto } from "./naoPeriodicos";
 import { DADOS_VAZIOS, horasSemanais, lerDadosEsocial, sugerirGrauDeInstrucao } from "./cadastro";
 import { RUBRICAS_PADRAO } from "../rubricas";
 
@@ -162,5 +162,35 @@ describe("remuneração variável no contrato (funcionalidade-760)", () => {
     const ev = eventoS2200(empregador, { ...t, dados: { ...t.dados, remuneracaoVariavel: "Comissão de 3% sobre as vendas" } }, sindicato, geradorDeId(empregador.cnpj, quando));
     expect(ev.xml).toContain("<undSalFixo>5</undSalFixo><dscSalVar>Comissão de 3% sobre as vendas</dscSalVar></remuneracao>");
     expect(eventoS2200(empregador, trabalhador(), sindicato, geradorDeId(empregador.cnpj, quando)).xml).not.toContain("dscSalVar");
+  });
+});
+
+describe("transferência entre empresas do grupo (funcionalidade-771)", () => {
+  it("S-2299 da origem: motivo 11, véspera da transferência, sucessora e sem verbas", () => {
+    const ev = eventoS2299Transferencia(empregador, trabalhador(), { ultimoDia: "2027-06-15", cnpjSucessora: "11.222.333/0001-81", observacao: "Transferência para a filial" }, geradorDeId(empregador.cnpj, quando));
+    expect(ev.tipo).toBe("S-2299");
+    expect(ev.xml).toContain("<mtvDeslig>11</mtvDeslig><dtDeslig>2027-06-15</dtDeslig><indPagtoAPI>N</indPagtoAPI><pensAlim>0</pensAlim>");
+    expect(ev.xml).toContain("<sucessaoVinc><tpInsc>1</tpInsc><nrInsc>11222333000181</nrInsc></sucessaoVinc>");
+    expect(ev.xml).not.toContain("verbasResc");
+    expect(ev.referencia).toContain("transferência");
+    expect(ev.pendencias.filter((p) => p.bloqueia)).toEqual([]);
+  });
+
+  it("S-2299 sem CNPJ da sucessora aponta a pendência", () => {
+    const ev = eventoS2299Transferencia(empregador, trabalhador(), { ultimoDia: "2027-06-15", cnpjSucessora: null, observacao: null }, geradorDeId(empregador.cnpj, quando));
+    expect(ev.pendencias.map((p) => p.texto).join(" ")).toMatch(/destino.*CNPJ/);
+  });
+
+  it("S-2200 do destino: tpAdmissao 2, admissão original e sucessaoVinc", () => {
+    const ev = eventoS2200(empregador, trabalhador(), sindicato, geradorDeId(empregador.cnpj, quando), { cnpjAnterior: "11.222.333/0001-81", matriculaAnterior: "M-77", data: "2027-06-16", observacao: null });
+    expect(ev.xml).toContain("<dtAdm>2026-11-03</dtAdm><tpAdmissao>2</tpAdmissao>");
+    expect(ev.xml).toContain("<sucessaoVinc><tpInsc>1</tpInsc><nrInsc>11222333000181</nrInsc><matricAnt>M-77</matricAnt><dtTransf>2027-06-16</dtTransf></sucessaoVinc>");
+    expect(ev.xml.indexOf("</infoContrato>")).toBeLessThan(ev.xml.indexOf("<sucessaoVinc>"));
+    expect(ev.referencia).toContain("sucessão");
+  });
+
+  it("S-2200 sem a matrícula anterior aponta a pendência", () => {
+    const ev = eventoS2200(empregador, trabalhador(), sindicato, geradorDeId(empregador.cnpj, quando), { cnpjAnterior: "11.222.333/0001-81", matriculaAnterior: null, data: "2027-06-16", observacao: null });
+    expect(ev.pendencias.map((p) => p.texto).join(" ")).toMatch(/matrícula/);
   });
 });
