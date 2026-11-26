@@ -326,7 +326,7 @@ export function AppShell({
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
   const noGeral = (tela: TelaDoGeral) => telasDoGeral.includes(tela);
-  /** Uma tela de um grupo do Geral (Apoio, Cadastros, Atendimento ao cliente). `contador`: o que espera a pessoa nela. */
+  /** Uma tela de um grupo do Geral (Apoio, Cadastros, Atendimento). `contador`: o que espera a pessoa nela. */
   type ItemDoGrupo = { chave: string; label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean; contador?: number };
   // Cadastros é um grupo do Geral como o Apoio (10/11/2026, pedido do Kauan):
   // cada tela é um item da janela ao lado, aberta no clique e no toque, e não
@@ -358,13 +358,14 @@ export function AppShell({
     ];
     return telas;
   };
-  // O grupo Atendimento ao cliente do Geral (26/11/2026, melhoria-871, pedido
-  // do Kauan): Solicitações, Atendimento e Arquivos, as três da área de cor
-  // "Clientes e atendimento", que eram itens soltos. Cada uma continua
-  // dependendo do módulo ligado e da visibilidade do setor (Configurações ›
-  // Setores); a regra dos grupos vale igual — nenhuma, o grupo some; uma, ela
-  // fica solta. O nome não é "Clientes" para não se confundir com o grupo
-  // "Cliente" do menu do BPO. Os números ficam em cada tela, dentro da janela,
+  // O grupo Atendimento do Geral (26/11/2026, melhoria-871, pedido do Kauan):
+  // Solicitações, Atendimento e Arquivos, as três da área de cor "Clientes e
+  // atendimento", que eram itens soltos. Cada uma continua dependendo do
+  // módulo ligado e da visibilidade do setor (Configurações › Setores); a
+  // regra dos grupos vale igual — nenhuma, o grupo some; uma, ela fica solta.
+  // O nome não é "Clientes" para não se confundir com o grupo "Cliente" do
+  // menu do BPO; era "Atendimento ao cliente" e virou só "Atendimento" no mesmo
+  // dia, a pedido do Kauan — o mesmo nome da tela de dentro. Os números ficam em cada tela, dentro da janela,
   // e a soma no grupo: as conversas novas do Atendimento não somem.
   const clientesBruto = (): ItemDoGrupo[] => {
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
@@ -380,7 +381,7 @@ export function AppShell({
       ...(arquivosLigados && noGeral("arquivos") ? [{ chave: "arquivos", label: "Arquivos", href: "/arquivos", icon: <FolderOpen size={16} />, area: arquivos }] : []),
     ];
   };
-  /** As telas de um grupo do Geral (Apoio, Cadastros, Atendimento ao cliente) na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
+  /** As telas de um grupo do Geral (Apoio, Cadastros, Atendimento) na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
   // `comAOrdemEscolhida`: a ordem e o olho do organizador (09/11/2026) valem;
   // `comOcultas`: as escondidas ficam na lista (o organizador mostra todas).
   const escolhaDoSetor = (comAOrdemEscolhida: boolean) => (comAOrdemEscolhida && activeSector ? ordemDoMenu : undefined);
@@ -423,7 +424,7 @@ export function AppShell({
   // de Cadastros (`comQuadroForaDoApoio`, em menuDoSetor.ts).
   //
   // 26/11/2026 (melhoria-871): Solicitações, Atendimento e Arquivos viraram o
-  // grupo Atendimento ao cliente, no mesmo lugar — depois dos azuis, antes do
+  // grupo Atendimento, no mesmo lugar — depois dos azuis, antes do
   // Apoio. A ordem gravada com as três soltas é convertida na leitura
   // (`comAtendimentoAoClienteEmGrupo`): o grupo fica onde estava a primeira.
   const listaDoGeral = (quadros: ItemDoGrupo | null = null, comAOrdemEscolhida = true, comOcultas = false) => {
@@ -631,7 +632,7 @@ export function AppShell({
           {/* Nav */}
           {/* `scroll-gutter-stable`: quando a lista passa da altura da tela, a barra
               de rolagem aparece, o content box encolhe 9px e tudo que é alinhado à
-              direita (a contagem de cada grupo) salta de lugar. O comentário do
+              direita (o "›" e os números de cada item) salta de lugar. O comentário do
               globals.css evita o gutter em container estreito; aqui a troca vale:
               9px de faixa parada custam menos que o menu inteiro se mexendo. */}
           {/* Na faixa, sem barra de rolagem à vista (a roda do mouse e o Tab
