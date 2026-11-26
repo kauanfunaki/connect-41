@@ -633,6 +633,9 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             <Button type="submit" variant="secondary">
               Baixar (PDF)
             </Button>
+            <Button href={`/api/dp2/quadro-de-horario?empresa=${tela.empresa.id}`} variant="ghost" download>
+              Quadro de horário da empresa (PDF)
+            </Button>
           </form>
           <p className="mt-2 text-fs-2 text-fg-muted">O contrato de experiência sai do contrato por prazo determinado (tipo 2 e data de término nos dados do eSocial), com o termo de prorrogação no fim. O histórico PPP junta os S-2240 e os ASOs gerados em DP 2 › eSocial.</p>
         </Secao>
