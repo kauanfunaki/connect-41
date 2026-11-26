@@ -86,13 +86,17 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
     expect((await detalheItem(ctx, curto))!.id).toBe(item.id);
     // O número é o que vale: o prefixo de outro tipo acha o mesmo item (a tela passa para o de agora).
     expect((await detalheItem(ctx, `MELHORIA-${item.number}`))!.id).toBe(item.id);
+    // A sigla de três letras (25/11/2026, melhoria-818), em maiúsculas ou minúsculas.
+    expect((await detalheItem(ctx, `BUG-${item.number}`))!.id).toBe(item.id);
+    expect((await detalheItem(ctx, `mel-${item.number}`))!.id).toBe(item.id);
+    expect((await listarItens(ctx, lerFiltros({ q: `BUG-${item.number}` }))).items.map(i => i.id)).toContain(item.id);
     expect(await idDoItem(ctx, curto)).toBe(item.id);
     expect(await detalheItem(ctx, "bug-999999")).toBeNull();
     expect(await detalheItem(ctx, "qualquer-coisa")).toBeNull();
     expect((await detalheItem(ctx, `bug-${deFora!.number}`))?.id).not.toBe(deFora!.id);
     expect((await listarItens(ctx, lerFiltros({ q: curto }))).items.map(i => i.id)).toContain(item.id);
     // Mudar o tipo muda o prefixo do endereço; o número fica.
-    expect(await salvarItem(ctx, { title: item.title, type: "IMPROVEMENT" }, item.id, item.version)).toMatchObject({ ok: true, endereco: `/controle-interno/melhoria-${item.number}` });
+    expect(await salvarItem(ctx, { title: item.title, type: "IMPROVEMENT" }, item.id, item.version)).toMatchObject({ ok: true, endereco: `/controle-interno/mel-${item.number}` });
     expect((await detalheItem(ctx, item.id))!.number).toBe(item.number);
     // O outro escritório volta a ficar sem item: o teste de isolamento conta com isso.
     await db!.techInternalChange.deleteMany({ where: { itemId: deFora!.id } }); await db!.techInternalItem.delete({ where: { id: deFora!.id } });
