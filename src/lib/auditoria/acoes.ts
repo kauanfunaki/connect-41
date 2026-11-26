@@ -267,6 +267,10 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // Exportação para a Domínio (fila do BPO, 21/10).
   "financeiro.dominio.exported": o("exportou para a Domínio as baixas da empresa"),
   "financeiro.dominio.depara_saved": e("atualizou o de-para da Domínio da empresa"),
+  // Modelos da Tabela dinâmica (25/11/2026, funcionalidade-816).
+  "financeiro.tabela_dinamica.modelo_salvo": c("salvou o modelo da Tabela dinâmica"),
+  "financeiro.tabela_dinamica.modelo_renomeado": e("renomeou o modelo da Tabela dinâmica"),
+  "financeiro.tabela_dinamica.modelo_excluido": x("excluiu o modelo da Tabela dinâmica"),
   // De-para e lançamentos do Contábil, e o SPED Contribuições pedido de lá (29/10/2026).
   "contabil.regra.salva": e("gravou a regra do de-para contábil do fornecedor"),
   "contabil.regra.desconsiderada": e("deixou fora da contabilidade"),
@@ -878,6 +882,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   FinanceRecurrence: "repetição",
   BankRuleApplication: "lançamento por regra de conciliação",
   BpoCredential: "senha do repositório",
+  BpoModeloDaTabela: "modelo da Tabela dinâmica",
   Branch: "filial",
   Budget: "orçamento",
   Candidatura: "candidatura",
