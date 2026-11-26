@@ -7,14 +7,15 @@ import { STATUS_CONTRATO } from "@/lib/honorarios/regras/auditContratosStatus";
 import { responsaveisDaLista } from "@/lib/honorarios/filtros";
 import { ROTULO_STATUS_CONTRATO } from "@/lib/honorarios/rotulos";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CascoDaTabela, ForaDaLista, contarItens } from "@/components/shared/CascoDaTabela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
+import { FaixaDaVarredura } from "@/components/honorarios/FaixaDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
-import { ResumoExClientes } from "@/components/honorarios/ExClientes";
+import { ExClientesFora } from "@/components/honorarios/ExClientes";
 import { BotaoDaPlanilha, hrefDaPlanilha } from "@/components/honorarios/BotaoDaPlanilha";
 import { TabelaDeContratos } from "@/components/honorarios/TabelaDeContratos";
 import { formatarNumero } from "@/lib/format";
@@ -61,12 +62,9 @@ export default async function ContratosPage({ searchParams }: { searchParams: Pr
 
   return (
     <PageContainer>
-      <CabecalhoDosHonorarios
-        ativa="contratos"
-        status={status}
-        podeAgir={podeAgir}
-        acao={relatorio.job ? <BotaoDaPlanilha href={hrefDaPlanilha("contratos", { status: statusValido, responsavel: q.responsavel, busca: q.busca })} /> : undefined}
-      />
+      <CabecalhoDosHonorarios ativa="contratos">
+        <FaixaDaVarredura status={status} podeAgir={podeAgir} />
+      </CabecalhoDosHonorarios>
 
       {!relatorio.job ? (
         <SemVarredura texto="O relatório aparece depois da primeira varredura do robô." />
@@ -97,22 +95,23 @@ export default async function ContratosPage({ searchParams }: { searchParams: Pr
                 valor: formatarNumero(resumo.revisar, 0),
                 icone: <SearchCheck />,
                 tom: resumo.revisar > 0 ? "text-warning-fg" : undefined,
-                detalhe:
-                  escolhido === "REVISAR"
-                    ? "mostrando agora"
-                    : resumo.marcadasSemPasta > 0
-                      ? `${resumo.marcadasSemPasta} marcada(s) sem pasta ficam fora`
-                      : "precisam de conferência manual",
+                detalhe: escolhido === "REVISAR" ? "mostrando agora" : "precisam de conferência manual",
                 ativo: escolhido === "REVISAR",
                 href: "/honorarios/contratos?status=REVISAR",
               },
             ]}
           />
 
-          <ResumoExClientes exClientes={resumo.exClientes} />
-
           <CascoDaTabela
             contagem={contarItens(filtradas.length, "empresa", "empresas")}
+            fora={
+              <>
+                <ExClientesFora exClientes={resumo.exClientes} />
+                {/* Era o detalhe do total "Para revisar" (26/11/2026, melhoria-813). */}
+                <ForaDaLista n={resumo.marcadasSemPasta} um="marcada sem pasta" varios="marcadas sem pasta" href="/honorarios/pastas?aba=empresas&marca=marcadas" acao="Ver" />
+              </>
+            }
+            acoes={<BotaoDaPlanilha href={hrefDaPlanilha("contratos", { status: statusValido, responsavel: q.responsavel, busca: q.busca })} />}
             busca={<DebouncedSearchInput paramName="busca" placeholder="Buscar empresa, CNPJ ou pasta" />}
             filtros={
               <FiltrosDaTela

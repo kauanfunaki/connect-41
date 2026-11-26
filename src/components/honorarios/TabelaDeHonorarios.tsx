@@ -1,14 +1,35 @@
 "use client";
 
-import { Fragment, useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, Camera, ChevronRight, CircleCheck, Dot, Banknote } from "lucide-react";
+import {
+  Ban,
+  Banknote,
+  Camera,
+  CircleCheck,
+  CircleSlash,
+  Clock,
+  CloudUpload,
+  Eye,
+  FileX,
+  PenLine,
+  ScanLine,
+  TriangleAlert,
+  UserMinus,
+  Dot,
+  Building2,
+  ThumbsUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { Selo } from "@/components/ui/Selo";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SlideOver } from "@/components/ui/SlideOver";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { useToast } from "@/components/ui/Toast";
-import { ALERTAS_INFORMATIVOS } from "@/lib/honorarios/regras/honorariosRegras";
+import { CascoDaTabela } from "@/components/shared/CascoDaTabela";
+import { useSelecaoDasLinhas } from "@/components/shared/useSelecaoDasLinhas";
+import { ALERTAS_INFORMATIVOS, type SituacaoHonorario } from "@/lib/honorarios/regras/honorariosRegras";
 import { fotoPendente } from "@/lib/honorarios/filtros";
 import {
   dataCurta,
@@ -23,10 +44,25 @@ import {
 } from "@/lib/honorarios/rotulos";
 import type { DocumentoResumo, EmpresaHonorario } from "@/lib/honorarios/servidor/honorariosService";
 import { removerHonorarioInformado } from "@/app/(app)/honorarios/actions";
-import { AvisoDistrato } from "./AvisoDistrato";
-import { AvisoExCliente } from "./ExClientes";
+import { AvisoDistrato, linhasDoDistrato } from "./AvisoDistrato";
 import { DialogoDoValor, DialogoAcessoriasCerto } from "./DialogosDoHonorario";
 import { DialogoDeEnvio, DialogoDeLote } from "./DialogosDoAcessorias";
+import {
+  AcoesDaLinha,
+  CLASSE_DA_TABELA,
+  NomeQueAbre,
+  PeDoPainel,
+  SecaoDoPainel,
+  SeloDaSituacao,
+  SubtituloDoPainel,
+  type AcaoPrincipal,
+} from "./PecasDaLista";
+
+// Aba Honorários no padrão da alternativa A (26/11/2026, melhoria-813): tabela
+// `.c41-tabela`, Situação num selo só (o resto na dica e no painel), uma ação
+// de largura fixa e o ⋯ por linha, a barra do lote no lugar da barra do casco
+// e o detalhe da empresa num painel lateral, em seções. A regra de cada ação
+// (quem pode, quando) é a mesma de antes; só mudou o lugar.
 
 const tipoMinusculo = (d: DocumentoResumo) => ROTULO_TIPO_DOCUMENTO[d.tipo].toLowerCase();
 const dataDoDoc = (d: DocumentoResumo) => dataCurta(d.data ?? d.modificadoEm);
@@ -40,8 +76,6 @@ function origemDoValor(e: EmpresaHonorario): string | null {
   }
   return null;
 }
-
-const ehGrave = (a: EmpresaHonorario["alertas"][number]) => !ALERTAS_INFORMATIVOS.has(a);
 
 /** O que a pessoa pode fazer com o Acessórias nesta tela. */
 export type EnvioNaTela = {
@@ -57,23 +91,97 @@ export type EnvioNaTela = {
 export const podeAtualizar = (e: EmpresaHonorario) =>
   e.situacao !== "DISTRATO" && e.valor !== null && (e.acessorias.comparacao === "DIFERENTE" || e.acessorias.comparacao === "NAO_CONFERIDO");
 
+const ICONE_DA_SITUACAO: Record<SituacaoHonorario, ReactNode> = {
+  CONFERIR: <TriangleAlert aria-hidden />,
+  DIGITALIZADO: <ScanLine aria-hidden />,
+  SEM_VALOR: <CircleSlash aria-hidden />,
+  AGUARDANDO_LEITURA: <Clock aria-hidden />,
+  SEM_DOCUMENTO: <FileX aria-hidden />,
+  LIDO: <CircleCheck aria-hidden />,
+  MANUAL: <PenLine aria-hidden />,
+  DISTRATO: <Ban aria-hidden />,
+};
+
+const TOM_DA_COMPARACAO: Record<EmpresaHonorario["acessorias"]["comparacao"], TomDoSelo> = {
+  DIFERENTE: "atencao",
+  IGUAL: "sucesso",
+  NAO_ENCONTRADA: "neutro",
+  NAO_CONFERIDO: "neutro",
+  SEM_VALOR_NO_APP: "neutro",
+};
+
+type Ponto = { texto: string; grave: boolean; icone: ReactNode };
+
+/** O que pede atenção na empresa, do mais grave ao informativo — a dica do selo e a seção do painel. */
+function pontosDeAtencao(e: EmpresaHonorario): Ponto[] {
+  const foto = fotoPendente(e);
+  const pontos: Ponto[] = [];
+  if (foto) pontos.push({ texto: "O arquivo mais recente é foto ou escaneado: confira o valor nele", grave: true, icone: <Camera size={14} aria-hidden /> });
+  for (const a of e.alertas) {
+    if (foto && a === "mais_recente_digitalizado") continue;
+    const grave = !ALERTAS_INFORMATIVOS.has(a);
+    pontos.push({ texto: ROTULO_ALERTA[a], grave, icone: grave ? <TriangleAlert size={14} aria-hidden /> : <Dot size={14} aria-hidden /> });
+  }
+  if (e.exCliente) pontos.push({ texto: `Também tem pasta em Ex Clientes (“${e.exCliente}”)`, grave: true, icone: <UserMinus size={14} aria-hidden /> });
+  return pontos.sort((a, b) => Number(b.grave) - Number(a.grave));
+}
+
+/** O selo da linha: a situação, ou "Foto" quando o arquivo mais recente é foto; +N graves e a dica com tudo. */
+function SeloDoHonorario({ e }: { e: EmpresaHonorario }) {
+  const foto = fotoPendente(e);
+  const pontos = pontosDeAtencao(e);
+  const graves = pontos.filter((p) => p.grave).length - (foto ? 1 : 0);
+  const situacao = e.manual?.origem === "acessorias" ? "Vale o do Acessórias" : ROTULO_SITUACAO[e.situacao];
+  const dica = [`Situação: ${situacao}`, ...pontos.map((p) => `• ${p.texto}`), ...linhasDoDistrato(e.distrato).map((l) => `• ${l}`)].join("\n");
+  if (foto) {
+    return (
+      <SeloDaSituacao tom="atencao" icone={<Camera aria-hidden />} mais={graves} dica={dica}>
+        Foto
+      </SeloDaSituacao>
+    );
+  }
+  return (
+    <SeloDaSituacao tom={TOM_SITUACAO[e.situacao]} icone={ICONE_DA_SITUACAO[e.situacao]} mais={graves} dica={dica}>
+      {e.manual?.origem === "acessorias" ? "Do Acessórias" : ROTULO_SITUACAO[e.situacao]}
+    </SeloDaSituacao>
+  );
+}
+
+type Dialogo = { tipo: "valor" | "acessorias" | "enviar"; empresa: EmpresaHonorario; doPainel: boolean };
+
+/** As ações de uma empresa, com a mesma regra na linha e no pé do painel. */
+function acoesDaEmpresa(e: EmpresaHonorario, podeAgir: boolean, envio: EnvioNaTela) {
+  const comparacao = e.acessorias.comparacao;
+  const podeValor = podeAgir && e.situacao !== "DISTRATO";
+  const podeEnviarEsta = podeValor && envio.podeEnviar && podeAtualizar(e);
+  const confirmaAcessorias = podeValor && comparacao === "DIFERENTE" && (e.acessorias.valor ?? 0) >= 10;
+  // Lido ou informado e diferente do Acessórias: o que falta é atualizar lá.
+  const atualizarPrimeiro = podeEnviarEsta && (e.situacao === "LIDO" || e.situacao === "MANUAL");
+  const rotuloDoValor = e.manual ? "Alterar valor" : e.situacao === "CONFERIR" ? "Conferir valor" : "Informar valor";
+  return { podeValor, podeEnviarEsta, confirmaAcessorias, atualizarPrimeiro, rotuloDoValor };
+}
+
 export function TabelaDeHonorarios({
   empresas,
   podeAgir,
   filtrado,
   envio = { podeEnviar: false, bloqueado: null, loteLiberado: false },
+  barra,
 }: {
   empresas: EmpresaHonorario[];
   podeAgir: boolean;
   filtrado: boolean;
   envio?: EnvioNaTela;
+  /** A barra do casco quando nada está marcado: contagem, total, fora, busca e Filtros. */
+  barra: { contagem?: ReactNode; total?: ReactNode; fora?: ReactNode; busca?: ReactNode; filtros?: ReactNode };
 }) {
-  const [aberta, setAberta] = useState<string | null>(null);
-  const [dialogo, setDialogo] = useState<{ tipo: "valor" | "acessorias" | "enviar"; empresa: EmpresaHonorario } | null>(null);
-  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [painel, setPainel] = useState<string | null>(null);
+  const [dialogo, setDialogo] = useState<Dialogo | null>(null);
   const [lote, setLote] = useState(false);
   const selecionaveis = envio.podeEnviar ? empresas.filter(podeAtualizar) : [];
+  const [selecionadas, setSelecionadas] = useSelecaoDasLinhas(selecionaveis.map((e) => e.empresa.id));
   const escolhidas = selecionaveis.filter((e) => selecionadas.has(e.empresa.id));
+  const comCaixa = selecionaveis.length > 0;
   const alternar = (id: string) =>
     setSelecionadas((s) => {
       const n = new Set(s);
@@ -81,22 +189,40 @@ export function TabelaDeHonorarios({
       else n.add(id);
       return n;
     });
+  const todas = comCaixa && escolhidas.length === selecionaveis.length;
+  const marcarTodas = () => setSelecionadas(todas ? new Set() : new Set(selecionaveis.map((e) => e.empresa.id)));
+  const limpar = () => setSelecionadas(new Set());
 
-  if (!empresas.length) {
-    return filtrado ? (
-      <EmptyState title="Nenhuma empresa neste filtro" description="Troque o filtro ou a busca acima para ver as outras." icon={<Banknote />} />
-    ) : (
-      <EmptyState title="Nenhuma empresa ativa com CNPJ" description="O honorário é procurado nas empresas ativas do cadastro, pelo vínculo da pasta." icon={<Banknote />} />
-    );
-  }
+  // A janela aberta do painel fecha o painel (dois diálogos disputariam o Tab)
+  // e o reabre ao fechar, na mesma empresa.
+  const abrirDialogo = (tipo: Dialogo["tipo"], empresa: EmpresaHonorario, doPainel = false) => {
+    setPainel(null);
+    setDialogo({ tipo, empresa, doPainel });
+  };
+  const fecharDialogo = () => {
+    if (dialogo?.doPainel) setPainel(dialogo.empresa.empresa.id);
+    setDialogo(null);
+  };
 
   const diferentes = selecionaveis.filter((e) => e.acessorias.comparacao === "DIFERENTE");
   const semPendencia = selecionaveis.filter((e) => e.situacao === "LIDO" || e.situacao === "MANUAL");
+  const motivoDoLote = envio.bloqueado ?? (!envio.loteLiberado ? "Libera depois do primeiro envio de uma empresa só, conferido no Acessórias" : undefined);
 
-  return (
+  const barraDoLote = escolhidas.length > 0 && (
     <>
-      {selecionaveis.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-label" role="group" aria-label="Envio em lote ao Acessórias">
+      <span className="inline-flex items-center gap-2.5">
+        <Checkbox checked onChange={limpar} aria-label="Desmarcar todas" />
+        <span aria-live="polite" className="font-semibold text-fg">
+          {escolhidas.length} {escolhidas.length === 1 ? "selecionada" : "selecionadas"}
+        </span>
+      </span>
+      <Button variant="ghost" size="xs" onClick={limpar}>
+        Limpar
+      </Button>
+      {(diferentes.length > 0 || semPendencia.length > 0) && (
+        <>
+          <span aria-hidden className="hidden h-5 w-px bg-border sm:block" />
+          <span className="text-fg-muted">Selecionar:</span>
           {diferentes.length > 0 && (
             <Button
               variant="ghost"
@@ -104,192 +230,181 @@ export function TabelaDeHonorarios({
               title="Todas as empresas desta página cujo honorário está diferente no Acessórias"
               onClick={() => setSelecionadas(new Set(diferentes.map((e) => e.empresa.id)))}
             >
-              Selecionar as diferentes ({diferentes.length})
+              Diferentes ({diferentes.length})
             </Button>
           )}
           {semPendencia.length > 0 && (
-            <Button variant="ghost" size="xs" onClick={() => setSelecionadas(new Set(semPendencia.map((e) => e.empresa.id)))}>
-              Selecionar as sem pendência ({semPendencia.length})
+            <Button
+              variant="ghost"
+              size="xs"
+              title="As empresas desta página com o valor lido sem pendência ou informado à mão"
+              onClick={() => setSelecionadas(new Set(semPendencia.map((e) => e.empresa.id)))}
+            >
+              Sem pendência ({semPendencia.length})
             </Button>
           )}
-          {escolhidas.length > 0 && (
-            <Button variant="ghost" size="xs" onClick={() => setSelecionadas(new Set())}>
-              Limpar seleção
-            </Button>
-          )}
-          <Button
-            size="xs"
-            disabled={!escolhidas.length || !!envio.bloqueado || !envio.loteLiberado}
-            title={envio.bloqueado ?? (!envio.loteLiberado ? "Libera depois do primeiro envio de uma empresa só, conferido no Acessórias" : undefined)}
-            onClick={() => setLote(true)}
-          >
-            Atualizar {escolhidas.length} no Acessórias
-          </Button>
-          {!envio.loteLiberado && (
-            <span className="text-micro text-fg-muted">O envio em lote libera depois do primeiro envio de uma empresa só, conferido no Acessórias.</span>
-          )}
-        </div>
+        </>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px]">
-          <thead>
-            <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
-              {selecionaveis.length > 0 && (
-                <th className="w-8 py-2">
-                  <span className="sr-only">Selecionar para o envio em lote</span>
-                </th>
-              )}
-              <th className="w-8 py-2"><span className="sr-only">Detalhes</span></th>
-              <th className="py-2 pr-3 font-medium">Empresa</th>
-              <th className="py-2 pr-3 font-medium text-right">Honorário</th>
-              <th className="py-2 pr-3 font-medium">Situação</th>
-              <th className="py-2 pr-3 font-medium">No Acessórias</th>
-              <th className="py-2 font-medium">
-                <span className="sr-only">Ações</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {empresas.map((e) => {
-              const id = e.empresa.id;
-              const expandida = aberta === id;
-              const foto = fotoPendente(e);
-              const comparacao = e.acessorias.comparacao;
-              const podeConfirmarAcessorias = e.situacao !== "DISTRATO" && comparacao === "DIFERENTE" && (e.acessorias.valor ?? 0) >= 10;
-              const alertas = e.alertas.filter((a) => !(foto && a === "mais_recente_digitalizado"));
-              return (
-                <Fragment key={id}>
-                  <tr className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
-                    {selecionaveis.length > 0 && (
-                      <td className="py-3.5">
-                        {podeAtualizar(e) && (
+      <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
+        {!envio.loteLiberado && !envio.bloqueado && <span className="text-micro text-fg-muted">Libera depois de um envio individual</span>}
+        <Button size="sm" disabled={!!envio.bloqueado || !envio.loteLiberado} title={motivoDoLote} onClick={() => setLote(true)}>
+          <CloudUpload size={14} aria-hidden />
+          Atualizar {escolhidas.length} no Acessórias
+        </Button>
+      </span>
+    </>
+  );
+
+  const aberta = empresas.find((e) => e.empresa.id === painel) ?? null;
+
+  return (
+    <>
+      <CascoDaTabela {...barra} lote={barraDoLote || undefined}>
+        {!empresas.length ? (
+          <div className="c41-sem-linhas">
+            {filtrado ? (
+              <EmptyState title="Nenhuma empresa neste filtro" description="Troque o filtro ou a busca acima para ver as outras." icon={<Banknote />} />
+            ) : (
+              <EmptyState title="Nenhuma empresa ativa com CNPJ" description="O honorário é procurado nas empresas ativas do cadastro, pelo vínculo da pasta." icon={<Banknote />} />
+            )}
+          </div>
+        ) : (
+          <div className={CLASSE_DA_TABELA}>
+            <table className="w-full min-w-[920px]">
+              <thead>
+                <tr>
+                  {comCaixa && (
+                    <th className="w-11">
+                      <Checkbox checked={todas} onChange={marcarTodas} aria-label="Selecionar todas as que dá para atualizar nesta página" />
+                    </th>
+                  )}
+                  <th>Empresa</th>
+                  <th>Honorário</th>
+                  <th>Situação</th>
+                  <th>No Acessórias</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {empresas.map((e) => {
+                  const id = e.empresa.id;
+                  const marcada = selecionadas.has(id) && podeAtualizar(e);
+                  const comparacao = e.acessorias.comparacao;
+                  const a = acoesDaEmpresa(e, podeAgir, envio);
+                  const nome = e.empresa.razaoSocial;
+                  const valor: AcaoPrincipal = { rotulo: a.rotuloDoValor, onClick: () => abrirDialogo("valor", e) };
+                  const atualizar: AcaoPrincipal = {
+                    rotulo: "Atualizar",
+                    onClick: () => abrirDialogo("enviar", e),
+                    disabled: !!envio.bloqueado,
+                    titulo: envio.bloqueado ?? "Atualiza o honorário desta empresa no Acessórias",
+                  };
+                  const principal: AcaoPrincipal = a.atualizarPrimeiro ? atualizar : a.podeValor ? valor : { rotulo: "Detalhes", onClick: () => setPainel(id) };
+                  const origem = origemDoValor(e);
+                  return (
+                    <tr key={id} className={marcada ? "bg-selected-bg" : undefined}>
+                      {comCaixa && (
+                        <td>
                           <Checkbox
-                            checked={selecionadas.has(id)}
+                            checked={marcada}
+                            disabled={!podeAtualizar(e)}
                             onChange={() => alternar(id)}
-                            aria-label={`Selecionar ${e.empresa.razaoSocial} para o envio em lote`}
+                            title={podeAtualizar(e) ? undefined : "Sem valor diferente para enviar ao Acessórias"}
+                            aria-label={`Selecionar ${nome} para o envio em lote`}
                           />
-                        )}
+                        </td>
+                      )}
+                      <td>
+                        <NomeQueAbre
+                          nome={nome}
+                          aberto={painel === id}
+                          aoAbrir={() => setPainel(id)}
+                          sub={
+                            <>
+                              {e.empresa.cnpj}
+                              {e.empresa.responsavel && ` · ${e.empresa.responsavel}`}
+                            </>
+                          }
+                        />
                       </td>
-                    )}
-                    <td className="py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setAberta(expandida ? null : id)}
-                        aria-expanded={expandida}
-                        aria-label={`${expandida ? "Esconder" : "Ver"} documentos de ${e.empresa.razaoSocial}`}
-                        className="grid h-7 w-7 place-items-center rounded text-fg-muted hover:bg-surface-2 hover:text-fg"
-                      >
-                        <ChevronRight size={16} className={`transition-transform motion-reduce:transition-none ${expandida ? "rotate-90" : ""}`} aria-hidden />
-                      </button>
-                    </td>
-                    <td className="py-2.5 pr-3">
-                      <Link href={`/empresas/${id}`} className="font-semibold text-fg hover:text-brand transition-colors">
-                        {e.empresa.razaoSocial}
-                      </Link>
-                      <span className="block text-micro text-fg-muted tabular-nums">
-                        {e.empresa.cnpj}
-                        {e.empresa.responsavel && ` · ${e.empresa.responsavel}`}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-3 text-right whitespace-nowrap">
-                      <span className="font-semibold tabular-nums">{moeda(e.valor)}</span>
-                      {origemDoValor(e) && <span className="block text-micro text-fg-muted">{origemDoValor(e)}</span>}
-                    </td>
-                    <td className="py-2.5 pr-3 max-w-[340px]">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Selo tom={TOM_SITUACAO[e.situacao]}>{ROTULO_SITUACAO[e.situacao]}</Selo>
-                        {foto && e.fotoMaisRecente && (
-                          <span
-                            title={`${e.fotoMaisRecente.caminhoRelativo} (${dataDoDoc(e.fotoMaisRecente)}): o robô não lê foto nem PDF escaneado. Abra o arquivo e, se o valor for outro, use "Conferir valor".`}
-                          >
-                            <Selo tom="atencao">
-                              <Camera size={12} aria-hidden /> Mais recente é foto
-                            </Selo>
+                      <td className="whitespace-nowrap">
+                        <span className="font-semibold">{moeda(e.valor)}</span>
+                        {origem && (
+                          <span className="block max-w-[14rem] truncate text-micro text-fg-muted" title={origem}>
+                            {origem}
                           </span>
                         )}
-                      </div>
-                      <AvisoDistrato distrato={e.distrato} />
-                      <AvisoExCliente pasta={e.exCliente} />
-                      {alertas.length > 0 && (
-                        <ul className="mt-1 space-y-0.5">
-                          {alertas.map((a) => (
-                            <li key={a} className={`flex items-start gap-1 text-micro ${ehGrave(a) ? "text-warning-fg" : "text-fg-muted"}`}>
-                              {ehGrave(a) ? <AlertTriangle size={12} className="mt-px flex-shrink-0" aria-hidden /> : <Dot size={12} className="mt-px flex-shrink-0" aria-hidden />}
-                              {ROTULO_ALERTA[a]}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td className="py-2.5 pr-3 whitespace-nowrap">
-                      <span className="tabular-nums">
-                        {comparacao === "NAO_CONFERIDO" || comparacao === "NAO_ENCONTRADA" ? "—" : moeda(e.acessorias.valor)}
-                      </span>
-                      {ROTULO_COMPARACAO[comparacao] && (
-                        <span className={`block text-micro ${comparacao === "DIFERENTE" ? "text-warning-fg" : "text-fg-muted"}`}>{ROTULO_COMPARACAO[comparacao]}</span>
-                      )}
-                      {e.ultimoEnvio && (
-                        <span className="block text-micro text-fg-muted">
-                          {e.ultimoEnvio.status === "ok" ? "Atualizado" : "Falhou"} em {dataCurta(e.ultimoEnvio.enviadoEm)} ({e.ultimoEnvio.conta})
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2.5">
-                      {podeAgir && e.situacao !== "DISTRATO" && (
-                        <div className="flex flex-wrap justify-end gap-1.5">
-                          {podeConfirmarAcessorias && (
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              title="O valor do Acessórias está certo e o lido na pasta está errado"
-                              onClick={() => setDialogo({ tipo: "acessorias", empresa: e })}
-                            >
-                              Acessórias está certo
-                            </Button>
-                          )}
-                          {envio.podeEnviar && podeAtualizar(e) && (
-                            <Button
-                              variant="secondary"
-                              size="xs"
-                              disabled={!!envio.bloqueado}
-                              title={envio.bloqueado ?? "Atualiza o honorário desta empresa no Acessórias"}
-                              onClick={() => setDialogo({ tipo: "enviar", empresa: e })}
-                            >
-                              Atualizar
-                            </Button>
-                          )}
-                          <Button variant="secondary" size="xs" onClick={() => setDialogo({ tipo: "valor", empresa: e })}>
-                            {e.manual ? "Alterar valor" : e.situacao === "CONFERIR" ? "Conferir valor" : "Informar valor"}
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                  {expandida && (
-                    <tr className="border-b border-border-soft bg-surface-2/50">
-                      <td />
-                      <td colSpan={selecionaveis.length > 0 ? 6 : 5} className="py-3 pr-3">
-                        <DetalhesDaEmpresa empresa={e} podeAgir={podeAgir} />
+                      </td>
+                      <td>
+                        <SeloDoHonorario e={e} />
+                      </td>
+                      <td
+                        className="whitespace-nowrap"
+                        title={
+                          e.ultimoEnvio
+                            ? `${e.ultimoEnvio.status === "ok" ? "Atualizado" : "Falhou"} em ${dataCurta(e.ultimoEnvio.enviadoEm)} (${e.ultimoEnvio.conta})`
+                            : undefined
+                        }
+                      >
+                        <span>{comparacao === "NAO_CONFERIDO" || comparacao === "NAO_ENCONTRADA" ? "—" : moeda(e.acessorias.valor)}</span>
+                        {ROTULO_COMPARACAO[comparacao] && (
+                          <span className={`block text-micro ${comparacao === "DIFERENTE" ? "font-medium text-warning-fg" : "text-fg-muted"}`}>{ROTULO_COMPARACAO[comparacao]}</span>
+                        )}
+                      </td>
+                      <td>
+                        <AcoesDaLinha
+                          nome={nome}
+                          principal={principal}
+                          menu={[
+                            a.confirmaAcessorias && {
+                              rotulo: "Acessórias está certo",
+                              icone: <ThumbsUp />,
+                              onClick: () => abrirDialogo("acessorias", e),
+                            },
+                            a.podeEnviarEsta &&
+                              !a.atualizarPrimeiro && {
+                                rotulo: "Atualizar no Acessórias",
+                                icone: <CloudUpload />,
+                                onClick: () => abrirDialogo("enviar", e),
+                                disabled: !!envio.bloqueado,
+                                descricao: envio.bloqueado ?? undefined,
+                              },
+                            a.atualizarPrimeiro && { rotulo: a.rotuloDoValor, icone: <PenLine />, onClick: () => abrirDialogo("valor", e) },
+                            principal.rotulo !== "Detalhes" && { rotulo: "Ver detalhes", icone: <Eye />, onClick: () => setPainel(id) },
+                            { rotulo: "Abrir empresa", icone: <Building2 />, href: `/empresas/${id}` },
+                          ]}
+                        />
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CascoDaTabela>
 
-      {dialogo?.tipo === "valor" && <DialogoDoValor empresa={dialogo.empresa} aoFechar={() => setDialogo(null)} />}
-      {dialogo?.tipo === "acessorias" && <DialogoAcessoriasCerto empresa={dialogo.empresa} aoFechar={() => setDialogo(null)} />}
-      {dialogo?.tipo === "enviar" && <DialogoDeEnvio empresa={dialogo.empresa} aoFechar={() => setDialogo(null)} />}
+      <SlideOver open={!!aberta} onClose={() => setPainel(null)} title={aberta?.empresa.razaoSocial} width="max-w-lg">
+        {aberta && (
+          <PainelDoHonorario
+            e={aberta}
+            podeAgir={podeAgir}
+            envio={envio}
+            aoAbrirDialogo={(tipo) => abrirDialogo(tipo, aberta, true)}
+          />
+        )}
+      </SlideOver>
+
+      {dialogo?.tipo === "valor" && <DialogoDoValor empresa={dialogo.empresa} aoFechar={fecharDialogo} />}
+      {dialogo?.tipo === "acessorias" && <DialogoAcessoriasCerto empresa={dialogo.empresa} aoFechar={fecharDialogo} />}
+      {dialogo?.tipo === "enviar" && <DialogoDeEnvio empresa={dialogo.empresa} aoFechar={fecharDialogo} />}
       {lote && (
         <DialogoDeLote
           empresas={escolhidas}
           aoFechar={() => setLote(false)}
           aoEnviar={() => {
             setLote(false);
-            setSelecionadas(new Set());
+            limpar();
           }}
         />
       )}
@@ -297,10 +412,25 @@ export function TabelaDeHonorarios({
   );
 }
 
-function DetalhesDaEmpresa({ empresa: e, podeAgir }: { empresa: EmpresaHonorario; podeAgir: boolean }) {
+/** O detalhe da empresa, em seções: valor, pontos de atenção, distrato, Acessórias e documentos da pasta. */
+function PainelDoHonorario({
+  e,
+  podeAgir,
+  envio,
+  aoAbrirDialogo,
+}: {
+  e: EmpresaHonorario;
+  podeAgir: boolean;
+  envio: EnvioNaTela;
+  aoAbrirDialogo: (tipo: Dialogo["tipo"]) => void;
+}) {
   const toast = useToast();
   const [removendo, iniciar] = useTransition();
   const foto = fotoPendente(e) ? e.fotoMaisRecente : null;
+  const pontos = pontosDeAtencao(e);
+  const a = acoesDaEmpresa(e, podeAgir, envio);
+  const comparacao = e.acessorias.comparacao;
+  const temDistrato = linhasDoDistrato(e.distrato).length > 0;
 
   function remover() {
     iniciar(async () => {
@@ -311,85 +441,163 @@ function DetalhesDaEmpresa({ empresa: e, podeAgir }: { empresa: EmpresaHonorario
   }
 
   return (
-    <div className="space-y-3 text-label">
-      {e.manual && (
-        <div>
-          <p className="font-semibold text-fg">{e.manual.origem === "acessorias" ? "Valor do Acessórias, confirmado como certo" : "Valor informado"}</p>
-          <p className="text-fg-secondary">
-            {moeda(e.manual.valor)} · por {e.manual.informadoPor} em {dataHora(e.manual.informadoEm)}
-            {e.manual.documento && ` · documento: ${e.manual.documento}`}
-          </p>
-          {e.manual.observacao && <p className="text-fg-muted">“{e.manual.observacao}”</p>}
-          {podeAgir && (
-            <Button variant="link" size="xs" className="mt-1 px-0" onClick={remover} disabled={removendo}>
-              Remover e voltar ao valor lido
-            </Button>
+    <>
+      <SubtituloDoPainel partes={[e.empresa.cnpj, e.empresa.responsavel]} empresaId={e.empresa.id} />
+
+      <SecaoDoPainel rotulo="Valor">
+        <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+          <span className="text-section font-semibold text-fg tabular-nums">{moeda(e.valor)}</span>
+          {origemDoValor(e) && <span className="text-micro text-fg-muted">{origemDoValor(e)}</span>}
+        </p>
+        {e.manual && (
+          <div className="mt-2">
+            <p className="font-medium text-fg">{e.manual.origem === "acessorias" ? "Valor do Acessórias, confirmado como certo" : "Valor informado"}</p>
+            <p>
+              {moeda(e.manual.valor)} · por {e.manual.informadoPor} em {dataHora(e.manual.informadoEm)}
+              {e.manual.documento && ` · documento: ${e.manual.documento}`}
+            </p>
+            {e.manual.observacao && <p className="text-fg-muted">“{e.manual.observacao}”</p>}
+            {podeAgir && (
+              <Button variant="link" size="xs" className="mt-1 px-0" onClick={remover} disabled={removendo}>
+                {removendo ? "Removendo…" : "Remover e voltar ao valor lido"}
+              </Button>
+            )}
+          </div>
+        )}
+        {e.documento?.trecho && (
+          <BlocoRecolhivel className="mt-3" titulo="Trecho lido" resumo={e.documento.nome}>
+            <blockquote className="border-l-2 border-border-strong pl-3 text-fg-secondary">{e.documento.trecho}</blockquote>
+          </BlocoRecolhivel>
+        )}
+      </SecaoDoPainel>
+
+      {(pontos.length > 0 || foto) && (
+        <SecaoDoPainel rotulo={`Pontos de atenção (${pontos.length})`}>
+          <ul className="space-y-1.5">
+            {pontos.map((p) => (
+              <li key={p.texto} className={`flex items-start gap-2 ${p.grave ? "text-warning-fg" : "text-fg-muted"}`}>
+                <span className="mt-0.5 shrink-0">{p.icone}</span>
+                <span>{p.texto}</span>
+              </li>
+            ))}
+          </ul>
+          {foto && e.documento && (
+            <p className="mt-2 rounded-md border border-warning/30 bg-warning/8 px-3 py-2 text-warning-fg">
+              {foto.caminhoRelativo} ({dataCurta(foto.modificadoEm)}, data do arquivo). O valor acima ({moeda(e.valor)}) é do {tipoMinusculo(e.documento)} de{" "}
+              {dataDoDoc(e.documento)}. Abra a foto e, se o valor for outro, use <strong>Conferir valor</strong>.
+            </p>
           )}
-        </div>
+        </SecaoDoPainel>
       )}
 
-      {e.documento?.trecho && (
-        <div>
-          <p className="font-semibold text-fg">Trecho lido em {e.documento.nome}</p>
-          <blockquote className="mt-1 border-l-2 border-border-strong pl-3 text-fg-secondary">{e.documento.trecho}</blockquote>
-        </div>
+      {temDistrato && (
+        <SecaoDoPainel rotulo="Distrato">
+          <AvisoDistrato distrato={e.distrato} />
+        </SecaoDoPainel>
       )}
 
-      {foto && e.documento && (
-        <div className="rounded-md border border-warning/30 bg-warning/8 px-3 py-2 text-warning-fg">
-          <p>O arquivo mais recente é foto ou PDF escaneado, e o robô não lê o valor dele.</p>
-          <p className="mt-0.5">
-            {foto.caminhoRelativo} ({dataCurta(foto.modificadoEm)}, data do arquivo). O valor acima ({moeda(e.valor)}) é do {tipoMinusculo(e.documento)} de{" "}
-            {dataDoDoc(e.documento)}. Abra a foto e, se o valor for outro, use <strong>Conferir valor</strong>.
+      <SecaoDoPainel rotulo="No Acessórias">
+        <p className="flex flex-wrap items-center gap-2">
+          <strong className="text-ui text-fg tabular-nums">
+            {comparacao === "NAO_CONFERIDO" || comparacao === "NAO_ENCONTRADA" ? "—" : moeda(e.acessorias.valor)}
+          </strong>
+          {ROTULO_COMPARACAO[comparacao] && <Selo tom={TOM_DA_COMPARACAO[comparacao]}>{ROTULO_COMPARACAO[comparacao]}</Selo>}
+        </p>
+        {e.ultimoEnvio && (
+          <p className={`mt-1 text-micro ${e.ultimoEnvio.status === "ok" ? "text-fg-muted" : "text-danger"}`}>
+            {e.ultimoEnvio.status === "ok" ? "Atualizado" : "Falhou"} em {dataCurta(e.ultimoEnvio.enviadoEm)} ({e.ultimoEnvio.conta})
+            {e.ultimoEnvio.status !== "ok" && e.ultimoEnvio.erro && `: ${e.ultimoEnvio.erro}`}
           </p>
-        </div>
-      )}
+        )}
+      </SecaoDoPainel>
 
-      <div>
-        <p className="font-semibold text-fg">Documentos da pasta ({e.documentos.length})</p>
+      <SecaoDoPainel rotulo={`Documentos da pasta (${e.documentos.length})`}>
         {e.documentos.length === 0 ? (
           <p className="text-fg-muted">
             Nenhum documento.
             {e.situacao === "SEM_DOCUMENTO" && (
               <>
                 {" "}
-                <Link href="/honorarios/pastas?aba=empresas" className="text-brand hover:underline">
+                <Link href="/honorarios/pastas?aba=empresas" className="font-medium text-brand hover:underline">
                   Conferir o vínculo da pasta
                 </Link>
               </>
             )}
           </p>
         ) : (
-          <ul className="mt-1 space-y-1">
-            {e.documentos.map((d) => {
-              const usado = e.documento?.caminhoRelativo === d.caminhoRelativo && e.documento.nomePasta === d.nomePasta;
-              const ehAFoto = foto?.caminhoRelativo === d.caminhoRelativo && foto.nomePasta === d.nomePasta;
-              return (
-                <li key={`${d.nomePasta}/${d.caminhoRelativo}`} className="flex items-start gap-1.5 text-fg-secondary">
-                  {usado ? (
-                    <CircleCheck size={14} className="mt-0.5 flex-shrink-0 text-success-fg" aria-label="Documento usado" />
-                  ) : ehAFoto ? (
-                    <Camera size={14} className="mt-0.5 flex-shrink-0 text-warning-fg" aria-label="Arquivo mais recente, foto: conferir" />
-                  ) : (
-                    <span className="w-3.5 flex-shrink-0" aria-hidden />
-                  )}
-                  <span className="min-w-0 break-words">
-                    {d.caminhoRelativo} · {ROTULO_TIPO_DOCUMENTO[d.tipo]} · {dataDoDoc(d)}
-                    {!d.data && " (arquivo)"} · {ROTULO_ESTADO_DO_TEXTO[d.estado]}
-                    {d.minuta && " · minuta"}
-                    {d.valor !== null && (
-                      <>
-                        {" "}
-                        · <strong className="text-fg tabular-nums">{moeda(d.valor)}</strong>
-                      </>
-                    )}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          <table className="w-full table-fixed text-label">
+            <colgroup>
+              <col className="w-6" />
+              <col />
+              <col className="w-24" />
+              <col className="w-24" />
+            </colgroup>
+            <thead>
+              <tr className="text-left">
+                <th className="pb-1">
+                  <span className="sr-only">Uso</span>
+                </th>
+                <th className="c41-rotulo pb-1">Arquivo</th>
+                <th className="c41-rotulo pb-1">Data</th>
+                <th className="c41-rotulo pb-1 text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {e.documentos.map((d) => {
+                const usado = e.documento?.caminhoRelativo === d.caminhoRelativo && e.documento.nomePasta === d.nomePasta;
+                const ehAFoto = foto?.caminhoRelativo === d.caminhoRelativo && foto.nomePasta === d.nomePasta;
+                return (
+                  <tr key={`${d.nomePasta}/${d.caminhoRelativo}`} className="border-t border-border-soft align-top">
+                    <td className="py-1.5">
+                      {usado ? (
+                        <CircleCheck size={14} className="text-success-fg" aria-label="Documento usado" />
+                      ) : ehAFoto ? (
+                        <Camera size={14} className="text-warning-fg" aria-label="Arquivo mais recente, foto: conferir" />
+                      ) : null}
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <span className="block truncate text-fg" title={d.caminhoRelativo}>
+                        {d.nome}
+                      </span>
+                      <span className="block text-micro text-fg-muted">
+                        {ROTULO_TIPO_DOCUMENTO[d.tipo]} · {ROTULO_ESTADO_DO_TEXTO[d.estado]}
+                        {d.minuta && " · minuta"}
+                      </span>
+                    </td>
+                    <td className="py-1.5 tabular-nums" title={d.data ? undefined : "Sem data no texto: é a data do arquivo"}>
+                      {dataDoDoc(d)}
+                      {!d.data && <span className="block text-micro text-fg-muted">do arquivo</span>}
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">
+                      {d.valor !== null ? <strong className="text-fg">{moeda(d.valor)}</strong> : <span className="text-fg-muted">{ehAFoto ? "foto" : "—"}</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
-      </div>
-    </div>
+      </SecaoDoPainel>
+
+      <PeDoPainel
+        nome={e.empresa.razaoSocial}
+        menu={[
+          a.confirmaAcessorias && { rotulo: "Acessórias está certo", icone: <ThumbsUp />, onClick: () => aoAbrirDialogo("acessorias") },
+          { rotulo: "Abrir empresa", icone: <Building2 />, href: `/empresas/${e.empresa.id}` },
+        ]}
+        secundaria={
+          a.podeEnviarEsta
+            ? {
+                rotulo: "Atualizar no Acessórias",
+                onClick: () => aoAbrirDialogo("enviar"),
+                disabled: !!envio.bloqueado,
+                titulo: envio.bloqueado ?? "Atualiza o honorário desta empresa no Acessórias",
+              }
+            : null
+        }
+        principal={a.podeValor ? { rotulo: a.rotuloDoValor, onClick: () => aoAbrirDialogo("valor") } : null}
+      />
+    </>
   );
 }
+

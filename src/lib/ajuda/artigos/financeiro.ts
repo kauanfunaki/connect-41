@@ -1512,9 +1512,9 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Conferir o honorário",
         passos: [
-          "Na aba “Honorários”, cada linha traz o valor lido do documento mais recente e o do Acessórias.",
-          "Contrato digitalizado (foto ou PDF escaneado) não tem texto, e o robô não lê o valor: clique em “Informar valor” e digite à mão. Use “Conferir valor” ou “Alterar valor” para revisar o que já está lá.",
-          "Para pedir uma leitura nova das pastas, clique em “Varrer as pastas”, no topo.",
+          "Na aba “Honorários”, cada linha traz o valor lido do documento mais recente e o do Acessórias. Clique no nome da empresa para ver o detalhe: o trecho lido, os pontos de atenção e os documentos da pasta.",
+          "Contrato digitalizado (foto ou PDF escaneado) não tem texto, e o robô não lê o valor: clique em “Informar valor” e digite à mão. Use “Conferir valor” ou “Alterar valor” para revisar o que já está lá. As outras ações da linha ficam no “⋯”.",
+          "Para pedir uma leitura nova das pastas, clique em “Detalhes”, na faixa abaixo das abas, e em “Varrer as pastas”.",
         ],
       },
       {

@@ -7,14 +7,15 @@ import { STATUS_ADITIVO } from "@/lib/honorarios/regras/auditAditivosStatus";
 import { responsaveisDaLista } from "@/lib/honorarios/filtros";
 import { ROTULO_STATUS_ADITIVO } from "@/lib/honorarios/rotulos";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CascoDaTabela, ForaDaLista, contarItens } from "@/components/shared/CascoDaTabela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
+import { FaixaDaVarredura } from "@/components/honorarios/FaixaDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
-import { ResumoExClientes } from "@/components/honorarios/ExClientes";
+import { ExClientesFora } from "@/components/honorarios/ExClientes";
 import { BotaoDaPlanilha, hrefDaPlanilha } from "@/components/honorarios/BotaoDaPlanilha";
 import { TabelaDeAditivos } from "@/components/honorarios/TabelaDeAditivos";
 import { formatarNumero } from "@/lib/format";
@@ -68,16 +69,9 @@ export default async function AditivosPage({ searchParams }: { searchParams: Pro
 
   return (
     <PageContainer>
-      <CabecalhoDosHonorarios
-        ativa="aditivos"
-        status={status}
-        podeAgir={podeAgir}
-        acao={
-          relatorio.job ? (
-            <BotaoDaPlanilha href={hrefDaPlanilha("aditivos", { ano, status: statusValido, responsavel: q.responsavel, busca: q.busca, decimo })} />
-          ) : undefined
-        }
-      />
+      <CabecalhoDosHonorarios ativa="aditivos">
+        <FaixaDaVarredura status={status} podeAgir={podeAgir} />
+      </CabecalhoDosHonorarios>
 
       {!relatorio.job ? (
         <SemVarredura texto="Assim que o robô terminar a primeira varredura das pastas, o relatório aparece aqui." />
@@ -114,17 +108,20 @@ export default async function AditivosPage({ searchParams }: { searchParams: Pro
             ]}
           />
 
-          {(resumo.distratos > 0 || resumo.marcadasSemPasta > 0) && (
-            <p className="mb-3 text-label text-fg-muted">
-              {resumo.distratos > 0 && `${resumo.distratos} empresa(s) com distrato da prestação de serviços ficam fora das pendências. `}
-              {resumo.marcadasSemPasta > 0 && `${resumo.marcadasSemPasta} empresa(s) marcada(s) como sem pasta ficaram fora da auditoria.`}
-            </p>
-          )}
-
-          <ResumoExClientes exClientes={resumo.exClientes} />
-
+          {/* A frase solta acima da tabela (distratos e marcadas sem pasta) virou o
+              "· N fora · Ver" da barra, como os ex-clientes (26/11/2026, melhoria-813). */}
           <CascoDaTabela
             contagem={contarItens(filtradas.length, "empresa", "empresas")}
+            fora={
+              <>
+                <ExClientesFora exClientes={resumo.exClientes} />
+                {escolhido === "pendente" && (
+                  <ForaDaLista n={resumo.distratos} um="com distrato, fora das pendências" varios="com distrato, fora das pendências" href={hrefCom({ status: "DISTRATO", decimo: undefined })} acao="Ver" />
+                )}
+                <ForaDaLista n={resumo.marcadasSemPasta} um="marcada sem pasta" varios="marcadas sem pasta" href="/honorarios/pastas?aba=empresas&marca=marcadas" acao="Ver" />
+              </>
+            }
+            acoes={<BotaoDaPlanilha href={hrefDaPlanilha("aditivos", { ano, status: statusValido, responsavel: q.responsavel, busca: q.busca, decimo })} />}
             busca={<DebouncedSearchInput paramName="busca" placeholder="Buscar empresa, CNPJ ou pasta" />}
             filtros={
               <FiltrosDaTela

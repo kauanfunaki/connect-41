@@ -8,11 +8,15 @@ export function hrefDaPlanilha(relatorio: "contratos" | "aditivos", filtros: Rec
   return `/honorarios/planilha?${q.toString()}`;
 }
 
-/** Baixa a planilha do que a tela mostra — com os mesmos filtros. */
+/**
+ * Baixa a planilha do que a lista mostra — com os mesmos filtros. Mora na
+ * barra da lista, ao lado do Filtros, desde 26/11/2026 (melhoria-813); antes
+ * ficava no topo da tela, longe do recorte que ela baixa.
+ */
 export function BotaoDaPlanilha({ href }: { href: string }) {
   return (
-    <Button href={href} variant="secondary" size="sm" download>
-      <FileSpreadsheet size={14} aria-hidden /> Baixar planilha
+    <Button href={href} variant="secondary" size="sm" download title="Baixa a planilha do que a lista mostra, com os mesmos filtros">
+      <FileSpreadsheet size={14} aria-hidden /> Planilha
     </Button>
   );
 }

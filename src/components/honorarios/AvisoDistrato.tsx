@@ -1,8 +1,24 @@
 import type { DistratoDTO } from "@/lib/honorarios/regras/auditDistrato";
 import { dataCurta } from "@/lib/honorarios/rotulos";
 
+/** As mesmas linhas, em texto, para a dica do selo da linha (26/11/2026, melhoria-813). */
+export function linhasDoDistrato(distrato: DistratoDTO | null): string[] {
+  if (!distrato) return [];
+  const { efetivo, desconsiderado, avisos } = distrato;
+  const linhas: string[] = [];
+  if (efetivo) linhas.push(`${efetivo.dataFim ? `Serviços até ${dataCurta(efetivo.dataFim)}` : "Distrato na pasta"}${efetivo.assinado ? " · assinado" : " · sem assinatura"}`);
+  if (desconsiderado) linhas.push(`Distrato desconsiderado: há contrato mais novo (${dataCurta(desconsiderado.contratoMaisNovoEm)})`);
+  const porTipo = new Map<string, typeof avisos>();
+  for (const a of avisos) porTipo.set(a.tipo, [...(porTipo.get(a.tipo) ?? []), a]);
+  for (const [tipo, lista] of porTipo) {
+    const fim = lista.map((a) => a.dataFim).filter((d): d is string => !!d).sort().at(-1);
+    linhas.push(`${tipo === "bpo" ? "Distrato do BPO (a contabilidade segue)" : "Distrato social (dissolução da empresa)"}${fim ? ` · até ${dataCurta(fim)}` : ""}`);
+  }
+  return linhas;
+}
+
 /**
- * O distrato da empresa, embaixo da situação: o que encerra a prestação de
+ * O distrato da empresa, no painel lateral: o que encerra a prestação de
  * serviços (efetivo), o que foi deixado de lado por haver contrato mais novo e
  * os avisos de distrato do BPO ou social, que não encerram a contabilidade.
  */

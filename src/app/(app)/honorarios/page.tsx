@@ -1,4 +1,4 @@
-import { CircleCheck, FileSearch, ListChecks, PenLine } from "lucide-react";
+import { CircleCheck, ListChecks, PenLine } from "lucide-react";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { noEscritorioDe, permissoesNosHonorarios } from "@/lib/honorarios/acesso";
 import { montarRelatorioHonorarios } from "@/lib/honorarios/servidor/honorariosService";
@@ -7,16 +7,16 @@ import { filtrarHonorarios, fotoPendente, responsaveisDaLista, SITUACOES_QUE_PED
 import { ROTULO_COMPARACAO, ROTULO_SITUACAO } from "@/lib/honorarios/rotulos";
 import { SITUACOES_HONORARIO } from "@/lib/honorarios/regras/honorariosRegras";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { contarItens } from "@/components/shared/CascoDaTabela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
+import { FaixaDaVarredura } from "@/components/honorarios/FaixaDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
-import { ResumoExClientes } from "@/components/honorarios/ExClientes";
+import { ExClientesFora } from "@/components/honorarios/ExClientes";
 import { TabelaDeHonorarios } from "@/components/honorarios/TabelaDeHonorarios";
-import { QuadroDoAcessorias } from "@/components/honorarios/QuadroDoAcessorias";
 import { HistoricoDeEnvios } from "@/components/honorarios/HistoricoDeEnvios";
 import { estado as estadoDoAcessorias, listarEnvios } from "@/lib/honorarios/servidor/acessoriasService";
 import { formatarNumero } from "@/lib/format";
@@ -55,15 +55,32 @@ export default async function HonorariosPage({ searchParams }: { searchParams: P
   const pedemAcao = SITUACOES_QUE_PEDEM_ACAO.reduce((n, s) => n + conta(s), 0);
   const comFoto = relatorio.empresas.filter(fotoPendente).length;
 
+  // Os documentos lidos pelo robô eram o quarto total, o único que não
+  // filtrava a lista: foram para o "Detalhes" da faixa (26/11/2026, melhoria-813).
+  const documentosLidos = [
+    `Documentos lidos pelo robô: ${formatarNumero(resumo.textos.lidos, 0)} de ${formatarNumero(resumo.textos.documentos, 0)}`,
+    ...(resumo.textos.pendentes > 0
+      ? [`Faltam ${formatarNumero(resumo.textos.pendentes, 0)}; o robô lê um lote a cada poucos segundos.`]
+      : resumo.textos.semTexto > 0
+        ? [`${formatarNumero(resumo.textos.semTexto, 0)} sem texto (digitalizados).`]
+        : []),
+  ];
+
   return (
     <PageContainer>
-      <CabecalhoDosHonorarios ativa="honorarios" status={status} podeAgir={podeAgir} />
+      <CabecalhoDosHonorarios ativa="honorarios">
+        <FaixaDaVarredura
+          status={status}
+          podeAgir={podeAgir}
+          detalhes={relatorio.job ? documentosLidos : []}
+          acessorias={relatorio.job ? { estado: acessorias, resumo: resumo.acessorias, podeGerir } : undefined}
+        />
+      </CabecalhoDosHonorarios>
 
       {!relatorio.job ? (
         <SemVarredura texto="Assim que o robô terminar a primeira varredura das pastas, os documentos começam a ser lidos." />
       ) : (
         <>
-          <QuadroDoAcessorias estado={acessorias} resumo={relatorio.resumo.acessorias} podeAgir={podeAgir} podeGerir={podeGerir} />
           <FaixaDeTotais
             itens={[
               {
@@ -92,73 +109,60 @@ export default async function HonorariosPage({ searchParams }: { searchParams: P
                 ativo: situacao === "MANUAL",
                 href: "/honorarios?situacao=MANUAL",
               },
-              {
-                rotulo: "Documentos lidos pelo robô",
-                valor: `${formatarNumero(resumo.textos.lidos, 0)} de ${formatarNumero(resumo.textos.documentos, 0)}`,
-                icone: <FileSearch />,
-                detalhe:
-                  resumo.textos.pendentes > 0
-                    ? `faltam ${formatarNumero(resumo.textos.pendentes, 0)}; o robô lê um lote a cada poucos segundos`
-                    : resumo.textos.semTexto > 0
-                      ? `${formatarNumero(resumo.textos.semTexto, 0)} sem texto (digitalizados)`
-                      : undefined,
-              },
             ]}
           />
 
-          <ResumoExClientes exClientes={resumo.exClientes} />
-
-          <CascoDaTabela
-            contagem={contarItens(filtradas.length, "empresa", "empresas")}
-            total={`${formatarNumero(resumo.comValor, 0)} de ${formatarNumero(resumo.empresas, 0)} com honorário`}
-            busca={<DebouncedSearchInput paramName="busca" placeholder="Buscar empresa ou CNPJ" />}
-            filtros={
-              <FiltrosDaTela
-                naBarra
-                campos={[
-                  {
-                    chave: "situacao",
-                    rotulo: "Situação",
-                    vazioLabel: padrao === "acao" ? "Pedem ação" : "Todas",
-                    opcoes: [
-                      ...(padrao === "acao" ? [{ value: "todas", label: `Todas (${resumo.empresas})` }] : [{ value: "acao", label: `Pedem ação (${pedemAcao})` }]),
-                      ...SITUACOES_HONORARIO.map((s) => ({ value: s, label: `${ROTULO_SITUACAO[s]} (${conta(s)})` })),
-                    ],
-                  },
-                  {
-                    chave: "acessorias",
-                    rotulo: "No Acessórias",
-                    vazioLabel: "Todas",
-                    opcoes: (["DIFERENTE", "IGUAL", "NAO_ENCONTRADA", "NAO_CONFERIDO"] as const).map((c) => ({ value: c, label: ROTULO_COMPARACAO[c] })),
-                  },
-                  {
-                    chave: "responsavel",
-                    rotulo: "Responsável",
-                    vazioLabel: "Todos",
-                    opcoes: [...responsaveisDaLista(relatorio.empresas).map((r) => ({ value: r, label: r })), { value: "__none__", label: "Sem responsável" }],
-                  },
-                  ...(comFoto > 0
-                    ? [{ chave: "foto", rotulo: "Arquivo mais recente", vazioLabel: "Qualquer", opcoes: [{ value: "1", label: `Foto ou escaneado (${comFoto})` }] }]
-                    : []),
-                ]}
-              />
-            }
-          >
-            <TabelaDeHonorarios
-              empresas={daPagina}
-              podeAgir={podeAgir}
-              filtrado={filtradas.length === 0 && relatorio.empresas.length > 0}
-              envio={{
-                podeEnviar: podeGerir && acessorias.configurado,
-                bloqueado: acessorias.bloqueio
-                  ? "Envios travados: confira o aviso no topo"
-                  : acessorias.operacao?.executando
-                    ? "Há uma operação com o Acessórias em andamento"
-                    : null,
-                loteLiberado: acessorias.envioLoteLiberado,
-              }}
-            />
-          </CascoDaTabela>
+          <TabelaDeHonorarios
+            empresas={daPagina}
+            podeAgir={podeAgir}
+            filtrado={filtradas.length === 0 && relatorio.empresas.length > 0}
+            envio={{
+              podeEnviar: podeGerir && acessorias.configurado,
+              bloqueado: acessorias.bloqueio
+                ? "Envios travados: veja o que mudou na faixa do topo"
+                : acessorias.operacao?.executando
+                  ? "Há uma operação com o Acessórias em andamento"
+                  : null,
+              loteLiberado: acessorias.envioLoteLiberado,
+            }}
+            barra={{
+              contagem: contarItens(filtradas.length, "empresa", "empresas"),
+              total: `${formatarNumero(resumo.comValor, 0)} de ${formatarNumero(resumo.empresas, 0)} com honorário`,
+              fora: <ExClientesFora exClientes={resumo.exClientes} />,
+              busca: <DebouncedSearchInput paramName="busca" placeholder="Buscar empresa ou CNPJ" />,
+              filtros: (
+                <FiltrosDaTela
+                  naBarra
+                  campos={[
+                    {
+                      chave: "situacao",
+                      rotulo: "Situação",
+                      vazioLabel: padrao === "acao" ? "Pedem ação" : "Todas",
+                      opcoes: [
+                        ...(padrao === "acao" ? [{ value: "todas", label: `Todas (${resumo.empresas})` }] : [{ value: "acao", label: `Pedem ação (${pedemAcao})` }]),
+                        ...SITUACOES_HONORARIO.map((s) => ({ value: s, label: `${ROTULO_SITUACAO[s]} (${conta(s)})` })),
+                      ],
+                    },
+                    {
+                      chave: "acessorias",
+                      rotulo: "No Acessórias",
+                      vazioLabel: "Todas",
+                      opcoes: (["DIFERENTE", "IGUAL", "NAO_ENCONTRADA", "NAO_CONFERIDO"] as const).map((c) => ({ value: c, label: ROTULO_COMPARACAO[c] })),
+                    },
+                    {
+                      chave: "responsavel",
+                      rotulo: "Responsável",
+                      vazioLabel: "Todos",
+                      opcoes: [...responsaveisDaLista(relatorio.empresas).map((r) => ({ value: r, label: r })), { value: "__none__", label: "Sem responsável" }],
+                    },
+                    ...(comFoto > 0
+                      ? [{ chave: "foto", rotulo: "Arquivo mais recente", vazioLabel: "Qualquer", opcoes: [{ value: "1", label: `Foto ou escaneado (${comFoto})` }] }]
+                      : []),
+                  ]}
+                />
+              ),
+            }}
+          />
           <Pagination page={pagina} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={filtradas.length} rotulo="empresas" />
           {acessorias.configurado && <HistoricoDeEnvios envios={envios} />}
         </>

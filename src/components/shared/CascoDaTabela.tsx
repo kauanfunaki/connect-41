@@ -30,7 +30,15 @@ export function CascoDaTabela({
   children,
   className = "",
   buscaAEsquerda = false,
+  lote,
 }: {
+  /**
+   * A barra do lote (26/11/2026, melhoria-813): com linha marcada, a barra do
+   * casco vira "3 selecionadas · Limpar · …ação" no mesmo lugar, em vez de uma
+   * barra solta acima da tabela. A busca e o Filtros saem enquanto há seleção.
+   * Sem seleção, passe `undefined` e a barra volta a ser a de sempre.
+   */
+  lote?: ReactNode;
   /** "38 contas" — o que a lista tem agora, já com os filtros. Ver `contarItens`. */
   contagem?: ReactNode;
   /** O valor somado da lista, quando ela é de dinheiro. */
@@ -47,6 +55,18 @@ export function CascoDaTabela({
   /** Busca na frente, ocupando o espaço livre, e a contagem à direita (27/10/2026, como em Chamados). */
   buscaAEsquerda?: boolean;
 }) {
+  if (lote) return (
+    <div className={`c41-casco ${className}`.trim()}>
+      <div
+        role="region"
+        aria-label="Ações com as selecionadas"
+        className="c41-casco-barra flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[52px] px-4 py-2.5 mb-2 bg-brand-subtle border border-brand/30 rounded-lg shadow-xs text-ui"
+      >
+        {lote}
+      </div>
+      {children}
+    </div>
+  );
   const temResumo = Boolean(contagem || total || fora);
   const temControles = Boolean(busca || filtros || acoes);
   const resumo = temResumo && (
@@ -94,14 +114,33 @@ export function CascoDaTabela({
  * melhoria-814): era uma frase acima da tabela, fora dela ("12 empresas
  * inativas ou canceladas fora desta lista."). Sem nada escondido, nada.
  */
-export function ForaDaLista({ n, um, varios, href, acao = "Mostrar todos" }: { n: number; um: string; varios: string; href: string; acao?: string }) {
+export function ForaDaLista({
+  n,
+  um,
+  varios,
+  href,
+  acao = "Mostrar todos",
+  botao,
+}: {
+  n: number;
+  um: string;
+  varios: string;
+  href?: string;
+  acao?: string;
+  /**
+   * Quando o "Ver" não é um endereço — abre um painel com a lista de quem
+   * ficou de fora (os ex-clientes de /honorarios, 26/11/2026, melhoria-813) —,
+   * o botão vem pronto e entra no lugar do link.
+   */
+  botao?: ReactNode;
+}) {
   if (n <= 0) return null;
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-2 text-fs-2 text-fg-muted">
       <span aria-hidden>·</span>
       <span className="tabular-nums">{NUMERO.format(n)} {n === 1 ? um : varios}</span>
-      <span aria-hidden>·</span>
-      <Link href={href} className="font-medium text-brand hover:underline">{acao}</Link>
+      {(botao || href) && <span aria-hidden>·</span>}
+      {botao ?? (href && <Link href={href} className="font-medium text-brand hover:underline">{acao}</Link>)}
     </span>
   );
 }

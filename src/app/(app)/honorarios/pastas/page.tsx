@@ -1,4 +1,4 @@
-import { Building2, FolderTree } from "lucide-react";
+import { Building2, CircleSlash, FolderTree } from "lucide-react";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { noEscritorioDe, permissoesNosHonorarios } from "@/lib/honorarios/acesso";
 import { listarPastas, obterStatus } from "@/lib/honorarios/servidor/auditSyncService";
@@ -10,10 +10,11 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
-import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
+import { FaixaDaVarredura } from "@/components/honorarios/FaixaDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
-import { ResumoExClientes } from "@/components/honorarios/ExClientes";
+import { ExClientesFora } from "@/components/honorarios/ExClientes";
 import { TabelaDePastas } from "@/components/honorarios/TabelaDePastas";
 import { TabelaDeEmpresasSemPasta } from "@/components/honorarios/TabelaDeEmpresasSemPasta";
 
@@ -60,35 +61,52 @@ export default async function PastasPage({ searchParams }: { searchParams: Promi
     .sort((a, b) => a.razao_social.localeCompare(b.razao_social, "pt-BR"))
     .map((e) => ({ value: e.id, label: e.razao_social, descricao: e.cnpj, busca: e.cnpj.replace(/\D/g, "") }));
 
+  // Os números da rede iam numa frase acima da lista; agora no "Detalhes" da faixa.
+  const daRede = [
+    `${formatarNumero(resumo.pastas, 0)} pastas na rede · ${formatarNumero(resumo.comSubpastaContrato, 0)} com subpasta de contrato`,
+  ];
+  const vinculo = q.vinculo ?? "sem";
+
   return (
     <PageContainer>
-      <CabecalhoDosHonorarios ativa="pastas" status={status} podeAgir={podeAgir} />
+      <CabecalhoDosHonorarios ativa="pastas">
+        <FaixaDaVarredura status={status} podeAgir={podeAgir} detalhes={lista.job ? daRede : []} />
+      </CabecalhoDosHonorarios>
 
       {!lista.job ? (
         <SemVarredura texto="Assim que o robô terminar a primeira varredura, as pastas aparecem aqui." />
       ) : (
         <>
-          <p className="mb-3 text-label text-fg-secondary">
-            {formatarNumero(resumo.pastas, 0)} pastas na rede · {formatarNumero(resumo.comSubpastaContrato, 0)} com subpasta de contrato ·{" "}
-            <strong className="text-fg">
-              {resumo.empresasAtivasSemPasta} de {resumo.empresasAtivas} empresas ativas ainda sem pasta
-            </strong>
-            {resumo.empresasMarcadasSemPasta > 0 && ` · ${resumo.empresasMarcadasSemPasta} marcada(s) sem pasta, fora da auditoria`}
-          </p>
-
-          <ResumoExClientes exClientes={resumo.exClientes} />
-
-          <AbasDeLink
-            ativa={aba}
-            aria-label="Pastas ou empresas"
-            abas={[
-              { chave: "pastas", rotulo: "Pastas na rede", href: "/honorarios/pastas", icone: <FolderTree size={18} />, contagem: resumo.semVinculo },
+          {/* Os totais trocam a subaba (26/11/2026, melhoria-813): eram uma frase de
+              resumo e uma segunda fileira de abas igual à de cima. */}
+          <FaixaDeTotais
+            itens={[
               {
-                chave: "empresas",
+                rotulo: "Pastas sem vínculo",
+                valor: formatarNumero(resumo.semVinculo, 0),
+                icone: <FolderTree />,
+                tom: resumo.semVinculo > 0 ? "text-warning-fg" : undefined,
+                detalhe: aba === "pastas" && vinculo === "sem" ? "mostrando agora" : `de ${formatarNumero(resumo.pastas, 0)} pastas na rede`,
+                ativo: aba === "pastas" && vinculo === "sem",
+                href: "/honorarios/pastas",
+              },
+              {
                 rotulo: "Empresas sem pasta",
+                valor: formatarNumero(resumo.empresasAtivasSemPasta, 0),
+                icone: <Building2 />,
+                tom: resumo.empresasAtivasSemPasta > 0 ? "text-warning-fg" : undefined,
+                detalhe:
+                  aba === "empresas" && q.marca !== "marcadas" ? "mostrando agora" : `de ${formatarNumero(resumo.empresasAtivas, 0)} empresas ativas`,
+                ativo: aba === "empresas" && q.marca !== "marcadas",
                 href: "/honorarios/pastas?aba=empresas",
-                icone: <Building2 size={18} />,
-                contagem: resumo.empresasAtivasSemPasta,
+              },
+              {
+                rotulo: "Marcadas sem pasta",
+                valor: formatarNumero(resumo.empresasMarcadasSemPasta, 0),
+                icone: <CircleSlash />,
+                detalhe: aba === "empresas" && q.marca === "marcadas" ? "mostrando agora" : "fora da auditoria",
+                ativo: aba === "empresas" && q.marca === "marcadas",
+                href: "/honorarios/pastas?aba=empresas&marca=marcadas",
               },
             ]}
           />
@@ -96,6 +114,7 @@ export default async function PastasPage({ searchParams }: { searchParams: Promi
           {aba === "pastas" ? (
             <CascoDaTabela
               contagem={contarItens(pastas.length, "pasta", "pastas")}
+              fora={<ExClientesFora exClientes={resumo.exClientes} />}
               busca={<DebouncedSearchInput paramName="busca" placeholder="Buscar pasta ou empresa" />}
               filtros={
                 <FiltrosDaTela
@@ -121,6 +140,7 @@ export default async function PastasPage({ searchParams }: { searchParams: Promi
           ) : (
             <CascoDaTabela
               contagem={contarItens(empresasSemPasta.length, "empresa", "empresas")}
+              fora={<ExClientesFora exClientes={resumo.exClientes} />}
               busca={<DebouncedSearchInput paramName="busca" placeholder="Buscar empresa ou CNPJ" />}
               filtros={
                 <FiltrosDaTela
