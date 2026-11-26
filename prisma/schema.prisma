@@ -2814,6 +2814,7 @@ model Person {
   dp2Ferias            Dp2Ferias[]
   dp2Transferencias    Dp2Transferencia[]
   dp2Alocacoes         Dp2Alocacao[]
+  dp2EntregasDeEpi     Dp2EntregaDeEpi[]
   dp2HistoricoSalarial Dp2HistoricoSalarial[]
   dp2Ocorrencias       Dp2Ocorrencia[]
   dp2SaldoInicial      Dp2SaldoInicialMedia[]
@@ -7303,6 +7304,63 @@ model Dp2Alocacao {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_alocacoes")
+}
+
+/// Ambiente de trabalho da empresa, como está no LTCAT (26/11/2026,
+/// funcionalidade-761): setor, atividade, agentes nocivos (Tabela 24,
+/// separados por vírgula) e uso de EPC/EPI. O S-2240 sai do ambiente.
+model Dp2Ambiente {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  nome        String   @db.VarChar(100)
+  atividade   String?  @db.Text
+  agentes     String   @default("") @db.VarChar(500)
+  usaEpc      String   @default("0") @db.VarChar(1)
+  usaEpi      String   @default("0") @db.VarChar(1)
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, companyId])
+  @@map("dp2_ambientes")
+}
+
+/// EPI da empresa com o CA e a validade (26/11/2026, funcionalidade-761).
+model Dp2Epi {
+  id          String    @id @default(uuid())
+  tenantId    String
+  companyId   String
+  nome        String    @db.VarChar(120)
+  ca          String    @db.VarChar(10)
+  validadeCa  DateTime? @db.Date
+  criadoPorId String?
+  createdAt   DateTime  @default(now())
+
+  entregas Dp2EntregaDeEpi[]
+
+  @@index([tenantId, companyId])
+  @@map("dp2_epis")
+}
+
+/// Entrega de EPI ao colaborador: a ficha de controle (NR-6).
+model Dp2EntregaDeEpi {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  personId    String
+  epiId       String
+  data        DateTime @db.Date
+  quantidade  Int      @default(1)
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  epi    Dp2Epi @relation(fields: [epiId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([personId])
+  @@index([epiId])
+  @@map("dp2_entregas_de_epi")
 }
 
 /// Transferência do colaborador para outra empresa do escritório, sem

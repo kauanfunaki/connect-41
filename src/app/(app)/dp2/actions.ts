@@ -10,6 +10,7 @@ import { descreverAlteracao, lerAlteracao } from "@/lib/dp2/alteracaoEmLote";
 import { adiantamentoDoMes, lerParametrosDoAdiantamento } from "@/lib/dp2/adiantamento";
 import { avisosDaTransferencia, lerTransferencia } from "@/lib/dp2/transferencia";
 import { lerAlocacao, NOME_DA_ALOCACAO, rotuloDoTomador } from "@/lib/dp2/alocacao";
+import { lerAmbiente, lerEntregaDeEpi, lerEpi } from "@/lib/dp2/sst";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
@@ -1144,6 +1145,109 @@ export async function transferirColaboradorAction(_: EstadoDoDp2, fd: FormData):
   return { ok: true, texto: `${pessoa.name} transferido(a) para ${nomeExibicao(para)} em ${t.data.split("-").reverse().join("/")}. ${avisos.join(" ")}` };
 }
 
+// ─── Cadastros de SST: ambientes, EPI e entregas (26/11/2026, funcionalidade-761) ─
+
+export async function criarAmbienteAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerAmbiente({ nome: texto(fd, "nome"), atividade: texto(fd, "atividade"), agentes: texto(fd, "agentes"), usaEpc: texto(fd, "usaEpc"), usaEpi: texto(fd, "usaEpi") });
+  if (!lido.ok) return erro(lido.erro);
+  const amb = lido.ambiente;
+  const r = await getPrisma().dp2Ambiente.create({ data: { tenantId: a.tenantId, companyId, ...amb, agentes: amb.agentes.join(", "), criadoPorId: a.userId }, select: { id: true } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ambiente_criado", entityType: "Company", entityId: companyId, metadata: { ambiente: r.id, nome: amb.nome, agentes: amb.agentes } });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: `Ambiente "${amb.nome}" cadastrado. Ele aparece no S-2240 em DP 2 › eSocial.` };
+}
+
+export async function excluirAmbienteAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const amb = await prisma.dp2Ambiente.findFirst({ where: { id: texto(fd, "ambienteId"), tenantId: a.tenantId }, select: { id: true, companyId: true, nome: true } });
+  if (!amb) return erro("Ambiente não encontrado.");
+  const recusa = await empresaDoEscritorio(a, amb.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2Ambiente.delete({ where: { id: amb.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ambiente_excluido", entityType: "Company", entityId: amb.companyId, metadata: { ambiente: amb.id, nome: amb.nome } });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: `Ambiente "${amb.nome}" excluído. Os S-2240 já gerados ficam como estão.` };
+}
+
+export async function criarEpiAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerEpi({ nome: texto(fd, "nome"), ca: texto(fd, "ca"), validadeCa: texto(fd, "validadeCa") });
+  if (!lido.ok) return erro(lido.erro);
+  const epi = lido.epi;
+  const r = await getPrisma().dp2Epi.create({
+    data: { tenantId: a.tenantId, companyId, nome: epi.nome, ca: epi.ca, validadeCa: epi.validadeCa ? new Date(`${epi.validadeCa}T00:00:00Z`) : null, criadoPorId: a.userId },
+    select: { id: true },
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.epi_criado", entityType: "Company", entityId: companyId, metadata: { epi: r.id, ...epi } });
+  revalidatePath("/dp2/configuracao");
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `EPI "${epi.nome}" (CA ${epi.ca}) cadastrado. As entregas ficam em DP 2 › Colaboradores.` };
+}
+
+export async function excluirEpiAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const epi = await prisma.dp2Epi.findFirst({ where: { id: texto(fd, "epiId"), tenantId: a.tenantId }, select: { id: true, companyId: true, nome: true, _count: { select: { entregas: true } } } });
+  if (!epi) return erro("EPI não encontrado.");
+  const recusa = await empresaDoEscritorio(a, epi.companyId);
+  if (recusa) return erro(recusa);
+  if (epi._count.entregas > 0) return erro("Este EPI já foi entregue a colaboradores: a ficha de controle precisa dele. Cadastre o novo CA como outro EPI.");
+  await prisma.dp2Epi.delete({ where: { id: epi.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.epi_excluido", entityType: "Company", entityId: epi.companyId, metadata: { epi: epi.id, nome: epi.nome } });
+  revalidatePath("/dp2/configuracao");
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `EPI "${epi.nome}" excluído.` };
+}
+
+export async function registrarEntregaDeEpiAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2 nesta empresa.");
+  const prisma = getPrisma();
+  const epi = await prisma.dp2Epi.findFirst({ where: { id: texto(fd, "epiId"), tenantId: a.tenantId, companyId } });
+  if (!epi) return erro("Escolha um EPI cadastrado nesta empresa.");
+  const lido = lerEntregaDeEpi({ data: texto(fd, "data"), quantidade: texto(fd, "quantidade") }, { validadeCa: epi.validadeCa ? epi.validadeCa.toISOString().slice(0, 10) : null });
+  if (!lido.ok) return erro(lido.erro);
+  const en = lido.entrega;
+  const r = await prisma.dp2EntregaDeEpi.create({
+    data: { tenantId: a.tenantId, companyId, personId: pessoa.id, epiId: epi.id, data: new Date(`${en.data}T00:00:00Z`), quantidade: en.quantidade, criadoPorId: a.userId },
+    select: { id: true },
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.epi_entregue", entityType: "Person", entityId: pessoa.id, metadata: { entrega: r.id, nome: pessoa.name, epi: epi.nome, ca: epi.ca, ...en } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Entrega de ${en.quantidade} × ${epi.nome} (CA ${epi.ca}) a ${pessoa.name} registrada. Imprima a ficha de EPI para assinatura.` };
+}
+
+export async function excluirEntregaDeEpiAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const en = await prisma.dp2EntregaDeEpi.findFirst({ where: { id: texto(fd, "entregaId"), tenantId: a.tenantId }, select: { id: true, companyId: true, personId: true } });
+  if (!en) return erro("Entrega não encontrada.");
+  const recusa = await empresaDoEscritorio(a, en.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2EntregaDeEpi.delete({ where: { id: en.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.entrega_de_epi_excluida", entityType: "Person", entityId: en.personId, metadata: { entrega: en.id } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: "Entrega de EPI excluída." };
+}
+
 // ─── Alocação em tomador: cessão de mão de obra e temporário (26/11/2026, funcionalidade-772) ─
 
 export async function registrarAlocacaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -2270,16 +2374,21 @@ export async function gerarCondicaoAmbientalAction(_: EstadoDoDp2, fd: FormData)
   const inicio = ehData(texto(fd, "inicioCondicao"));
   if (!inicio) return erro("Informe desde quando vale a condição.");
   const epc = (k: string) => (["0", "1", "2"].includes(texto(fd, k)) ? texto(fd, k) : "0");
+  // O ambiente cadastrado (funcionalidade-761) preenche o que ficou em branco.
+  const ambienteId = texto(fd, "ambienteId");
+  const amb = ambienteId ? await getPrisma().dp2Ambiente.findFirst({ where: { id: ambienteId, tenantId: a.tenantId, companyId: p.companyId } }) : null;
+  if (ambienteId && !amb) return erro("Ambiente não encontrado na empresa do colaborador.");
+  const agentesDigitados = lerAgentes(texto(fd, "agentes"));
   const r = await gerarCondicaoAmbiental(
     a.tenantId,
     p.id,
     {
       inicio,
-      setor: texto(fd, "setor") || null,
-      atividade: texto(fd, "atividade") || null,
-      agentes: lerAgentes(texto(fd, "agentes")),
-      usaEpc: epc("usaEpc"),
-      usaEpi: epc("usaEpi"),
+      setor: texto(fd, "setor") || amb?.nome || null,
+      atividade: texto(fd, "atividade") || amb?.atividade || null,
+      agentes: agentesDigitados.length || !amb ? agentesDigitados : lerAgentes(amb.agentes),
+      usaEpc: amb && !texto(fd, "usaEpc") ? amb.usaEpc : epc("usaEpc"),
+      usaEpi: amb && !texto(fd, "usaEpi") ? amb.usaEpi : epc("usaEpi"),
     },
     a.userId
   );
