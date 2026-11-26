@@ -257,6 +257,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         titulo: "Acompanhar o mês no painel",
         passos: [
           "Abra “Painel do DP 2” e escolha o mês. A tela mostra as competências do mês de todas as empresas (ou do grupo em foco), com a etapa em que cada uma está.",
+          "Abaixo, “Avisos do cálculo” junta o que o cálculo do mês apontou em cada pessoa, com link para o holerite, e “Avisos de vencimento” lista, do vencido ao mais distante: férias em dobro ou com o concessivo terminando em 60 dias, contrato por prazo determinado (experiência) e estágio terminando em 30 dias, salário-família de quem faz 14 anos e dependente de IRRF que faz 21 ou 24 anos.",
           "Clique no nome da empresa para abrir a competência dela.",
           "A coluna “Alertas” conta os avisos do cálculo, como salário abaixo do piso da convenção.",
         ],

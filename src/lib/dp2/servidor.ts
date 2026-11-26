@@ -2,6 +2,8 @@
 // nos arquivos puros ao lado (`mensal.ts`, `tabelas.ts`…); aqui só se junta o
 // que eles precisam e se guarda o que devolvem.
 
+import { avisosDeVencimento } from "./avisos";
+import { lerDadosEsocial } from "./esocial/cadastro";
 import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
@@ -570,4 +572,47 @@ async function calcularDecimoDaPessoa(
     diasTrabalhados: d.avos,
     alertas: d.alertas,
   };
+}
+
+// ─── Avisos (25/11/2026, funcionalidade-757) ────────────────────────────────
+
+/** Os avisos de vencimento dos colaboradores com contrato no DP 2 das empresas pedidas. */
+export async function avisosDasEmpresas(tenantId: string, companyIds: readonly string[], hoje: string) {
+  if (companyIds.length === 0) return [];
+  const vinculos = await getPrisma().dp2Vinculo.findMany({
+    where: { tenantId, companyId: { in: [...companyIds] }, person: { active: true } },
+    select: {
+      companyId: true,
+      dadosEsocial: true,
+      person: {
+        select: {
+          id: true,
+          name: true,
+          admissionDate: true,
+          dismissalDate: true,
+          dependentes: { select: { name: true, birthDate: true, relationship: true, isIRDependent: true, isSalarioFamilia: true } },
+          dp2Ferias: { select: { aquisitivoInicio: true, diasGozo: true, diasAbono: true, faltas: true, terco: true, tercoAbono: true } },
+        },
+      },
+    },
+  });
+  const dia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  return avisosDeVencimento(
+    vinculos.map((v) => {
+      const es = lerDadosEsocial(v.dadosEsocial);
+      return {
+        personId: v.person.id,
+        nome: v.person.name,
+        companyId: v.companyId,
+        admissao: dia(v.person.admissionDate),
+        desligamento: dia(v.person.dismissalDate),
+        tipoContrato: es.tipoContrato,
+        dataTermino: es.dataTermino,
+        estagioPrevisaoTermino: es.estagioPrevisaoTermino,
+        ferias: v.person.dp2Ferias.map((f) => ({ aquisitivoInicio: dia(f.aquisitivoInicio)!, diasGozo: f.diasGozo, diasAbono: f.diasAbono, faltas: f.faltas, terco: Number(f.terco), tercoAbono: Number(f.tercoAbono) })),
+        dependentes: v.person.dependentes.map((d) => ({ nome: d.name, nascimento: dia(d.birthDate), relacao: d.relationship, irrf: d.isIRDependent, salarioFamilia: d.isSalarioFamilia })),
+      };
+    }),
+    hoje
+  );
 }
