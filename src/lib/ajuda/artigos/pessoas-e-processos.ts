@@ -299,6 +299,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pagar e entregar a folha",
         passos: [
+          "Transparência salarial (Lei 14.611/2023): em DP 2 › Colaboradores, a seção compara por cargo quantas mulheres e homens (empregados CLT ativos) e a média do salário do contrato de cada grupo, mais a quebra por raça/cor. O relatório é obrigatório para empresas com 100 ou mais empregados; o sexo e a raça vêm dos dados do eSocial do contrato.",
           "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
           "“Gerar remessa” monta o arquivo do banco (CNAB 240) com o líquido de cada um, pela conta pagadora da empresa, em crédito em conta corrente, crédito em poupança ou TED para outro banco. Quem está sem banco, agência, conta ou CPF fica de fora e aparece listado ali.",
           "O primeiro arquivo de cada banco vai para teste no banco antes de valer.",
