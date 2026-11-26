@@ -26,6 +26,7 @@ import { reais, pct, num } from "./formato";
 import type { PapelDaRubrica, RubricaDoMotor } from "./rubricas";
 import type { TabelasDaCompetencia } from "./tabelas";
 import { MARCA_DA_FIXA } from "./rubricasFixas";
+import { ehDomestico } from "./categorias";
 import { diasPeloInss, type AfastamentoNoMes } from "./afastamentos";
 
 export type Insalubridade = "NENHUM" | "MINIMO" | "MEDIO" | "MAXIMO";
@@ -99,6 +100,8 @@ export type ItemDoHolerite = {
 
 export type Encargos = {
   base: number;
+  /** Doméstico (LC 150/2015, art. 34): a indenização compensatória de 3,2% (o FGTS da multa, depositado todo mês). */
+  indenizacaoCompensatoria?: number;
   inssEmpresa: number;
   rat: number;
   terceiros: number;
@@ -272,6 +275,36 @@ export function aliquotaPatronal(empresa: EmpresaDoMotor): number {
   return INSS_EMPRESA_ALIQUOTA + empresa.ratAliquota * empresa.fap + empresa.terceirosAliquota;
 }
 
+/**
+ * Os encargos do empregador doméstico (LC 150/2015, art. 34; 26/11/2026,
+ * funcionalidade-777): INSS patronal 8%, GILRAT 0,8%, o FGTS de 8% e a
+ * indenização compensatória de 3,2%, tudo no DAE do Simples Doméstico. Sem
+ * terceiros e sem FAP.
+ */
+export const DOMESTICO = { inssPatronal: 8, gilrat: 0.8, indenizacaoCompensatoria: 3.2 } as const;
+
+export function encargosDoDomestico(base: number, fgts: number): Encargos {
+  const inssEmpresa = r2((base * DOMESTICO.inssPatronal) / 100);
+  const rat = r2((base * DOMESTICO.gilrat) / 100);
+  const indenizacaoCompensatoria = r2((base * DOMESTICO.indenizacaoCompensatoria) / 100);
+  return {
+    base,
+    inssEmpresa,
+    rat,
+    terceiros: 0,
+    fgts,
+    indenizacaoCompensatoria,
+    total: r2(inssEmpresa + rat + fgts + indenizacaoCompensatoria),
+    memoria: [
+      `Empregador doméstico (LC 150/2015, art. 34), tudo no DAE`,
+      `INSS patronal: ${reais(base)} × ${pct(DOMESTICO.inssPatronal)} = ${reais(inssEmpresa)}`,
+      `GILRAT: ${reais(base)} × ${pct(DOMESTICO.gilrat)} = ${reais(rat)}`,
+      `Indenização compensatória: ${reais(base)} × ${pct(DOMESTICO.indenizacaoCompensatoria)} = ${reais(indenizacaoCompensatoria)}`,
+      `FGTS ${reais(fgts)}`,
+    ],
+  };
+}
+
 export function calcularEncargos(base: number, fgts: number, empresa: EmpresaDoMotor): Encargos {
   const memoria: string[] = [];
   if (empresa.patronalNoDas) {
@@ -289,11 +322,13 @@ export function calcularEncargos(base: number, fgts: number, empresa: EmpresaDoM
   return { base, inssEmpresa, rat, terceiros, fgts, total: r2(inssEmpresa + rat + terceiros + fgts), memoria };
 }
 
-export function calcularProvisoes(base: number, empresa: EmpresaDoMotor, aprendiz: boolean): Provisoes {
+export function calcularProvisoes(base: number, empresa: EmpresaDoMotor, aprendiz: boolean, domestico = false): Provisoes {
   const ferias = r2(base / 12);
   const tercoFerias = r2(ferias / 3);
   const decimo = r2(base / 12);
-  const encargoPct = aliquotaPatronal(empresa) + (aprendiz ? FGTS_ALIQUOTA_APRENDIZ : FGTS_ALIQUOTA);
+  const encargoPct = domestico
+    ? DOMESTICO.inssPatronal + DOMESTICO.gilrat + DOMESTICO.indenizacaoCompensatoria + FGTS_ALIQUOTA
+    : aliquotaPatronal(empresa) + (aprendiz ? FGTS_ALIQUOTA_APRENDIZ : FGTS_ALIQUOTA);
   const encargosFerias = r2(((ferias + tercoFerias) * encargoPct) / 100);
   const encargosDecimo = r2((decimo * encargoPct) / 100);
   const memoria = [
@@ -538,9 +573,9 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   if (dias < 30 && dias > 0) alertas.push(`Mês proporcional: ${dias} dias.`);
   if (e.desligamento && dias > 0) alertas.push("Desligamento no mês: as verbas rescisórias saem na tela de Rescisões.");
 
-  const encargos = calcularEncargos(baseInss, fgts, e.empresa);
+  const encargos = ehDomestico(v.categoria) ? encargosDoDomestico(baseInss, fgts) : calcularEncargos(baseInss, fgts, e.empresa);
   // A provisão é do salário do mês: as férias gozadas não provisionam férias de novo.
-  const provisoes = calcularProvisoes(r2(Math.max(0, baseInss - baseDasFerias)), e.empresa, v.aprendiz);
+  const provisoes = calcularProvisoes(r2(Math.max(0, baseInss - baseDasFerias)), e.empresa, v.aprendiz, ehDomestico(v.categoria));
   if (feriasDoMes.length) alertas.push(`Férias no mês (${feriasDoMes.map((f) => f.periodo).join(", ")}): pagas no recibo; aqui entram no INSS e no FGTS do mês.`);
 
   return { itens, proventos, descontos, liquido, baseInss, baseFgts, inss, irrf, fgts, encargos, provisoes, diasTrabalhados: dias, alertas };
