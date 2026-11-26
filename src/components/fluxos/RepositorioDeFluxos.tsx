@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, Folder, Trash2, Workflow } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, PanelLeftClose, PanelLeftOpen, Trash2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
@@ -55,6 +55,10 @@ type Props = {
  * desenho). No celular a árvore vai em cima, com teto de altura, e o fluxo
  * embaixo.
  *
+ * Na edição (25/11/2026, melhoria-829 — "Editar em página cheia"), a árvore
+ * recolhe e o limite de largura sai: as etapas ganham espaço ao lado do
+ * desenho. "Mostrar pastas" traz a árvore de volta; sair da edição também.
+ *
  * O fluxo aberto vem do endereço (`?fluxo=`): a página só carrega a lista de
  * etapas dele, e não a de todos.
  */
@@ -83,6 +87,15 @@ export function RepositorioDeFluxos({
   const [busca, setBusca] = useState("");
   const [renomeando, setRenomeando] = useState<string | null>(null);
   const [nomeNovo, setNomeNovo] = useState("");
+  // Na edição a árvore recolhe; "Mostrar pastas" a traz de volta só enquanto se edita.
+  const emEdicao = !!aberto && editando === aberto.id && !versaoAberta;
+  const [pastasNaEdicao, setPastasNaEdicao] = useState(false);
+  const [emEdicaoAntes, setEmEdicaoAntes] = useState(emEdicao);
+  if (emEdicao !== emEdicaoAntes) {
+    setEmEdicaoAntes(emEdicao);
+    setPastasNaEdicao(false);
+  }
+  const arvoreAVista = !emEdicao || pastasNaEdicao;
   const [expandidas, setExpandidas] = useState<Set<string>>(() => new Set(aberto ? [aberto.pastaId] : pastas[0] ? [pastas[0].id] : []));
 
   // A pasta criada agora chega aberta na árvore (como nos manuais).
@@ -187,7 +200,6 @@ export function RepositorioDeFluxos({
   }
 
   const listaDePastas = pastas.map((p) => ({ id: p.id, titulo: p.titulo }));
-  const emEdicao = !!aberto && editando === aberto.id && !versaoAberta;
   const aoCriarFluxo = (id: string) => irPara(endereco(id, null, true));
 
   return (
@@ -204,7 +216,11 @@ export function RepositorioDeFluxos({
 
       {/* h-full, sem altura em vh: a página reserva exatamente o espaço que sobra, e as rolagens são as de dentro (como nos manuais). */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-xs md:flex-row">
-        <nav aria-label="Pastas e fluxos" className="flex max-h-[40%] w-full flex-shrink-0 flex-col border-b border-border p-3 md:max-h-none md:w-72 md:border-r md:border-b-0">
+        <nav
+          id="arvore-de-fluxos"
+          aria-label="Pastas e fluxos"
+          className={`${arvoreAVista ? "flex" : "hidden"} max-h-[40%] w-full flex-shrink-0 flex-col border-b border-border p-3 md:max-h-none md:w-72 md:border-r md:border-b-0`}
+        >
           {pastas.some((p) => p.fluxos.length > 0) && (
             <Input compact value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar fluxo" aria-label="Buscar fluxo pelo nome" className="mb-2 flex-shrink-0" />
           )}
@@ -308,7 +324,8 @@ export function RepositorioDeFluxos({
         </nav>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1280px] px-4 py-6 md:px-6">
+          {/* Na edição, sem o limite de 1.280 px: a página cheia é das etapas e do desenho. */}
+          <div className={`mx-auto w-full px-4 py-6 md:px-6 ${emEdicao ? "" : "max-w-[1280px]"}`}>
             {aberto ? (
               emEdicao ? (
                 <EditorDoFluxo
@@ -322,6 +339,12 @@ export function RepositorioDeFluxos({
                   salvarAction={acoes.salvarVersao}
                   aoSair={() => setEditando(null)}
                   aoMudarSujo={setSujo}
+                  controleDasPastas={
+                    <Button variant="ghost" size="sm" onClick={() => setPastasNaEdicao((v) => !v)} aria-expanded={pastasNaEdicao} aria-controls="arvore-de-fluxos" className="max-md:h-11">
+                      {pastasNaEdicao ? <PanelLeftClose size={14} aria-hidden /> : <PanelLeftOpen size={14} aria-hidden />}
+                      {pastasNaEdicao ? "Esconder pastas" : "Mostrar pastas"}
+                    </Button>
+                  }
                 />
               ) : (
                 <LeituraDoFluxo

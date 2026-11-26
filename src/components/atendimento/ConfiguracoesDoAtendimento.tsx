@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoHora } from "@/components/ui/CampoHora";
+import { SeletorDeSetores } from "@/components/ui/SeletorDeSetores";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import type { QuemVeTudo } from "@/lib/atendimento/regras";
 import { useToast } from "@/components/ui/Toast";
@@ -137,23 +138,14 @@ export function ConfiguracoesDoAtendimento(p: {
       </Bloco>
 
       <Bloco titulo="Setores que atendem" texto="Aparecem no “Encaminhar”. Quem é do setor recebe os avisos.">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {p.setores.map((s) => (
-            <div key={s.code} className="rounded-lg border border-border bg-surface px-3 py-2">
-              <Checkbox
-                id={`atd-setor-${s.code}`}
-                checked={c.setores.includes(s.code)}
-                onChange={(e) => mudar({ setores: e.target.checked ? [...c.setores, s.code] : c.setores.filter((x) => x !== s.code) })}
-                label={
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.cor }} aria-hidden />
-                    {s.label}
-                  </span>
-                }
-              />
-            </div>
-          ))}
-        </div>
+        {/* O seletor de setores padrão (25/11/2026, melhoria-812); era uma grade de cartões. */}
+        <SeletorDeSetores
+          rotulo="Setores"
+          opcoes={p.setores.map((s) => ({ value: s.code, label: s.label, cor: s.cor }))}
+          valor={c.setores}
+          onChange={(setores) => mudar({ setores })}
+          className="max-w-md"
+        />
       </Bloco>
 
       <Bloco

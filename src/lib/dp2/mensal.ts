@@ -26,6 +26,7 @@ import { reais, pct, num } from "./formato";
 import type { PapelDaRubrica, RubricaDoMotor } from "./rubricas";
 import type { TabelasDaCompetencia } from "./tabelas";
 import { MARCA_DA_FIXA } from "./rubricasFixas";
+import { diasPeloInss, type AfastamentoNoMes } from "./afastamentos";
 
 export type Insalubridade = "NENHUM" | "MINIMO" | "MEDIO" | "MAXIMO";
 
@@ -144,6 +145,11 @@ export type EntradaMensal = {
    * o INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases.
    */
   outrasBasesInss?: number;
+  /**
+   * Afastamentos (S-2230) que caem no mês (funcionalidade-749): os dias pagos
+   * pelo INSS saem do salário; os avisos vão para os alertas.
+   */
+  afastamentos?: readonly AfastamentoNoMes[];
 };
 
 export const FGTS_ALIQUOTA = 8;
@@ -303,7 +309,11 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   // Férias no mês (funcionalidade-745): o salário e os adicionais pagam só os dias fora delas.
   const feriasDoMes = e.ferias ?? [];
   const diasDeFerias = Math.min(dias, feriasDoMes.reduce((s, f) => s + f.diasDeFerias, 0));
-  const diasDeSalario = dias - diasDeFerias;
+  // Afastamento (funcionalidade-749): do 16º dia em diante o INSS paga, e esses dias saem do salário.
+  const afastamentosDoMes = e.afastamentos ?? [];
+  const diasDeAfastamento = Math.min(dias - diasDeFerias, diasPeloInss(afastamentosDoMes));
+  for (const a of afastamentosDoMes) if (a.alerta) alertas.push(a.alerta);
+  const diasDeSalario = dias - diasDeFerias - diasDeAfastamento;
   const cheio = salarioMensalCheio(v);
   const { insalubridade, periculosidade } = adicionaisFixos(v, salarioMinimo);
   const horaNormal = v.tipoSalario === "HORISTA" ? v.salarioBase : cheio / v.horasMensais;
@@ -312,7 +322,8 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // ── Salário e adicionais fixos ──
   const salario = (cheio * diasDeSalario) / 30;
-  const deFerias = diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "";
+  const deFerias =
+    (diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "") + (diasDeAfastamento > 0 ? ` (${diasDeAfastamento} dia(s) de afastamento pagos pelo INSS)` : "");
   itens.push(
     itemDaRubrica(
       R("SALARIO"),

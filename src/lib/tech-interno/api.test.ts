@@ -48,7 +48,7 @@ beforeEach(() => {
   s.salvarItem.mockResolvedValue({ ok: true, id: ID_ITEM });
   s.mudarSituacaoItem.mockResolvedValue({ ok: true, id: ID_ITEM });
   // O id curto acha o item pelo número; o uuid passa direto (como `idDoItem`).
-  s.idDoItem.mockImplementation(async (_ator: unknown, id: string) => (id.toLowerCase() === ID_CURTO || id === ID_ITEM ? ID_ITEM : id === "melhoria-3" ? "entrega-3" : null));
+  s.idDoItem.mockImplementation(async (_ator: unknown, id: string) => (id.toUpperCase() === ID_CURTO || id === ID_ITEM ? ID_ITEM : id === "melhoria-3" ? "entrega-3" : null));
 });
 
 describe("autenticação nas rotas", () => {
@@ -149,7 +149,7 @@ describe("listar e ver", () => {
     expect(s.detalheItem).toHaveBeenCalledWith(ator, ID_CURTO);
     expect(json).toMatchObject({
       id: ID_ITEM, number: 7, shortId: ID_CURTO, url: "https://connect.example.test/controle-interno/bug-7",
-      origin: { id: "entrega-3", title: "Entrega fictícia", shortId: "melhoria-3", url: "https://connect.example.test/controle-interno/melhoria-3" },
+      origin: { id: "entrega-3", title: "Entrega fictícia", shortId: "MEL-3", url: "https://connect.example.test/controle-interno/mel-3" },
     });
     // O que não é uuid nem id curto não chega a procurar.
     expect(await corpo(await item.GET(pedido("/tarefa-7", { token: LEITOR }), params("tarefa-7")))).toMatchObject({ status: 404, json: { error: { code: "not_found" } } });
@@ -167,7 +167,7 @@ describe("listar e ver", () => {
     const { json } = await corpo(await opcoes.GET(pedido("/opcoes", { token: LEITOR })));
     expect(json).toMatchObject({
       systems: [{ key: "robo:robo-1", name: "Robô fictício", origin: "robo", active: true }],
-      people: [{ id: "pessoa-1", name: "Pessoa fictícia" }], recentDeliveries: [{ id: "e-1", shortId: "melhoria-3", title: "Entrega fictícia" }],
+      people: [{ id: "pessoa-1", name: "Pessoa fictícia" }], recentDeliveries: [{ id: "e-1", shortId: "MEL-3", title: "Entrega fictícia" }],
       types: { BUG: "Bug" }, priorities: { 0: "Baixa", 3: "Urgente" },
     });
   });

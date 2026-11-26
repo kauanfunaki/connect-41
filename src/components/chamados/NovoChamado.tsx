@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Aviso } from "@/components/ui/Aviso";
 import { Stepper } from "@/components/ui/Stepper";
+import { SeletorDeSetores } from "@/components/ui/SeletorDeSetores";
 import { Campo, CamposDoChamado, type CategoriaDaTela } from "./CamposDoChamado";
 import { IconeDoArquivo } from "./LinhaDoTempo";
 import { FORMATOS } from "@/lib/chamados/formatos";
@@ -32,7 +33,7 @@ type Anexo = { id: string; fileName: string };
 type Rascunho = { id: string; version: number };
 export type RascunhoDaTela = { id: string; version: number; dados: DadosDoChamado; anexos: Anexo[] };
 
-type Setor = { code: string; label: string };
+type Setor = { code: string; label: string; cor?: string };
 /**
  * `atendem`: os setores que administram os chamados (12/11/2026). Com dois ou
  * mais, a revisão mostra o setor que vai atender, proposto pela IA (16/11/2026,
@@ -191,7 +192,8 @@ export function NovoChamado({ inicial, categorias, setores, atendem, setorPadrao
             : revisao ? <p className="text-helper text-fg-muted">A IA não identificou a categoria só pela descrição. Escolha uma, ou deixe para a equipe classificar.</p> : null}
         </div>
         {escolher && <div className="space-y-1.5">
-          <Campo label="Setor que vai atender"><Select required value={dados.handlingSectorCode} onChange={e => editar({ ...dados, handlingSectorCode: e.target.value })}><option value="">Selecione o setor</option>{atendem.map(st => <option key={st.code} value={st.code}>{st.label}</option>)}</Select></Campo>
+          {/* Escolha única no seletor de setores padrão (25/11/2026, melhoria-812); era um Select. */}
+          <SeletorDeSetores unico rotulo="Setor que vai atender" required opcoes={atendem.map(st => ({ value: st.code, label: st.label, cor: st.cor }))} valor={dados.handlingSectorCode} onChange={code => editar({ ...dados, handlingSectorCode: code })} className="max-w-md" />
           {revisao?.setor ? <p className="flex flex-wrap items-start gap-1.5 text-helper text-fg-secondary"><Sparkles size={14} aria-hidden className="mt-0.5 shrink-0 text-brand" /><span>Sugestão da IA: <strong className="text-fg">{nomeDoSetor(revisao.setor)}</strong>{revisao.motivoDoSetor ? ` — ${revisao.motivoDoSetor}` : ""}</span>{dados.handlingSectorCode !== revisao.setor && <Button variant="link" onClick={() => editar({ ...dados, handlingSectorCode: revisao.setor ?? "" })}>Usar a sugestão</Button>}</p>
             : revisao?.perguntaDoSetor ? <Aviso tom="info" icone={<Sparkles aria-hidden />}><p className="font-semibold">A IA ficou em dúvida sobre o setor</p><p>{revisao.perguntaDoSetor}</p><p>Escolha acima o setor que vai atender.</p></Aviso>
             : <p className="text-helper text-fg-muted">Escolha o setor que vai atender o pedido.</p>}

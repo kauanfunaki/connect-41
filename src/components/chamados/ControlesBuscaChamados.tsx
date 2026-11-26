@@ -12,7 +12,7 @@ import type { EscopoDaBusca } from "@/lib/chamados/acesso";
 // um filtro a mais. Cada papel recebe só os escopos dele (`escoposDaBusca`);
 // com um só, a escolha nem aparece.
 const ESCOPOS: Record<EscopoDaBusca, { rotulo: string; dica: string }> = {
-  chamado: { rotulo: "Chamado", dica: "Título, descrição ou chamado-45…" }, solicitante: { rotulo: "Solicitante", dica: "Nome de quem abriu…" },
+  chamado: { rotulo: "Chamado", dica: "Título, descrição ou CHA-45…" }, solicitante: { rotulo: "Solicitante", dica: "Nome de quem abriu…" },
   setor: { rotulo: "Setor", dica: "Nome do setor solicitante…" }, responsavel: { rotulo: "Responsável", dica: "Nome do responsável…" },
 };
 export function ControlesBuscaChamados({ atribuidos, escopos }: { atribuidos: boolean; escopos: EscopoDaBusca[] }) {
