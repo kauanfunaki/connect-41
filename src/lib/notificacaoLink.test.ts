@@ -21,11 +21,11 @@ describe("linkDaNotificacao", () => {
   });
 
   it("com o número já lido (o chip do sino), vai pelo endereço curto — só se for da mesma tela (10/11/2026)", () => {
-    expect(linkDaNotificacao({ type: "PROCESS_MESSAGE", entityId: "pr1" }, { tela: "processo", numero: 12 })).toBe("/processos/processo-12");
-    expect(linkDaNotificacao({ type: "COMMENT", entityId: "i1" }, { tela: "tarefa", numero: 77 })).toBe("/kanban/itens/tarefa-77");
-    expect(linkDaNotificacao({ type: "COMPANY_MESSAGE", entityType: "COMPANY", entityId: "c1" }, { tela: "empresa", numero: 301 })).toBe("/empresas/empresa-301");
-    expect(linkDaNotificacao({ type: "HANDOFF_RECEIVED", entityId: "h1" }, { tela: "transferencia", numero: 8 })).toBe("/transferencias/transferencia-8");
-    expect(linkDaNotificacao({ type: "client_request_answered", entityId: "r1" }, { tela: "pendencia", numero: 9 })).toBe("/pendencias/pendencia-9");
+    expect(linkDaNotificacao({ type: "PROCESS_MESSAGE", entityId: "pr1" }, { tela: "processo", numero: 12 })).toBe("/processos/pro-12");
+    expect(linkDaNotificacao({ type: "COMMENT", entityId: "i1" }, { tela: "tarefa", numero: 77 })).toBe("/kanban/itens/tar-77");
+    expect(linkDaNotificacao({ type: "COMPANY_MESSAGE", entityType: "COMPANY", entityId: "c1" }, { tela: "empresa", numero: 301 })).toBe("/empresas/emp-301");
+    expect(linkDaNotificacao({ type: "HANDOFF_RECEIVED", entityId: "h1" }, { tela: "transferencia", numero: 8 })).toBe("/transferencias/tra-8");
+    expect(linkDaNotificacao({ type: "client_request_answered", entityId: "r1" }, { tela: "pendencia", numero: 9 })).toBe("/pendencias/pen-9");
     // Número de outra tela não entra: o link fica com o uuid.
     expect(linkDaNotificacao({ type: "PROCESS_MESSAGE", entityId: "pr1" }, { tela: "empresa", numero: 3 })).toBe("/processos/pr1");
     expect(linkDaNotificacao({ type: "CHAMADO_NOVO", entityId: "t1" })).toBe("/chamados/t1");

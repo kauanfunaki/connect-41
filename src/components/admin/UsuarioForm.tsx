@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import type { UsuarioState } from "@/app/(app)/admin/usuarios/actions";
 import type { UserRole } from "@/generated/prisma/enums";
 import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
@@ -9,8 +9,8 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Button } from "@/components/ui/Button";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { SeletorDeSetores } from "@/components/ui/SeletorDeSetores";
 import { Aviso } from "@/components/ui/Aviso";
 
 export type UsuarioDefaultValues = {
@@ -26,7 +26,8 @@ type Props = {
   action: (prev: UsuarioState, form: FormData) => Promise<UsuarioState>;
   cancelHref: string;
   roleOptions: { value: UserRole; label: string }[];
-  sectorOptions: { value: string; label: string }[];
+  /** Os setores ativos, com a cor (a bolinha do seletor). */
+  sectorOptions: { value: string; label: string; color?: string }[];
   defaultValues?: UsuarioDefaultValues;
   isSelf?: boolean;
   /**
@@ -40,16 +41,6 @@ type Props = {
 export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, defaultValues, isSelf, extras }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const isEdit = Boolean(defaultValues?.id);
-  const [selectedSectors, setSelectedSectors] = useState(() => new Set(defaultValues?.sectors ?? []));
-
-  function toggleSector(code: string) {
-    setSelectedSectors((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
-    });
-  }
   // Campos <select>/<input> com `disabled` não são enviados no FormData — quando o próprio
   // usuário está editando seu registro, travamos as opções (papel único, ativo forçado) em
   // vez de desabilitar, para o valor continuar sendo submetido e bater com a regra do servidor.
@@ -149,58 +140,16 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
             )}
           </FieldGrid>
 
-          <div role="group" aria-labelledby="setores-com-acesso" className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-              <p id="setores-com-acesso" className="text-label font-medium text-fg">
-                Setores com acesso
-                <span className="text-fg-muted font-normal ml-1.5">
-                  ({selectedSectors.size} de {sectorOptions.length})
-                </span>
-              </p>
-              {/* Botões, e não texto azul/cinza (polimento de 30/09). Os cartões
-                  de setor logo abaixo continuam: são caixas de marcar do próprio
-                  formulário, não filtro de lista. */}
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  onClick={() => setSelectedSectors(new Set(sectorOptions.map((s) => s.value)))}
-                >
-                  Selecionar todos
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  onClick={() => setSelectedSectors(new Set())}
-                >
-                  Limpar
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {sectorOptions.map((s) => {
-                const checked = selectedSectors.has(s.value);
-                return (
-                  <label
-                    key={s.value}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-fs-2 transition-colors cursor-pointer ${
-                      checked
-                        ? "border-brand/40 bg-brand/8 text-fg font-medium"
-                        : "border-border text-fg-secondary hover:bg-surface-2"
-                    }`}
-                  >
-                    <Checkbox
-                      name="sectors"
-                      value={s.value}
-                      checked={checked}
-                      onChange={() => toggleSector(s.value)}
-                    />
-                    {s.label}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+          {/* O seletor de setores padrão (25/11/2026, melhoria-812): era uma
+              grade de caixas sem a cor do setor, com "Selecionar todos"/"Limpar".
+              Cada marcado continua indo como `sectors` no FormData. */}
+          <SeletorDeSetores
+            rotulo="Setores com acesso"
+            name="sectors"
+            opcoes={sectorOptions.map((s) => ({ value: s.value, label: s.label, cor: s.color }))}
+            valorInicial={defaultValues?.sectors ?? []}
+            className="sm:max-w-md"
+          />
         </FormSection>
       </div>
 
