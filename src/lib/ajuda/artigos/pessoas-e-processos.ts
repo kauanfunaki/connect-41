@@ -307,6 +307,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pagar e entregar a folha",
         passos: [
+          "RPA: para o autônomo (categoria 701), “Saídas da folha” tem o botão “RPA de …” com o recibo de pagamento a autônomo em PDF: o serviço, o INSS de 11%, o IRRF, o campo do ISS (quando o município cobrar), o líquido e a contribuição de 20% da empresa.",
           "Transparência salarial (Lei 14.611/2023): em DP 2 › Colaboradores, a seção compara por cargo quantas mulheres e homens (empregados CLT ativos) e a média do salário do contrato de cada grupo, mais a quebra por raça/cor. O relatório é obrigatório para empresas com 100 ou mais empregados; o sexo e a raça vêm dos dados do eSocial do contrato.",
           "Documentos do contrato: em DP 2 › Colaboradores, escolha o colaborador e baixe a ficha de registro de empregado ou o contrato de experiência (para contrato por prazo determinado, com o termo de prorrogação). Os dados vêm do cadastro da pessoa e do contrato do DP 2; o que faltar sai com um traço.",
           "Termo de quitação anual (art. 507-B da CLT): em DP 2 › Colaboradores, escolha o colaborador e o ano e baixe o termo em PDF. Ele soma por rubrica o que as competências fechadas do ano pagaram (folha e 13º), o líquido e o FGTS, com as assinaturas do empregador, do empregado e do sindicato da categoria.",
