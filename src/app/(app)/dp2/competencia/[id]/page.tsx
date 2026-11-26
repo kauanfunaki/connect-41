@@ -45,6 +45,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { LinkDoCliente } from "@/components/dp2/LinkDoCliente";
 import { centrosDeCustoDasPessoas, lancamentosDaCompetencia } from "@/lib/dp2/saidas";
 import { resumoPorCentro } from "@/lib/dp2/contabilizacao";
+import { RETENCAO_CESSAO, rotuloDoTomador, tomadorNoMes, type TipoDeAlocacao } from "@/lib/dp2/alocacao";
 import {
   ajustarCalculoAction,
   calcularCompetenciaAction,
@@ -202,6 +203,34 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
           }))
         )
       : [];
+  // A folha por tomador (funcionalidade-772): quem está alocado em cessão de mão de obra ou trabalho temporário no mês.
+  const alocacoesDoMes =
+    calculos.length > 0
+      ? tomadorNoMes(
+          (await getPrisma().dp2Alocacao.findMany({ where: { tenantId: ctx.tenantId, companyId: comp.companyId, personId: { in: calculos.map((c) => c.personId) } } })).map((al) => ({
+            personId: al.personId,
+            tipo: al.tipo as TipoDeAlocacao,
+            tomadorCnpj: al.tomadorCnpj,
+            tomadorNome: al.tomadorNome,
+            inicio: al.inicio.toISOString().slice(0, 10),
+            fim: al.fim ? al.fim.toISOString().slice(0, 10) : null,
+          })),
+          competenciaDe(comp.ano, comp.mes)
+        )
+      : new Map<string, never>();
+  const porTomador = resumoPorCentro(
+    calculos
+      .filter((c) => alocacoesDoMes.has(c.personId))
+      .map((c) => ({
+        centro: rotuloDoTomador(alocacoesDoMes.get(c.personId)!),
+        proventos: n(c.proventos),
+        descontos: n(c.descontos),
+        liquido: n(c.liquido),
+        fgts: n(c.fgts),
+        encargos: n((c.encargos as { total?: number } | null)?.total),
+        provisoes: n((c.provisoes as { total?: number } | null)?.total),
+      }))
+  );
   const urlPublica = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"));
   const totais = (comp.totais ?? null) as TotaisDaCompetencia | null;
@@ -1229,6 +1258,42 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                       <td className={TD_NUM}>{brl(r.fgts)}</td>
                       <td className={TD_NUM}>{brl(r.encargos)}</td>
                       <td className={TD_NUM}>{brl(r.provisoes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Secao>
+        )}
+
+        {etapa === "conferir" && porTomador.length > 0 && (
+          <Secao
+            titulo="Folha por tomador"
+            apoio={`Quem está alocado em cessão de mão de obra ou trabalho temporário no mês (DP 2 › Colaboradores). O tomador retém ${RETENCAO_CESSAO}% do INSS sobre o valor da nota; a coluna de referência é ${RETENCAO_CESSAO}% dos proventos, para comparar com a retenção e compensar na DCTFWeb.`}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Tomador</th>
+                    <th className={TH_NUM}>Pessoas</th>
+                    <th className={TH_NUM}>Proventos</th>
+                    <th className={TH_NUM}>Líquido</th>
+                    <th className={TH_NUM}>FGTS</th>
+                    <th className={TH_NUM}>Encargos</th>
+                    <th className={TH_NUM}>Referência {RETENCAO_CESSAO}%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porTomador.map((r) => (
+                    <tr key={r.centro} className={TR}>
+                      <td className={TD}>{r.centro}</td>
+                      <td className={TD_NUM}>{r.pessoas}</td>
+                      <td className={TD_NUM}>{brl(r.proventos)}</td>
+                      <td className={TD_NUM}>{brl(r.liquido)}</td>
+                      <td className={TD_NUM}>{brl(r.fgts)}</td>
+                      <td className={TD_NUM}>{brl(r.encargos)}</td>
+                      <td className={TD_NUM}>{brl(Math.round(r.proventos * RETENCAO_CESSAO) / 100)}</td>
                     </tr>
                   ))}
                 </tbody>

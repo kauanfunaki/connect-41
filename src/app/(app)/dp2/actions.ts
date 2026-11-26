@@ -9,6 +9,7 @@ import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
 import { descreverAlteracao, lerAlteracao } from "@/lib/dp2/alteracaoEmLote";
 import { adiantamentoDoMes, lerParametrosDoAdiantamento } from "@/lib/dp2/adiantamento";
 import { avisosDaTransferencia, lerTransferencia } from "@/lib/dp2/transferencia";
+import { lerAlocacao, NOME_DA_ALOCACAO, rotuloDoTomador } from "@/lib/dp2/alocacao";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
@@ -1141,6 +1142,52 @@ export async function transferirColaboradorAction(_: EstadoDoDp2, fd: FormData):
   revalidatePath("/dp2/colaboradores");
   const avisos = avisosDaTransferencia({ nome: nomeExibicao(de), cnpj: de.cnpj }, { nome: nomeExibicao(para), cnpj: para.cnpj });
   return { ok: true, texto: `${pessoa.name} transferido(a) para ${nomeExibicao(para)} em ${t.data.split("-").reverse().join("/")}. ${avisos.join(" ")}` };
+}
+
+// ─── Alocação em tomador: cessão de mão de obra e temporário (26/11/2026, funcionalidade-772) ─
+
+export async function registrarAlocacaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2 nesta empresa.");
+  const lido = lerAlocacao({ tipo: texto(fd, "tipo"), tomadorCnpj: texto(fd, "tomadorCnpj"), tomadorNome: texto(fd, "tomadorNome"), inicio: texto(fd, "inicio"), fim: texto(fd, "fim") });
+  if (!lido.ok) return erro(lido.erro);
+  const al = lido.alocacao;
+  const r = await getPrisma().dp2Alocacao.create({
+    data: {
+      tenantId: a.tenantId,
+      companyId,
+      personId: pessoa.id,
+      tipo: al.tipo,
+      tomadorCnpj: al.tomadorCnpj,
+      tomadorNome: al.tomadorNome,
+      inicio: new Date(`${al.inicio}T00:00:00Z`),
+      fim: al.fim ? new Date(`${al.fim}T00:00:00Z`) : null,
+      criadoPorId: a.userId,
+    },
+    select: { id: true },
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.alocacao_registrada", entityType: "Person", entityId: pessoa.id, metadata: { alocacao: r.id, nome: pessoa.name, ...al } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `${pessoa.name} alocado(a) em ${rotuloDoTomador(al)} (${NOME_DA_ALOCACAO[al.tipo].toLowerCase()}). A folha da competência sai separada por tomador.` };
+}
+
+export async function excluirAlocacaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const al = await prisma.dp2Alocacao.findFirst({ where: { id: texto(fd, "alocacaoId"), tenantId: a.tenantId }, select: { id: true, companyId: true, personId: true, tomadorNome: true } });
+  if (!al) return erro("Alocação não encontrada.");
+  const recusa = await empresaDoEscritorio(a, al.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2Alocacao.delete({ where: { id: al.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.alocacao_excluida", entityType: "Person", entityId: al.personId, metadata: { alocacao: al.id, tomador: al.tomadorNome } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: "Alocação excluída." };
 }
 
 // ─── Adiantamento salarial (26/11/2026, funcionalidade-758) ─────────────────

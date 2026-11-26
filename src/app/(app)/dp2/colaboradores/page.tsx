@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NOME_DA_ALOCACAO, rotuloDoTomador, type TipoDeAlocacao } from "@/lib/dp2/alocacao";
 import { IdCard, Pencil, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -37,7 +38,7 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, reajusteColetivoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, excluirAlocacaoAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -159,6 +160,8 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       take: 20,
     }),
   ]);
+  // Alocação em tomador (funcionalidade-772): cessão de mão de obra e trabalho temporário.
+  const alocacoes = await getPrisma().dp2Alocacao.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, include: { person: { select: { name: true } } }, orderBy: [{ inicio: "desc" }], take: 50 });
   const nomeDaEmpresaOutra = new Map(outrasEmpresas.map((c) => [c.id, nomeExibicao(c)]));
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
@@ -934,6 +937,96 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                 </li>
               ))}
             </ul>
+          )}
+        </Secao>
+      )}
+
+      {pessoas.some((p) => p.dp2Vinculo) && (tela.podeAgir || alocacoes.length > 0) && (
+        <Secao
+          titulo="Cessão de mão de obra e trabalho temporário"
+          apoio="Em qual tomador cada colaborador trabalha. A folha da competência sai separada por tomador, para conferir a retenção de 11% do INSS na nota de cada um."
+        >
+          {alocacoes.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[720px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Tomador</th>
+                    <th className={TH}>Tipo</th>
+                    <th className={TH}>Período</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alocacoes.map((al) => (
+                    <tr key={al.id} className={TR}>
+                      <td className={`${TD} align-middle`}>{al.person.name}</td>
+                      <td className={`${TD} align-middle`}>{rotuloDoTomador(al)}</td>
+                      <td className={`${TD} align-middle`}>{NOME_DA_ALOCACAO[al.tipo as TipoDeAlocacao] ?? al.tipo}</td>
+                      <td className={`${TD} align-middle tabular-nums`}>
+                        {formatCalendarDate(al.inicio)} a {al.fim ? formatCalendarDate(al.fim) : "hoje"}
+                      </td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        {tela.podeAgir && (
+                          <FormularioDoDp2
+                            acao={excluirAlocacaoAction}
+                            rotulo="Excluir"
+                            rotuloEnviando="Excluindo…"
+                            variante="secondary"
+                            tamanho="sm"
+                            confirmar={{ titulo: "Excluir a alocação?", texto: "O colaborador deixa de aparecer nesse tomador na folha por tomador.", rotulo: "Excluir" }}
+                          >
+                            <input type="hidden" name="alocacaoId" value={al.id} />
+                          </FormularioDoDp2>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={registrarAlocacaoAction} rotulo="Registrar alocação" rotuloEnviando="Registrando…" variante="secondary">
+              <input type="hidden" name="companyId" value={empresaAtual} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <CampoForm label="Colaborador" htmlFor="al-personId">
+                  <Select id="al-personId" name="personId" defaultValue="" required>
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {pessoas
+                      .filter((p) => p.dp2Vinculo && !p.dismissalDate)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Tipo" htmlFor="al-tipo">
+                  <Select id="al-tipo" name="tipo" defaultValue="CESSAO" required>
+                    <option value="CESSAO">{NOME_DA_ALOCACAO.CESSAO}</option>
+                    <option value="TEMPORARIO">{NOME_DA_ALOCACAO.TEMPORARIO}</option>
+                  </Select>
+                </CampoForm>
+                <CampoForm label="CNPJ do tomador" htmlFor="al-cnpj">
+                  <Input id="al-cnpj" name="tomadorCnpj" inputMode="numeric" maxLength={18} placeholder="00.000.000/0000-00" required />
+                </CampoForm>
+                <CampoForm label="Nome do tomador" htmlFor="al-nome">
+                  <Input id="al-nome" name="tomadorNome" maxLength={160} required />
+                </CampoForm>
+                <CampoForm label="Início" htmlFor="al-inicio">
+                  <CampoData id="al-inicio" name="inicio" required />
+                </CampoForm>
+                <CampoForm label="Fim (em branco se continua)" htmlFor="al-fim">
+                  <CampoData id="al-fim" name="fim" />
+                </CampoForm>
+              </div>
+            </FormularioDoDp2>
           )}
         </Secao>
       )}
