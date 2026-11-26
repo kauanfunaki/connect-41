@@ -35,7 +35,10 @@ export const PERCENTUAL_DA_INSALUBRIDADE: Record<Insalubridade, number> = { NENH
 
 export type VinculoDoMotor = {
   salarioBase: number;
-  tipoSalario: "MENSAL" | "HORISTA";
+  /** "HORA_AULA": professor; salarioBase é o valor da hora-aula (funcionalidade-773). */
+  tipoSalario: "MENSAL" | "HORISTA" | "HORA_AULA";
+  /** Aulas por semana do professor (funcionalidade-773). */
+  aulasSemanais?: number | null;
   horasMensais: number;
   dependentesIrrf: number;
   filhosSalarioFamilia: number;
@@ -248,7 +251,21 @@ export function itemDaRubrica(r: RubricaDoMotor, valor: number, referencia: stri
 }
 
 /** O salário do mês cheio (no horista, a hora × as horas do mês). */
+/** Semanas por mês do professor (CLT art. 320, § 1º: 4,5 semanas). */
+export const SEMANAS_DO_MES = 4.5;
+
+/**
+ * O mês do professor (funcionalidade-773): aulas por semana × 4,5 semanas ×
+ * valor da hora-aula, mais 1/6 de DSR (Súmula 351 do TST).
+ */
+export function salarioDoProfessor(valorHoraAula: number, aulasSemanais: number): { aulas: number; base: number; dsr: number; total: number } {
+  const base = r2(aulasSemanais * SEMANAS_DO_MES * valorHoraAula);
+  const dsr = r2(base / 6);
+  return { aulas: aulasSemanais, base, dsr, total: r2(base + dsr) };
+}
+
 export function salarioMensalCheio(v: VinculoDoMotor): number {
+  if (v.tipoSalario === "HORA_AULA") return salarioDoProfessor(v.salarioBase, v.aulasSemanais ?? 0).total;
   return v.tipoSalario === "HORISTA" ? r2(v.salarioBase * v.horasMensais) : v.salarioBase;
 }
 
@@ -383,7 +400,12 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
       R("SALARIO"),
       salario,
       `${diasDeSalario} dias`,
-      v.tipoSalario === "HORISTA"
+      v.tipoSalario === "HORA_AULA"
+        ? (() => {
+            const p = salarioDoProfessor(v.salarioBase, v.aulasSemanais ?? 0);
+            return `${p.aulas} aulas/semana × ${num(SEMANAS_DO_MES)} × ${reais(v.salarioBase)} = ${reais(p.base)} + 1/6 de DSR ${reais(p.dsr)} = ${reais(p.total)}${diasDeSalario < 30 ? ` × ${diasDeSalario}/30` : ""}${deFerias}`;
+          })()
+        : v.tipoSalario === "HORISTA"
         ? `${reais(v.salarioBase)}/h × ${v.horasMensais} h${diasDeSalario < 30 ? ` × ${diasDeSalario}/30` : ""}${deFerias}`
         : diasDeSalario < 30
           ? `${reais(cheio)} × ${diasDeSalario}/30${deFerias}`

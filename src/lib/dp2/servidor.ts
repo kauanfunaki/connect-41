@@ -162,6 +162,7 @@ export function vinculoDoMotor(v: {
   salarioBase: Prisma.Decimal | number;
   tipoSalario: string;
   horasMensais: number;
+  aulasSemanais?: number | null;
   dependentesIrrf: number;
   filhosSalarioFamilia: number;
   insalubridade: string;
@@ -175,7 +176,8 @@ export function vinculoDoMotor(v: {
 }): VinculoDoMotor {
   return {
     salarioBase: dec(v.salarioBase),
-    tipoSalario: v.tipoSalario === "HORISTA" ? "HORISTA" : "MENSAL",
+    tipoSalario: v.tipoSalario === "HORISTA" ? "HORISTA" : v.tipoSalario === "HORA_AULA" ? "HORA_AULA" : "MENSAL",
+    aulasSemanais: v.aulasSemanais ?? null,
     horasMensais: v.horasMensais > 0 ? v.horasMensais : 220,
     dependentesIrrf: v.dependentesIrrf,
     filhosSalarioFamilia: v.filhosSalarioFamilia,

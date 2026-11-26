@@ -17,7 +17,7 @@ import { pdfDosHolerites, type DadosDoHolerite, type LinhaDoHolerite } from "./h
 import { BANCOS, gerarRemessa, problemaDoPagamento, type PagamentoDaRemessa } from "./cnab240";
 import { contabilizar, lerContasDaFolha, type CalculoContabil, type ContasDaFolha, type RubricaContabil } from "./contabilizacao";
 import { NOME_DO_TIPO_DE_COMPETENCIA, nomeDaCompetencia } from "./tela";
-import type { ItemDoHolerite } from "./mensal";
+import { salarioDoProfessor, type ItemDoHolerite } from "./mensal";
 import type { CalculoDoRelatorio } from "./relatoriosDaFolha";
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -46,7 +46,7 @@ export async function dadosDosHolerites(tenantId: string, competenciaId: string,
   if (!comp) return null;
   const calculos = await prisma.dp2Calculo.findMany({
     where: { tenantId, competenciaId, ...(personId ? { personId } : {}) },
-    include: { person: { select: { name: true, cpf: true, admissionDate: true, dp2Vinculo: { select: { salarioBase: true, tipoSalario: true, horasMensais: true } } } } },
+    include: { person: { select: { name: true, cpf: true, admissionDate: true, dp2Vinculo: { select: { salarioBase: true, tipoSalario: true, horasMensais: true, aulasSemanais: true } } } } },
   });
   calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"));
   const empresa = nomeExibicao(comp.company);
@@ -54,7 +54,13 @@ export async function dadosDosHolerites(tenantId: string, competenciaId: string,
   const competencia = nomeDaCompetencia(comp.ano, comp.mes);
   const dados = calculos.map((c): DadosDoHolerite => {
     const v = c.person.dp2Vinculo;
-    const base = v ? (v.tipoSalario === "HORISTA" ? n(v.salarioBase) * v.horasMensais : n(v.salarioBase)) : 0;
+    const base = v
+      ? v.tipoSalario === "HORA_AULA"
+        ? salarioDoProfessor(n(v.salarioBase), v.aulasSemanais ?? 0).total
+        : v.tipoSalario === "HORISTA"
+          ? n(v.salarioBase) * v.horasMensais
+          : n(v.salarioBase)
+      : 0;
     return {
       empresaNome: empresa,
       empresaDocumento: doc || null,
