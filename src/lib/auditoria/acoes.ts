@@ -1006,6 +1006,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   Person: "pessoa",
   Pipeline: "tarefa",
   PipelineItem: "atividade",
+  AberturaAutomatica: "abertura automática de tarefas",
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",
   TenantEnviosConfig: "padrão dos envios",

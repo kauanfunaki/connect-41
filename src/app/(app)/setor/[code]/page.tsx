@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FolderKanban, FolderClosed, ListTodo, UserCog } from "lucide-react";
+import { FolderKanban, FolderClosed, ListTodo, UserCog, Zap } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -20,6 +21,8 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
 import { boardPath } from "@/lib/kanbanPaths";
 import { poderesNoEspaco, ROTULO_DA_PERMISSAO } from "@/lib/kanban/permissaoDoEspaco";
+import { separarAutomaticos } from "@/lib/kanban/aberturaAutomatica";
+import { SeloAutomatico } from "@/components/kanban/SeloAutomatico";
 
 /** Quantas listas o cartão do espaço mostra pelo nome antes do "+N". */
 const LISTAS_NO_CARTAO = 4;
@@ -57,6 +60,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
         color: true,
         icon: true,
         defaultPermission: true,
+        systemKey: true,
         folders: { orderBy: { order: "asc" }, select: { id: true, name: true } },
         _count: { select: { folders: true, pipelines: { where: { active: true } } } },
         pipelines: {
@@ -76,6 +80,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
   // setor de 28/10.
   const podeCriar = canManageSector(ctx, code);
   const comPoderes = spaces.map((s) => ({ ...s, poderes: poderesNoEspaco(ctx, { sectorCode: code, defaultPermission: s.defaultPermission }) }));
+  const { automaticos, daEquipe } = separarAutomaticos(comPoderes);
 
   return (
     <PageContainer>
@@ -102,6 +107,13 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
               criarLista={criarListaNoLocalEscolhido}
               criarPasta={criarPastaNoEspacoEscolhido}
             />
+            {/* De onde as tarefas do setor nascem sozinhas (27/11/2026,
+                funcionalidade-872): quem coordena o setor vê e configura. */}
+            {podeCriar && (
+              <Button href={`/setor/${code}/abertura-automatica`} variant="secondary">
+                <Zap size={14} aria-hidden /> Abertura automática
+              </Button>
+            )}
             {podeCriar && <JanelaDoEspaco modo="criar" action={criarEspaco.bind(null, code)} />}
           </div>
         }
@@ -120,8 +132,40 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
           />
         </Card>
       ) : (
+        <div className="flex flex-col gap-6">
+          {/* O que o sistema criou sozinho fica no topo, separado do que a
+              equipe criou (27/11/2026, funcionalidade-844). Sem automático, a
+              tela é a de sempre, sem os títulos das seções. */}
+          {automaticos.length > 0 && (
+            <section aria-labelledby="espacos-automaticos">
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 id="espacos-automaticos" className="text-section font-semibold text-fg">
+                  Automáticos
+                </h2>
+                <p className="text-fs-2 text-fg-muted">O sistema abre as tarefas daqui sozinho. Dá para renomear e mexer à mão; não dá para excluir.</p>
+              </div>
+              {grade(automaticos)}
+            </section>
+          )}
+          {daEquipe.length > 0 && (
+            <section aria-labelledby={automaticos.length > 0 ? "espacos-da-equipe" : undefined}>
+              {automaticos.length > 0 && (
+                <h2 id="espacos-da-equipe" className="mb-3 text-section font-semibold text-fg">
+                  Criados pela equipe
+                </h2>
+              )}
+              {grade(daEquipe)}
+            </section>
+          )}
+        </div>
+      )}
+    </PageContainer>
+  );
+
+  function grade(lista: typeof comPoderes) {
+    return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
-          {comPoderes.map((s, i) => {
+          {lista.map((s, i) => {
             const restantes = s._count.pipelines - s.pipelines.length;
             return (
               // O menu "…" é irmão do <Link>, não filho: <button> dentro de <a>
@@ -134,10 +178,11 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                   <Link href={`/setor/${code}/espacos/${s.id}`} className="group block px-4 pt-3.5 pb-3">
                     <p className="flex items-center gap-2.5 pr-8 min-w-0">
                       <QuadradoDoEspaco nome={s.name} cor={s.color} icone={s.icon} tamanho="sm" />
-                      <span className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors truncate">
+                      <span className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors truncate" title={s.name}>
                         {s.name}
                       </span>
                     </p>
+                    {s.systemKey && <SeloAutomatico className="mt-1.5" />}
                     <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-muted">
                       <span className="inline-flex items-center gap-1">
                         <FolderClosed size={13} /> {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"}
@@ -180,7 +225,8 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                   )}
                 </div>
                 {/* Excluir espaço: só o administrador (13/10/2026) — o gestor do setor cria. */}
-                {podeExcluir(ctx) && (
+                {/* O automático não se exclui: desliga-se a abertura automática. */}
+                {podeExcluir(ctx) && !s.systemKey && (
                   <div className="absolute top-3 right-2.5">
                     <DeleteEntityMenu kind="espaço" name={s.name} action={excluirEspaco.bind(null, s.id)} />
                   </div>
@@ -189,7 +235,6 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
             );
           })}
         </div>
-      )}
-    </PageContainer>
-  );
+    );
+  }
 }

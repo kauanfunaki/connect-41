@@ -162,6 +162,25 @@ export async function listaDeDestino(tenantId: string): Promise<string | null> {
   return garantirListaDosProcessos(tenantId, sectorCode);
 }
 
+/**
+ * A lista onde os processos do escritório viram cartão hoje, para o atalho do
+ * kanban de processos — sem criar nada: a escolhida pelo setor, ou a padrão se
+ * já existe. `null` quando não há nenhuma ainda.
+ */
+export async function listaDosProcessosParaVer(tenantId: string): Promise<{ id: string; sectorCode: string } | null> {
+  const sectorCode = await setorDoModulo(tenantId, MODULO_DOS_PROCESSOS);
+  if (!sectorCode) return null;
+  const prisma = getPrisma();
+  const config = await prisma.aberturaAutomatica.findUnique({
+    where: { tenantId_sectorCode_origem: { tenantId, sectorCode, origem: "PROCESSO_SOCIETARIO" } },
+    select: { pipelineId: true },
+  });
+  const escolhida = config?.pipelineId
+    ? await prisma.pipeline.findFirst({ where: { id: config.pipelineId, tenantId, active: true }, select: { id: true, sectorCode: true } })
+    : null;
+  return escolhida ?? (await prisma.pipeline.findFirst({ where: { tenantId, sectorCode, systemKey: LISTA_DOS_PROCESSOS }, select: { id: true, sectorCode: true } }));
+}
+
 // ─── A sincronia ─────────────────────────────────────────────────────────────
 
 const SELECT_DO_PROCESSO = {
