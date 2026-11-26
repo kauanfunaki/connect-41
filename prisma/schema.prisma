@@ -2797,6 +2797,7 @@ model Person {
   dp2Rescisoes         Dp2Rescisao[]
   dp2Ferias            Dp2Ferias[]
   dp2Transferencias    Dp2Transferencia[]
+  dp2Alocacoes         Dp2Alocacao[]
   dp2HistoricoSalarial Dp2HistoricoSalarial[]
   dp2Ocorrencias       Dp2Ocorrencia[]
   dp2SaldoInicial      Dp2SaldoInicialMedia[]
@@ -7263,6 +7264,29 @@ model Dp2Ferias {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_ferias")
+}
+
+/// Alocação do colaborador num tomador de serviço: cessão de mão de obra ou
+/// trabalho temporário (26/11/2026, funcionalidade-772). A folha da
+/// competência sai separada por tomador para conferir a retenção de 11%.
+model Dp2Alocacao {
+  id          String    @id @default(uuid())
+  tenantId    String
+  companyId   String
+  personId    String
+  tipo        String    @db.VarChar(20)
+  tomadorCnpj String    @db.VarChar(14)
+  tomadorNome String    @db.VarChar(160)
+  inicio      DateTime  @db.Date
+  fim         DateTime? @db.Date
+  criadoPorId String?
+  createdAt   DateTime  @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([personId])
+  @@map("dp2_alocacoes")
 }
 
 /// Transferência do colaborador para outra empresa do escritório, sem

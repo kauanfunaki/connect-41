@@ -490,6 +490,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.ferias_excluidas": x("excluiu férias gravadas no DP 2"),
   "folha.contratos_alterados_em_lote": c("alterou contratos em lote no DP 2"),
   "folha.adiantamento_lancado": c("lançou o adiantamento salarial da competência no DP 2"),
+  "folha.alocacao_registrada": c("registrou a alocação de um colaborador num tomador no DP 2"),
+  "folha.alocacao_excluida": x("excluiu a alocação de um colaborador num tomador no DP 2"),
   "folha.colaborador_transferido": c("transferiu um colaborador para outra empresa no DP 2"),
   "folha.reajuste_coletivo": c("aplicou um reajuste coletivo de salários no DP 2"),
   "folha.ocorrencia_registrada": c("registrou uma advertência ou suspensão no DP 2"),
