@@ -295,12 +295,14 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Enquanto o DP 2 roda em paralelo com a Domínio, em “Comparar com a Domínio” cole uma pessoa por linha: CPF; proventos; descontos; líquido; INSS; IRRF; FGTS. Campo vazio não é comparado.",
           "Ainda em “Conferir”, “Apuração da competência” mostra o INSS (DCTFWeb), o IRRF e, para entidade sem fins lucrativos (opção na Configuração), o PIS de 1% sobre a folha a recolher. Inclua ali as retenções de 11% sofridas (CNPJ do tomador e nota) e as compensações de INSS, IRRF e PIS (mês de origem): elas abatem o devido, e o que sobrar aparece como saldo.",
           "No passo “Fechar”, clique em “Fechar competência”. A competência fechada é a que vale para as médias de férias, 13º e rescisão.",
+          "Para quem já trabalhava antes do DP 2, traga o histórico das médias em DP 2 › Colaboradores › “Saldo inicial das médias”: copie da Domínio (Utilitários › Lançamentos › Lançamento de Rubricas para Médias) uma linha por rubrica e mês, CPF; competência; código da rubrica; valor, e clique em “Importar saldo inicial”. Confira o total de cada pessoa e clique em “Conferir”: só então os meses entram na média de férias, 13º e rescisão, nos meses sem competência fechada no DP 2.",
         ],
       },
       {
         titulo: "Pagar e entregar a folha",
         passos: [
           "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
+          "Em “Guias da folha” (passo “Fechar”), o DARF da DCTFWeb baixado pela rotina do Serpro é conferido com o INSS e o IRRF a recolher da apuração. O FGTS Digital não tem API: baixe a GFD no portal e use “Anexar a GFD” com o valor e o vencimento; o PDF vai para Arquivos › Guias e o valor é conferido com o FGTS do mês.",
           "“Gerar remessa” monta o arquivo do banco (CNAB 240) com o líquido de cada um, pela conta pagadora da empresa, em crédito em conta corrente, crédito em poupança ou TED para outro banco. Quem está sem banco, agência, conta ou CPF fica de fora e aparece listado ali.",
           "O primeiro arquivo de cada banco vai para teste no banco antes de valer.",
           "“Baixar lançamentos (CSV)” traz os lançamentos contábeis da folha, pelas contas das rubricas e das contas da folha.",
