@@ -156,16 +156,22 @@ padrão `kauanfunaki/connect-41`). O resultado da última conferência vem em
 `deliveryChecks`: só as que deram certo, como `pr`, `migration:<pasta>` e `no-ar`.
 
 **O id curto** (10/11/2026): cada item tem um número no escritório, uma sequência só
-para todos os tipos, e o endereço curto vem do tipo e do número —
-`/controle-interno/bug-123`, `/controle-interno/melhoria-45`. Os prefixos são `bug`,
-`melhoria`, `funcionalidade`, `teste` e `migracao`.
+para todos os tipos, e o id curto vem do tipo e do número. Desde 25/11/2026
+(melhoria-818), o prefixo é a sigla do tipo em três letras: `BUG`, `MEL` (melhoria),
+`FUN` (nova funcionalidade), `TES` (teste) e `MIG` (migração). Na tela, na API e no MCP
+o id vem em maiúsculas, `FUN-816`; no endereço, em minúsculas,
+`/controle-interno/fun-816`.
 
-- Todo item da resposta traz `number` (o número), `shortId` (`"bug-123"`) e `url`, que
+- Todo item da resposta traz `number` (o número), `shortId` (`"BUG-123"`) e `url`, que
   passa a ser o endereço curto. O `origin` ("Veio de") e as `recentDeliveries` também
   trazem o `shortId`.
-- Toda ferramenta e toda rota com `{id}` aceitam o `shortId` no lugar do UUID; o
-  `originItemId` também. O número é o que vale: se o tipo do item mudou, o prefixo
-  antigo ainda acha o item, e a tela passa para o endereço de agora.
+- Toda ferramenta e toda rota com `{id}` aceitam o `shortId` no lugar do UUID, sem
+  diferença de maiúsculas; o `originItemId` também. O número é o que vale: se o tipo
+  do item mudou, o prefixo antigo ainda acha o item, e a tela passa para o endereço de
+  agora.
+- O id curto de antes de 25/11/2026, com o tipo por extenso (`melhoria-45`,
+  `funcionalidade-816`, `teste-…`, `migracao-…`), continua aceito para sempre: acha o
+  item, e o endereço antigo passa para o novo.
 - A busca (`q`) com um id curto acha também o item desse número.
 - O endereço antigo, com o UUID, continua abrindo e passa para o curto.
 
@@ -179,7 +185,7 @@ Base: `https://app.useconnect.com.br/api/v1/controle-interno`. Cabeçalho
 | `GET /` | ler | filtros na URL: `status` (`OPEN` padrão, `ALL`, `PENDING`…), `type`, `priority` (0–3), `system`, `assignee` (`me`, `none` ou id), `q`, `overdue`, `page` |
 | `GET /opcoes` | ler | — |
 | `GET /resumo` | ler | na URL: `period` (`day`, `week` padrão, `month`, `year`) e `date` (AAAA-MM-DD; padrão hoje) |
-| `GET /{id}` | ler | — (`{id}` é o UUID ou o id curto, como `bug-123`, aqui e nas rotas abaixo) |
+| `GET /{id}` | ler | — (`{id}` é o UUID ou o id curto, como `BUG-123` ou `fun-816`, aqui e nas rotas abaixo) |
 | `POST /` | escrever | `title`, `type` obrigatórios; `description`, `acceptanceCriteria`, `priority`, `status`, `systemKey`, `systemMode`, `assigneeId`, `dueDate` (AAAA-MM-DD), `size` (P/M/G), `originItemId`, `prUrl`, `commitSha` |
 | `PATCH /{id}` | escrever | os campos que mudam, mais `version` |
 | `POST /{id}/situacao` | escrever | `{ "status": "IN_PROGRESS", "version": 3 }` |

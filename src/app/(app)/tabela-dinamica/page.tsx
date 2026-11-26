@@ -25,6 +25,7 @@ import {
   montarTabela,
 } from "@/lib/relatorios/tabelaDinamica";
 import { fatosDaBase, LIMITE_DE_FATOS } from "@/lib/relatorios/tabelaDinamicaServidor";
+import { modelosDaTela } from "@/lib/relatorios/modelosDaTabelaServidor";
 import { TabelaDinamica } from "@/components/relatorios/TabelaDinamica";
 import { ConfiguracaoDaTabela } from "@/components/relatorios/ConfiguracaoDaTabela";
 
@@ -80,7 +81,10 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
     );
   }
 
-  const { fatos, limitada } = await fatosDaBase(ctx.tenantId, empresaId ?? empresasDeTodas, config, agora);
+  const [{ fatos, limitada }, modelos] = await Promise.all([
+    fatosDaBase(ctx.tenantId, empresaId ?? empresasDeTodas, config, agora),
+    modelosDaTela(ctx),
+  ]);
   const tabela = montarTabela(fatos, config);
 
   return (
@@ -91,7 +95,7 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
       {/* Sem `key`: a configuração da tela é sempre a que veio do endereço
           (`config`), e ela não guarda cópia — remontar só fecharia o painel
           de filtros e levaria o foco a cada mudança. */}
-      <ConfiguracaoDaTabela config={config} empresa={empresaUrl} visao={params.visao ?? null} hoje={hoje}>
+      <ConfiguracaoDaTabela config={config} empresa={empresaUrl} visao={params.visao ?? null} hoje={hoje} modelos={modelos}>
         <p className="mb-2 text-helper text-fg-muted">
           {formatarNumero(fatos.length, 0)} {config.base === "baixas" ? "movimentos de baixa" : "linhas de conta"}
         </p>
