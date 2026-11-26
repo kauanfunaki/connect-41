@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, ArrowRight, Clock, Play } from "lucide-react";
+import { AlertCircle, ArrowRight, Clock, Play, SquareKanban } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -112,6 +112,8 @@ type Props = {
   filtrado: boolean;
   /** Agora, do servidor — o prazo combinado conta dias no fuso de São Paulo. */
   agora: Date;
+  /** Por processo, o endereço do cartão dele nos Quadros (27/11/2026); sem a chave, sem o botão. */
+  quadros?: Record<string, string>;
 };
 
 /**
@@ -124,7 +126,7 @@ type Props = {
  * página; desde 13/11/2026 (melhoria-662) a fila vem de 50 em 50, e o recorte
  * grande (situação, responsável, prioridade, busca) é o do servidor.
  */
-export function ProcessosFila({ linhas, filtrado, agora }: Props) {
+export function ProcessosFila({ linhas, filtrado, agora, quadros }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
       <EmptyState
@@ -249,7 +251,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   <FiltroDaColuna rotulo="Início" chave="inicio" tipo="data" align="right" />
                 </th>
                 <th className="px-4 py-3">
-                  <span className="sr-only">Abrir</span>
+                  <span className="sr-only">Ações</span>
                 </th>
               </tr>
             </thead>
@@ -288,9 +290,24 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   </td>
                   <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.iniciadoEm)}</td>
                   <td className="px-4 py-3">
-                    <Button href={enderecoDe("processo", { id: l.id, number: l.numero })} variant="secondary" size="xs">
-                      Abrir <ArrowRight size={12} />
-                    </Button>
+                    <div className="flex items-center justify-center gap-1.5">
+                      {/* O cartão do processo nos Quadros, aberto por cima da
+                          lista (27/11/2026, funcionalidade-844). */}
+                      {quadros?.[l.id] && (
+                        <Button
+                          href={quadros[l.id]}
+                          variant="ghost"
+                          size="xs"
+                          aria-label={`Ver o processo nº ${l.numero} no quadro`}
+                          title="Ver no quadro"
+                        >
+                          <SquareKanban size={12} aria-hidden /> Quadro
+                        </Button>
+                      )}
+                      <Button href={enderecoDe("processo", { id: l.id, number: l.numero })} variant="secondary" size="xs">
+                        Abrir <ArrowRight size={12} />
+                      </Button>
+                    </div>
                   </td>
                 </LinhaFiltravel>
               ))}

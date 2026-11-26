@@ -150,7 +150,8 @@ const tarefasDoEscopo = cache((ctx: AuthContext) =>
   tentar("tarefas", async () => {
     const { inicio, fim } = limitesDeHoje();
     const prisma = getPrisma();
-    const base = { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } };
+    // Sem o cartão do processo societário (27/11/2026, funcionalidade-844): o processo já conta.
+    const base = { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false }, processId: null };
     const [atrasadas, hoje] = await Promise.all([
       prisma.pipelineItem.count({ where: { ...base, dueDate: { lt: inicio } } }),
       prisma.pipelineItem.count({ where: { ...base, dueDate: { gte: inicio, lte: fim } } }),
@@ -167,6 +168,7 @@ const tarefasAtrasadasDoSetor = cache((ctx: AuthContext, setor: string) =>
         tenantId: ctx.tenantId,
         pipeline: { AND: [scopedPipelineWhere(ctx), { sectorCode: setor }] },
         stage: { isTerminal: false },
+        processId: null,
         dueDate: { lt: limitesDeHoje().inicio },
       },
     })

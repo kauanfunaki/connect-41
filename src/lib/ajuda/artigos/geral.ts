@@ -481,6 +481,25 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Quando terminar, clique em “Marcar como concluída”, ao lado da “Situação”. Se ainda houver subatividades abertas, marque “Concluir também as subatividades abertas” para fechar todas juntas, ou desmarque para concluir só esta.",
         ],
       },
+      {
+        titulo: "Automáticos e criados pela equipe, no Quadro de tarefas",
+        passos: [
+          "No Quadro de tarefas, o que o sistema criou sozinho fica em “Automáticos”, no topo, com o selo “Automático”. Embaixo, em “Criados pela equipe”, ficam os espaços que vocês criaram.",
+          "O espaço automático pode ser renomeado e mexido à mão, como qualquer outro: colunas, etiquetas, cartões. Ele não se exclui; para parar de receber cartões, desligue a abertura automática.",
+          "Os processos societários são o primeiro automático: o espaço “Processos”, com a lista “Processos societários” e uma coluna por situação do processo.",
+          "No cartão de processo, o selo “Automático · Processo nº” diz de onde ele veio. A coluna, o responsável, a prioridade e o prazo seguem o processo: arrastar o cartão para outra coluna não vale, e o aviso pede para registrar no processo. Clique em “Abrir processo” para ir até ele.",
+        ],
+      },
+      {
+        titulo: "Abertura automática: de onde as tarefas nascem sozinhas",
+        passos: [
+          "No Quadro de tarefas do setor, clique em “Abertura automática”. O botão aparece para quem coordena o setor.",
+          "A tela mostra todas as origens que criam tarefas sozinhas no setor: processos societários, solicitações do cliente, obrigações recorrentes e obrigações por regime.",
+          "Nos “Processos societários”, ligue ou desligue a abertura e escolha a “Lista onde o processo vira cartão”. Clique em “Salvar”.",
+          "Trocar a lista vale para os processos novos; os cartões que já existem ficam onde estão. Desligar não apaga cartão: os que já existem seguem acompanhando os processos.",
+          "As outras origens se configuram na tela de cada uma. Use “Configurar os assuntos”, “Ver as obrigações” ou “Ver os modelos” para chegar até ela.",
+        ],
+      },
     ],
     dicas: [
       "Criar e editar espaços é para o gestor do setor e os administradores. O que os colaboradores fazem em cada espaço é a “Permissão padrão” dele: “Edição total” (criam e editam, e criam pastas), “Editar” (criam e editam, sem pastas), “Comentário” (só comentam) ou “Apenas exibição” (só veem).",

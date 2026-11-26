@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
-import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, canViewSector, podeExcluir } from "@/lib/auth/context";
+import { SquareKanban } from "lucide-react";
+import { cartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
@@ -170,6 +172,11 @@ export default async function ProcessoDetalhePage({
     },
   });
   if (!processo) notFound();
+
+  // O cartão do processo nos Quadros (27/11/2026, funcionalidade-844): o "Ver
+  // no quadro" abre a lista com o cartão por cima — só para quem vê o setor dela.
+  const cartao = await cartaoDoProcesso(ctx.tenantId, processo.id);
+  const verNoQuadro = cartao && canViewSector(ctx, cartao.sectorCode) ? cartao.href : null;
 
   const feriados = await feriadosDoTenant(ctx.tenantId);
   const situacao = situacaoDoProcesso(processo.protocols, processo.concludedAt !== null, processo.status);
@@ -441,6 +448,11 @@ export default async function ProcessoDetalhePage({
           <Button href={enderecoDe("empresa", processo.company)} variant="secondary" size="xs">
             Abrir empresa
           </Button>
+          {verNoQuadro && (
+            <Button href={verNoQuadro} variant="secondary" size="xs">
+              <SquareKanban size={11} aria-hidden /> Ver no quadro
+            </Button>
+          )}
           </>
         }
       />

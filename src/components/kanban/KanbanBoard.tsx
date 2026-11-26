@@ -13,6 +13,7 @@ import { NovaTarefaEmLinha, useNovaTarefaDoTopo } from "./NovaTarefaEmLinha";
 import { segmentoDaTarefa } from "@/lib/enderecoCurto";
 import { capaDoCartao } from "@/lib/kanban/capa";
 import { FaixaDaCapa } from "./CapaDoCartao";
+import { SeloAutomatico } from "./SeloAutomatico";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -33,6 +34,11 @@ type Item = {
   subtaskDone?: number;
   /** A capa escolhida no cartão — a chave da paleta (27/11/2026, funcionalidade-845). */
   coverColor?: string | null;
+  /**
+   * O processo societário que o cartão acompanha (27/11/2026, funcionalidade-844):
+   * o número vai no selo, e a cor do tipo vira a capa quando o cartão não tem uma.
+   */
+  processo?: { numero: number; corDoTipo: string | null } | null;
 };
 
 type Props = {
@@ -135,8 +141,8 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
           >
             {stageItems.map((item, i) => {
               const overdue = isOverdue(item.dueDate, stage.isTerminal);
-              // Sem processo ligado ao cartão ainda (funcionalidade-844), a capa vem só do cartão.
-              const capa = capaDoCartao({ coverColor: item.coverColor });
+              // A capa do cartão vence; sem ela, a cor do tipo do processo (funcionalidade-844).
+              const capa = capaDoCartao({ coverColor: item.coverColor, corDoTipo: item.processo?.corDoTipo });
               return (
                 <Link
                   key={item.id}
@@ -173,6 +179,10 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                       </span>
                     )}
                   </div>
+
+                  {/* O cartão que o processo abriu: a coluna segue a situação dele,
+                      e arrastar é recusado com o caminho (27/11/2026). */}
+                  {item.processo && <SeloAutomatico processo={item.processo.numero} className="mt-1.5" />}
 
                   {item.subtaskTotal !== undefined && item.subtaskTotal > 0 && (
                     <p className="text-kanban-meta text-fg-muted mt-1.5">

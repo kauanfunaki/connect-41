@@ -59,6 +59,11 @@ vi.mock("./conversa", () => ({
   processoNoEscopo: async () => ({ id: "p" }),
 }));
 vi.mock("./avisoAoCliente", () => ({ avisarClienteDoProcesso: async () => void m.avisos++ }));
+// O cartão do processo nos Quadros (27/11/2026) tem os testes dele em src/lib/kanban.
+const cartoes = vi.hoisted(() => [] as { processId: string; userId: unknown }[]);
+vi.mock("@/lib/kanban/cartaoDoProcessoServidor", () => ({
+  sincronizarCartaoDoProcesso: async (processId: string, o: { userId?: unknown }) => void cartoes.push({ processId, userId: o.userId }),
+}));
 
 const { abrirProcessoNoServidor, prepararAbertura } = await import("./aberturaServidor");
 type Pedido = Parameters<typeof abrirProcessoNoServidor>[1];
@@ -130,6 +135,12 @@ describe("a abertura pela tela continua igual", () => {
       }),
     ]);
     expect(m.mensagens).toEqual([]);
+  });
+
+  it("o processo aberto vira cartão nos Quadros, em nome de quem abriu (27/11/2026)", async () => {
+    cartoes.length = 0;
+    await abrirProcessoNoServidor(QUEM, pedido());
+    expect(cartoes).toEqual([{ processId: "process-1", userId: "u-quem-abre" }]);
   });
 
   it("o roteiro e a empresa são lidos no tenant de quem abre", async () => {

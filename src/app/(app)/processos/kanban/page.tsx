@@ -1,6 +1,8 @@
 import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { notFound } from "next/navigation";
-import { List } from "lucide-react";
+import { List, SquareKanban } from "lucide-react";
+import { listaDosProcessosParaVer } from "@/lib/kanban/cartaoDoProcessoServidor";
+import { boardPath } from "@/lib/kanbanPaths";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { contarItens } from "@/components/shared/CascoDaTabela";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
@@ -70,6 +72,10 @@ export default async function KanbanDeProcessosPage({
   ]);
   const noQuadro = filtrarPelaBusca([...abertos, ...concluidos], busca);
   const colunas = colunasDoKanban(noQuadro);
+  // O atalho para a lista dos Quadros onde os processos viram cartão (27/11/2026,
+  // funcionalidade-844). Esta tela fica; o redirecionamento é para depois.
+  const listaNosQuadros = await listaDosProcessosParaVer(ctx.tenantId);
+  const verNoQuadro = listaNosQuadros && canViewSector(ctx, listaNosQuadros.sectorCode) ? boardPath(listaNosQuadros) : null;
 
   return (
     <PageContainer>
@@ -78,9 +84,16 @@ export default async function KanbanDeProcessosPage({
       <PageHeader
         title="Kanban de processos"
         action={
-          <Button href="/processos" variant="secondary">
-            <List size={14} /> Ver como lista
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {verNoQuadro && (
+              <Button href={verNoQuadro} variant="secondary">
+                <SquareKanban size={14} aria-hidden /> Ver no quadro
+              </Button>
+            )}
+            <Button href="/processos" variant="secondary">
+              <List size={14} /> Ver como lista
+            </Button>
+          </div>
         }
       />
 

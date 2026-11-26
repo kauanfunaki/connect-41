@@ -17,6 +17,7 @@ import { logAudit } from "@/lib/audit";
 import { getSectorUsers, type SectorUser } from "@/lib/sectorUsers";
 import { setoresDoModulo } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
+import { sincronizarCartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
 import { gravarMensagem, processoNoEscopo } from "./conversa";
 import { avisarClienteDoProcesso } from "./avisoAoCliente";
 import { lerDadosDoProcesso, type CamposDoProcesso } from "./dados-do-processo";
@@ -307,6 +308,10 @@ export async function abrirProcessoNoServidor(
       console.error("[abrirProcesso] pedido ao cliente", processoId, err);
     }
   }
+
+  // O processo vira cartão no quadro do setor (27/11/2026, funcionalidade-844),
+  // se a abertura automática está ligada. Nunca lança: o processo já está aberto.
+  await sincronizarCartaoDoProcesso(processoId, { userId });
 
   return { ok: true, processoId, endereco: endereco("processo", numero) };
 }

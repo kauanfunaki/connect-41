@@ -11,7 +11,8 @@ import { podeNoModulo } from "@/lib/auth/modulo";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, canManageSector, canViewSector } from "@/lib/auth/context";
+import { cartoesDosProcessos } from "@/lib/kanban/cartaoDoProcessoServidor";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { listarFilaLeve, comEtapasAgora, contarPorSituacao, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
@@ -117,6 +118,12 @@ export default async function ProcessosPage({
   const totalDePaginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA));
   const pagina = Math.min(Math.max(1, Number.parseInt(params.pagina ?? "1", 10) || 1), totalDePaginas);
   const daPagina = await comEtapasAgora(ctx.tenantId, linhas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA));
+  // O "Quadro" de cada linha (27/11/2026, funcionalidade-844): o cartão do
+  // processo nos Quadros, só onde a pessoa vê o setor da lista.
+  const quadros: Record<string, string> = {};
+  for (const [processId, c] of await cartoesDosProcessos(ctx.tenantId, daPagina.map((l) => l.id))) {
+    if (canViewSector(ctx, c.sectorCode)) quadros[processId] = c.href;
+  }
 
   const filtrosNaUrl = new URLSearchParams();
   if (responsavelFiltro) filtrosNaUrl.set("responsavel", responsavelFiltro);
@@ -264,6 +271,7 @@ export default async function ProcessosPage({
       >
         <ProcessosFila
           linhas={daPagina}
+          quadros={quadros}
           filtrado={linhas.length === 0 && (todas.length > 0 || filtroAtivo)}
           agora={agora}
         />

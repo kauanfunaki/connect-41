@@ -158,6 +158,9 @@ async function cards(tenantId: string, agora: Date, filtro: FiltroDeItens): Prom
       // O funil de uma vaga também é quadro, mas é do Recrutamento e tem a
       // tela dele: candidato não é "tarefa do setor".
       candidatura: { is: null },
+      // O cartão que acompanha um processo societário (27/11/2026,
+      // funcionalidade-844) também: o processo já conta na Gestão.
+      processId: null,
       pipeline: { active: true, ...(setores ? { sectorCode: { in: setores } } : {}) },
       OR: [{ stage: { type: { not: "DONE" } } }, { updatedAt: { gte: inicioDosConcluidos(agora, filtro) } }],
     },

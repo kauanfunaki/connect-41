@@ -16,6 +16,7 @@ import { setorDoModulo } from "@/lib/modules";
 import { usuariosDoPortalDaEmpresa } from "@/lib/financeiro/pendencias/avisos";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import type { ResultadoDoAviso } from "@/lib/email/sendMail";
+import { sincronizarCartaoDoProcesso } from "@/lib/kanban/cartaoDoProcessoServidor";
 import { enviarAvisoDoProcesso, nomeDoProcessoNoAviso } from "./avisoAoCliente";
 import { etapasLiberadas, itensObrigatoriosPendentes, type StatusDaEtapa } from "./processo";
 import {
@@ -77,7 +78,16 @@ type ProcessoCarregado = NonNullable<Awaited<ReturnType<typeof carregar>>>;
  * O envio vem antes porque, quando sai, ele mesmo encerra a última etapa — e
  * aí o processo já fica concluído nesta mesma passada.
  */
-export async function sincronizarProcesso(processId: string): Promise<void> {
+export async function sincronizarProcesso(processId: string, userId: string | null = null): Promise<void> {
+  await sincronizarEtapasEConclusao(processId);
+  // Por último, o cartão do processo nos Quadros (27/11/2026, funcionalidade-844):
+  // a coluna segue a situação que acabou de se firmar. `userId` assina a
+  // mudança de coluna no histórico do cartão; sem ele (robô, observador), o
+  // cartão só anda. Nunca lança.
+  await sincronizarCartaoDoProcesso(processId, { userId });
+}
+
+async function sincronizarEtapasEConclusao(processId: string): Promise<void> {
   const processo = await carregar(processId);
   if (!processo) return;
 

@@ -12,6 +12,7 @@ import { colunasDoModelo, lerIcone, modeloDeEspaco } from "@/lib/kanban/modelosD
 import { apagarTarefaComAtividades, type TarefaApagada } from "@/lib/kanban/exclusaoDeAtividade";
 import { NOME_DA_TAREFA_NAO_CONFERE, TAREFA_GANHOU_ATIVIDADES } from "@/lib/kanban/exclusaoDeTarefa";
 import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
+import { NAO_EXCLUI_AUTOMATICO, NAO_EXCLUI_DESTINO, NAO_EXCLUI_LISTA_AUTOMATICA } from "@/lib/kanban/aberturaAutomatica";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 // Estágios padrão usados pelas Listas criadas pelo fluxo simplificado
@@ -267,6 +268,8 @@ export async function excluirEspaco(spaceId: string): Promise<PipelineState> {
   });
   if (!space) return { error: "Espaço não encontrado." };
   if (!canManageSector(ctx, space.sectorCode)) return { error: "Sem permissão para excluir este espaço." };
+  // O espaço criado pelo sistema não se exclui: desliga-se a abertura automática (27/11/2026).
+  if (space.systemKey) return { error: NAO_EXCLUI_AUTOMATICO };
 
   if (space._count.pipelines > 0 || space._count.folders > 0) {
     const partes: string[] = [];
@@ -337,10 +340,15 @@ export async function excluirLista(pipelineId: string, confirmacao?: string): Pr
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({
     where: { id: pipelineId, tenantId },
-    include: { space: true, _count: { select: { items: true, recurringObligations: true, modelosDeObrigacao: true, assuntosDeSolicitacao: true } } },
+    include: { space: true, _count: { select: { items: true, recurringObligations: true, modelosDeObrigacao: true, assuntosDeSolicitacao: true, aberturasAutomaticas: true } } },
   });
   if (!pipeline) return { error: "Tarefa não encontrada." };
   if (!canManageSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para excluir esta tarefa." };
+
+  // A lista criada pelo sistema não se exclui, e a escolhida para os processos
+  // societários também trava, como a dos assuntos (27/11/2026, funcionalidade-844).
+  if (pipeline.systemKey) return { error: NAO_EXCLUI_LISTA_AUTOMATICA };
+  if (pipeline._count.aberturasAutomaticas > 0) return { error: NAO_EXCLUI_DESTINO };
 
   // Obrigação recorrente aponta pra Lista e continuaria gerando tarefa num
   // destino que não existe mais — some da checagem de "vazio" porque não é
