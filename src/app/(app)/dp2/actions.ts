@@ -10,7 +10,7 @@ import { descreverAlteracao, lerAlteracao } from "@/lib/dp2/alteracaoEmLote";
 import { adiantamentoDoMes, lerParametrosDoAdiantamento } from "@/lib/dp2/adiantamento";
 import { avisosDaTransferencia, lerTransferencia } from "@/lib/dp2/transferencia";
 import { lerAlocacao, NOME_DA_ALOCACAO, rotuloDoTomador } from "@/lib/dp2/alocacao";
-import { lerAmbiente, lerEntregaDeEpi, lerEpi } from "@/lib/dp2/sst";
+import { lerAmbiente, lerEntregaDeEpi, lerEpi, lerMedico } from "@/lib/dp2/sst";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
@@ -1136,7 +1136,7 @@ export async function transferirColaboradorAction(_: EstadoDoDp2, fd: FormData):
   if (!de || !para) return erro("Empresa não encontrada.");
   await prisma.$transaction(async (tx) => {
     await tx.person.update({ where: { id: pessoa.id }, data: { currentCompanyId: paraCompanyId } });
-    await tx.dp2Vinculo.update({ where: { personId: pessoa.id }, data: { companyId: paraCompanyId } });
+    await tx.dp2Vinculo.update({ where: { personId: pessoa.id }, data: { companyId: paraCompanyId, ambienteId: null } });
     await tx.dp2Transferencia.create({ data: { tenantId: a.tenantId, companyId: paraCompanyId, deCompanyId, personId: pessoa.id, data: new Date(`${t.data}T00:00:00Z`), motivo: t.motivo, criadoPorId: a.userId } });
   });
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.colaborador_transferido", entityType: "Person", entityId: pessoa.id, metadata: { nome: pessoa.name, de: deCompanyId, para: paraCompanyId, data: t.data } });
@@ -1162,6 +1162,34 @@ export async function criarAmbienteAction(_: EstadoDoDp2, fd: FormData): Promise
   return { ok: true, texto: `Ambiente "${amb.nome}" cadastrado. Ele aparece no S-2240 em DP 2 › eSocial.` };
 }
 
+export async function criarMedicoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerMedico({ nome: texto(fd, "nome"), crm: texto(fd, "crm"), uf: texto(fd, "uf") });
+  if (!lido.ok) return erro(lido.erro);
+  const r = await getPrisma().dp2Medico.create({ data: { tenantId: a.tenantId, companyId, ...lido.medico, criadoPorId: a.userId }, select: { id: true } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.medico_criado", entityType: "Company", entityId: companyId, metadata: { medico: r.id, ...lido.medico } });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: `${lido.medico.nome} (CRM ${lido.medico.crm}/${lido.medico.uf}) cadastrado. Ele aparece no ASO em DP 2 › eSocial.` };
+}
+
+export async function excluirMedicoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const m = await prisma.dp2Medico.findFirst({ where: { id: texto(fd, "medicoId"), tenantId: a.tenantId }, select: { id: true, companyId: true, nome: true } });
+  if (!m) return erro("Médico não encontrado.");
+  const recusa = await empresaDoEscritorio(a, m.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2Medico.delete({ where: { id: m.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.medico_excluido", entityType: "Company", entityId: m.companyId, metadata: { medico: m.id, nome: m.nome } });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: `${m.nome} excluído. Os ASOs já gerados ficam como estão.` };
+}
+
 export async function excluirAmbienteAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
   const a = await acesso("dp2_configuracao", "agir");
   if (!a) return SEM_PERMISSAO;
@@ -1170,7 +1198,10 @@ export async function excluirAmbienteAction(_: EstadoDoDp2, fd: FormData): Promi
   if (!amb) return erro("Ambiente não encontrado.");
   const recusa = await empresaDoEscritorio(a, amb.companyId);
   if (recusa) return erro(recusa);
-  await prisma.dp2Ambiente.delete({ where: { id: amb.id } });
+  await prisma.$transaction([
+    prisma.dp2Vinculo.updateMany({ where: { tenantId: a.tenantId, ambienteId: amb.id }, data: { ambienteId: null } }),
+    prisma.dp2Ambiente.delete({ where: { id: amb.id } }),
+  ]);
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ambiente_excluido", entityType: "Company", entityId: amb.companyId, metadata: { ambiente: amb.id, nome: amb.nome } });
   revalidatePath("/dp2/configuracao");
   return { ok: true, texto: `Ambiente "${amb.nome}" excluído. Os S-2240 já gerados ficam como estão.` };
@@ -1510,6 +1541,11 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
   if (costCenterId && !(await prisma.costCenter.findFirst({ where: { id: costCenterId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId }, select: { id: true } }))) {
     return erro("Centro de custo não encontrado nesta empresa.");
   }
+  // Ambiente de trabalho (funcionalidade-761): um dos ambientes da mesma empresa.
+  const ambienteId = texto(fd, "ambienteId") || null;
+  if (ambienteId && !(await prisma.dp2Ambiente.findFirst({ where: { id: ambienteId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId }, select: { id: true } }))) {
+    return erro("Ambiente de trabalho não encontrado nesta empresa.");
+  }
 
   const dados = {
     companyId: pessoa.currentCompanyId,
@@ -1526,6 +1562,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     contribuicaoSindical: marcado(fd, "contribuicaoSindical"),
     horarioId,
     costCenterId,
+    ambienteId,
     departamento: texto(fd, "departamento").slice(0, 80) || null,
     vtCustoDiario: lerNumero(texto(fd, "vtCustoDiario")),
     aprendiz: marcado(fd, "aprendiz"),
@@ -2341,6 +2378,9 @@ export async function gerarAsoAction(_: EstadoDoDp2, fd: FormData): Promise<Esta
   if (typeof p === "string") return erro(p);
   const data = ehData(texto(fd, "dataAso"));
   if (!data) return erro("Informe a data do ASO.");
+  const medicoId = texto(fd, "medicoId");
+  const medico = medicoId ? await getPrisma().dp2Medico.findFirst({ where: { id: medicoId, tenantId: a.tenantId, companyId: p.companyId } }) : null;
+  if (medicoId && !medico) return erro("Médico não encontrado na empresa do colaborador.");
   const r = await gerarAso(
     a.tenantId,
     p.id,
@@ -2349,9 +2389,9 @@ export async function gerarAsoAction(_: EstadoDoDp2, fd: FormData): Promise<Esta
       data,
       resultado: texto(fd, "resultado") === "2" ? "2" : "1",
       procedimentos: lerProcedimentos(texto(fd, "procedimentos")),
-      medicoNome: texto(fd, "medicoNome") || null,
-      medicoCrm: texto(fd, "medicoCrm").replace(/\D/g, "") || null,
-      medicoUf: texto(fd, "medicoUf").toUpperCase() || null,
+      medicoNome: texto(fd, "medicoNome") || medico?.nome || null,
+      medicoCrm: texto(fd, "medicoCrm").replace(/\D/g, "") || medico?.crm || null,
+      medicoUf: texto(fd, "medicoUf").toUpperCase() || medico?.uf || null,
     },
     a.userId
   );
@@ -2375,7 +2415,8 @@ export async function gerarCondicaoAmbientalAction(_: EstadoDoDp2, fd: FormData)
   if (!inicio) return erro("Informe desde quando vale a condição.");
   const epc = (k: string) => (["0", "1", "2"].includes(texto(fd, k)) ? texto(fd, k) : "0");
   // O ambiente cadastrado (funcionalidade-761) preenche o que ficou em branco.
-  const ambienteId = texto(fd, "ambienteId");
+  const ambienteId =
+    texto(fd, "ambienteId") || (await getPrisma().dp2Vinculo.findFirst({ where: { personId: p.id, tenantId: a.tenantId }, select: { ambienteId: true } }))?.ambienteId || "";
   const amb = ambienteId ? await getPrisma().dp2Ambiente.findFirst({ where: { id: ambienteId, tenantId: a.tenantId, companyId: p.companyId } }) : null;
   if (ambienteId && !amb) return erro("Ambiente não encontrado na empresa do colaborador.");
   const agentesDigitados = lerAgentes(texto(fd, "agentes"));

@@ -100,6 +100,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
   ]);
   const comContrato = pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate);
   // Os ambientes de trabalho cadastrados (funcionalidade-761), para o S-2240.
+  const medicosDoAso = await getPrisma().dp2Medico.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" }, select: { id: true, nome: true, crm: true, uf: true } });
   const ambientesDeSst = await getPrisma().dp2Ambiente.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" }, select: { id: true, nome: true, agentes: true } });
   // Reintegração (S-2298, funcionalidade-756): empregados desligados.
   const desligados = pessoas.filter((p) => p.dp2Vinculo && p.dismissalDate && !semVinculo(p.dp2Vinculo.categoria));
@@ -389,7 +390,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
 
       {comContrato.length > 0 && tela.podeAgir && (
         <Secao titulo="Saúde e segurança" className="mb-5">
-          <FormulariosDeSst pessoas={comContrato.map((p) => ({ id: p.id, name: p.name }))} ambientes={ambientesDeSst} />
+          <FormulariosDeSst pessoas={comContrato.map((p) => ({ id: p.id, name: p.name }))} ambientes={ambientesDeSst} medicos={medicosDoAso} />
         </Secao>
       )}
 

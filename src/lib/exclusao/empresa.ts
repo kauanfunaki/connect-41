@@ -379,6 +379,7 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   { modelo: "Dp2Ferias", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Ferias.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2EntregaDeEpi", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2EntregaDeEpi.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2Epi", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Epi.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "Dp2Medico", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Medico.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2Ambiente", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Ambiente.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2Alocacao", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Alocacao.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2Transferencia", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Transferencia.deleteMany({ where: daEmpresa(a) })) },
