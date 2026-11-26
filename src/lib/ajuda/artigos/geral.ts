@@ -201,6 +201,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Quem vê cada empresa no portal se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
       "No cadastro, a etapa “SPED fiscal” é opcional: são os dados que vão no SPED da empresa, e o “?” de cada campo diz onde achar a informação.",
       "Os responsáveis de cada setor ficam no cartão “Serviços contratados” da ficha, e não no formulário: numa empresa nova, salve e adicione ali os setores contratados.",
+      "Cada empresa tem um código curto, EMP e o número (EMP-301), ao lado do nome na ficha. Digite o código na busca (Ctrl+K) para abrir a empresa; um link antigo, como o de “empresa-301”, continua abrindo.",
       "O endereço do sócio é o que responde “Reside no local?” na viabilidade do Empresa Fácil. Sem CEP e número, a pergunta volta a ser respondida à mão.",
       "A “Folha de pagamento” da ficha é controle e conferência dos lançamentos, não motor de cálculo. A “Conferência assistida” aponta o que foge do histórico da empresa para revisão — não é cálculo trabalhista.",
       "Em “Cálculo de rescisão”, na ficha, cada campo mostra de onde vem o valor atual. O que você muda ali vale só para esta empresa e só nos campos alterados; o resto segue o padrão do escritório.",
@@ -263,6 +264,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Esta lista é só da equipe do escritório. Os funcionários das empresas clientes ficam em “Colaboradores de clientes”.",
+      "Cada pessoa tem um código curto, PES e o número (PES-12), ao lado do nome na ficha. Digite o código na busca (Ctrl+K) para abrir a ficha.",
       "O vínculo da pessoa com a conta de acesso ao Connect é feito pelo administrador, nas configurações.",
       "Cadastrar, editar e inativar pessoas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
       "O contato de empresa cliente guarda só a empresa, o cargo e o departamento: jornada, admissão e folha existem só para o colaborador interno, que é da equipe do escritório e não pede empresa, cargo nem departamento.",
@@ -352,7 +354,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como navegar pela agenda",
         passos: [
-          "Abra “Agenda” na barra lateral.",
+          "Abra o Meu dia e clique em “Agenda”, no alto da tela. (Se o seu setor trouxe a Agenda de volta ao menu, ela também fica na barra lateral.)",
           "Escolha a visão em “Prazos”, “Dia”, “Semana” ou “Mês”. Da próxima vez, a Agenda abre na última visão que você escolheu.",
           "Use as setas para ir ao período anterior ou ao próximo, e “Hoje” para voltar à data atual. O ícone de calendário ao lado (“Escolher data”) leva direto a uma data.",
           "Clique em um prazo para abrir o item na tela de onde ele vem.",
@@ -483,6 +485,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Criar e editar espaços é para o gestor do setor e os administradores. O que os colaboradores fazem em cada espaço é a “Permissão padrão” dele: “Edição total” (criam e editam, e criam pastas), “Editar” (criam e editam, sem pastas), “Comentário” (só comentam) ou “Apenas exibição” (só veem).",
       "Excluir atividade, subatividade, comentário, item do checklist, coluna, espaço, pasta ou tarefa é só do Administrador ou do Super Admin, e não pode ser desfeito. Excluir uma atividade leva junto as subatividades de todos os níveis abaixo dela; a confirmação diz quantas são. Quem escreveu um comentário corrige pelo “Editar”.",
       "Hora apontada errada se corrige na atividade, em “Horas apontadas”: clique no lápis do lançamento.",
+      "Cada tarefa tem um código curto, TAR e o número (TAR-77), no alto da tarefa aberta. Digite o código na busca (Ctrl+K) para abrir a tarefa no quadro dela.",
       "A tela “Todas as tarefas” reúne num lugar só as tarefas de todos os seus setores. Para chegar nela, clique em “Todas as tarefas”, no topo do Meu dia.",
     ],
   },
@@ -1189,6 +1192,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Cada setor marcado atende os chamados enviados a ele. Com mais de um, a IA propõe o setor na revisão e quem abre confirma; a equipe pode encaminhar o chamado depois.",
       "Os prazos contam em minutos úteis: de segunda a quinta, das 8h às 18h, e na sexta, das 8h às 17h, no horário de Brasília. O ciclo começa em “Em andamento” e pausa nas situações de espera.",
       "Quem entrou num setor que passou a atender precisa sair e entrar de novo no Connect para ver a fila.",
+      "Cada chamado tem um código curto, CHA e o número (CHA-45), no cartão e no protocolo. Na busca, o código, “#45” ou só “45” acham o chamado; um link antigo, como o de “chamado-45”, continua abrindo.",
     ],
   },
 
@@ -1224,6 +1228,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "No Resumo, concluídos e cancelados contam pela data da mudança de situação; “em andamento” é a situação de agora.",
       "O “Tamanho” (P, M ou G) trava quando o item começa, e quem define é a coordenação da Tech. Nas Entregas, só a entrega que passou por “Em validação” e tem tamanho conta pontos.",
       "“Veio de” liga o item à entrega que o gerou: é o retrabalho daquela entrega.",
+      "Cada item tem um código curto: a sigla do tipo em três letras e o número, como FUN-816. As siglas são BUG (bug), MEL (melhoria), FUN (nova funcionalidade), TES (teste) e MIG (migração). Digite o código na busca para achar o item; o link do item também usa ele, e um link antigo, como o de “funcionalidade-816”, continua abrindo.",
     ],
   },
 

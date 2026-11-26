@@ -28,6 +28,7 @@ import { TIPOS_DE_INFORMACAO, apurarCompetencia, ehTipoDeInformacao } from "@/li
 import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
 import { conferirGuias, NOME_DA_SITUACAO_DA_GUIA } from "@/lib/dp2/guiasDaFolha";
+import { conferirTotalizadores, type Diferenca } from "@/lib/dp2/esocial/totalizadores";
 import { documentoFormatado } from "@/lib/dp2/outrasBasesInss";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
 import { camposAjustaveis, nomeDoCampo, type AjusteAplicado } from "@/lib/dp2/ajustesDoCalculo";
@@ -45,6 +46,7 @@ import {
   ajustarCalculoAction,
   calcularCompetenciaAction,
   anexarGfdAction,
+  importarTotalizadoresAction,
   incluirInformacaoDaApuracaoAction,
   retirarInformacaoDaApuracaoAction,
   copiarOutrasBasesInssAction,
@@ -160,6 +162,15 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
     : [[], null];
   const darfDoMes = guiasDoMes.find((g) => g.tipo === "DCTFWEB");
   const gfdDoMes = guiasDoMes.find((g) => g.tipo === "FGTS");
+  // Totalizadores do eSocial (funcionalidade-755): o que o eSocial calculou, contra o cálculo do DP 2.
+  const totalizadores = calculos.length > 0 ? await prisma.dp2TotalizadorEsocial.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id } }) : [];
+  const conferenciaEsocial =
+    totalizadores.length > 0
+      ? conferirTotalizadores(
+          calculos.map((c) => ({ personId: c.personId, nome: c.person.name, cpf: c.person.cpf, inss: n(c.inss), irrf: n(c.irrf), baseFgts: n(c.baseFgts), fgts: n(c.fgts) })),
+          totalizadores.map((t) => ({ tipo: t.tipo as "S-5001", cpf: t.cpf, valores: t.valores as Record<string, number> }))
+        )
+      : null;
   // As rubricas fixas do contrato que valem no mês: entram no cálculo sozinhas (funcionalidade-767).
   // Fechada, o cálculo já foi: só aparece o que de fato entrou (nos holerites).
   const fixasVigentes = mensal && !fechada
@@ -273,6 +284,12 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
             ]}
           />
         </div>
+      )}
+
+      {totais?.rescindidos && totais.rescindidos.length > 0 && etapa !== "abrir" && (
+        <Aviso tom="info" className="mb-5">
+          Com rescisão gravada no mês, fora desta folha: {totais.rescindidos.join(", ")}. As verbas do mês estão na rescisão (DP 2 › Rescisões) e vão no S-2299.
+        </Aviso>
       )}
 
       {comp.situacao === "ABERTA" && calculos.length > 0 && (
@@ -953,6 +970,79 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
           </Secao>
         )}
 
+        {etapa === "conferir" && calculos.length > 0 && (mensal || comp.tipo === "DECIMO_2") && (
+          <Secao
+            titulo="Totalizadores do eSocial"
+            apoio={
+              conferenciaEsocial
+                ? conferenciaEsocial.divergentes
+                  ? `${conferenciaEsocial.divergentes} pessoa(s) com diferença entre o cálculo e o eSocial.`
+                  : "O cálculo bate com o que o eSocial totalizou."
+                : "Importe os XML de retorno do eSocial (S-5001, S-5002, S-5003, S-5011 e S-5013) para conferir com o cálculo."
+            }
+          >
+            {podeAgir && (
+              <FormularioDoDp2 acao={importarTotalizadoresAction} rotulo="Importar totalizadores" rotuloEnviando="Lendo…" variante="secondary" className="mb-4">
+                <input type="hidden" name="competenciaId" value={comp.id} />
+                <CampoForm label="XML de retorno ou .zip do eSocial" htmlFor="arquivo-totalizadores" dica="Do “eSocial Download” do portal ou do retorno da consulta do lote. Importar de novo troca os do mesmo tipo e CPF.">
+                  <input id="arquivo-totalizadores" name="arquivo" type="file" multiple accept=".xml,.zip" required className="text-fs-3" />
+                </CampoForm>
+              </FormularioDoDp2>
+            )}
+            {conferenciaEsocial && (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-fs-3">
+                  <thead>
+                    <tr>
+                      <th className={TH}>Colaborador</th>
+                      <th className={TH_NUM}>INSS (S-5001)</th>
+                      <th className={TH_NUM}>IRRF (S-5002)</th>
+                      <th className={TH_NUM}>FGTS (S-5003)</th>
+                      <th className={TH}>Conferência</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {conferenciaEsocial.linhas.map((l) => (
+                      <tr key={l.cpf ?? l.personId ?? l.nome} className={TR}>
+                        <td className={TD}>
+                          {l.nome}
+                          {l.cpf && <span className="block text-fs-2 text-fg-muted">{formatCpf(l.cpf)}</span>}
+                        </td>
+                        <td className={TD_NUM}>
+                          <CelulaDoTotalizador d={l.inss} />
+                        </td>
+                        <td className={TD_NUM}>
+                          <CelulaDoTotalizador d={l.irrf} />
+                        </td>
+                        <td className={TD_NUM}>
+                          <CelulaDoTotalizador d={l.fgts} />
+                        </td>
+                        <td className={TD}>
+                          {l.diverge ? <Selo tom="perigo">difere do eSocial</Selo> : l.inss.esocial === null && l.irrf.esocial === null && l.fgts.esocial === null ? <span className="text-fg-muted">sem totalizador</span> : <Selo tom="sucesso">bate</Selo>}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className={`${TR} font-semibold`}>
+                      <td className={TD}>Empresa (S-5011 e S-5013)</td>
+                      <td className={TD_NUM}>
+                        <CelulaDoTotalizador d={conferenciaEsocial.total.inss} />
+                      </td>
+                      <td className={TD_NUM}>
+                        <CelulaDoTotalizador d={conferenciaEsocial.total.irrf} />
+                      </td>
+                      <td className={TD_NUM}>
+                        <CelulaDoTotalizador d={conferenciaEsocial.total.fgts} />
+                      </td>
+                      <td className={TD} />
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="mt-2 text-fs-2 text-fg-muted">Em cada célula: o valor do cálculo, o do eSocial e a diferença (cálculo − eSocial). INSS é o descontado do trabalhador; no total, o do S-5011.</p>
+              </div>
+            )}
+          </Secao>
+        )}
+
         {etapa === "fechar" && calculada && (
           <Secao
             titulo="Saídas da folha"
@@ -1291,5 +1381,17 @@ function Holerite({
         </div>
       )}
     </Secao>
+  );
+}
+
+/** Cálculo, eSocial e a diferença numa célula (funcionalidade-755). */
+function CelulaDoTotalizador({ d }: { d: Diferenca }) {
+  if (d.esocial === null) return <span className="text-fg-muted">{brl(d.calculo)} · —</span>;
+  const difere = d.diferenca !== null && Math.abs(d.diferenca) > 0.01;
+  return (
+    <span className="whitespace-nowrap">
+      {brl(d.calculo)} · {brl(d.esocial)}
+      {difere && <span className="block text-danger font-medium">{d.diferenca! > 0 ? "+" : ""}{brl(d.diferenca)}</span>}
+    </span>
   );
 }
