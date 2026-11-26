@@ -43,6 +43,8 @@ export type VinculoDoMotor = {
   filhosSalarioFamilia: number;
   insalubridade: Insalubridade;
   periculosidade: boolean;
+  /** Autorizou o desconto da contribuição sindical (funcionalidade-774). */
+  contribuicaoSindical?: boolean;
   valeTransporte: boolean;
   /** Custo diário do vale-transporte (funcionalidade-753); sem ele, o desconto é 6% sem limite. */
   vtCustoDiario?: number | null;
@@ -51,7 +53,16 @@ export type VinculoDoMotor = {
   categoria?: string;
 };
 
-export type ConvencaoDoMotor = { he50: number; he100: number; noturno: number; piso: number | null; nome: string | null };
+export type ConvencaoDoMotor = {
+  he50: number;
+  he100: number;
+  noturno: number;
+  piso: number | null;
+  nome: string | null;
+  /** Mês do desconto da contribuição sindical (nulo = março) e o percentual (nulo = um dia), funcionalidade-774. */
+  contribuicaoMes?: number | null;
+  contribuicaoPercentual?: number | null;
+};
 
 export const CONVENCAO_DA_CLT: ConvencaoDoMotor = { he50: 50, he100: 100, noturno: 20, piso: null, nome: null };
 
@@ -451,6 +462,25 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   if (v.valeTransporte && salario > 0) {
     const vt = descontoDoValeTransporte(salario, v.vtCustoDiario ?? null, e.diasUteis, diasDeSalario);
     if (vt.valor > 0) itens.push(itemDaRubrica(R("VALE_TRANSPORTE"), vt.valor, vt.limitado ? `${vt.diasUteis} dias` : pct(VALE_TRANSPORTE_PCT), vt.memoria));
+  }
+
+  // ── Contribuição sindical (funcionalidade-774) ──
+  // Só com autorização prévia e expressa do empregado (CLT arts. 545 e 578),
+  // uma vez por ano, no mês da convenção (março, sem ela): um dia de trabalho
+  // (salário ÷ 30) ou o percentual que a convenção fixar.
+  if (v.contribuicaoSindical && e.mes === (e.convencao.contribuicaoMes ?? 3) && cheio > 0) {
+    const pctDaConvencao = e.convencao.contribuicaoPercentual ?? null;
+    const valor = pctDaConvencao !== null ? (cheio * pctDaConvencao) / 100 : cheio / 30;
+    itens.push(
+      itemDaRubrica(
+        R("CONTRIBUICAO_SINDICAL"),
+        valor,
+        pctDaConvencao !== null ? pct(pctDaConvencao) : "1 dia",
+        pctDaConvencao !== null
+          ? `${pct(pctDaConvencao)} × ${reais(r2(cheio))} (convenção${e.convencao.nome ? ` ${e.convencao.nome}` : ""}), autorizada pelo empregado`
+          : `${reais(r2(cheio))} ÷ 30 = um dia de trabalho, autorizado pelo empregado (CLT arts. 545 e 578)`
+      )
+    );
   }
 
   // ── Bases, INSS e salário-família ──

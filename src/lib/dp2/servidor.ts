@@ -138,7 +138,15 @@ export async function configDaEmpresa(tenantId: string, companyId: string): Prom
   return {
     empresa: { patronalNoDas: c.patronalNoDas, ratAliquota: dec(c.ratAliquota), fap: dec(c.fap), terceirosAliquota: dec(c.terceirosAliquota) },
     convencao: c.convencao
-      ? { he50: dec(c.convencao.he50), he100: dec(c.convencao.he100), noturno: dec(c.convencao.noturno), piso: decOuNulo(c.convencao.piso), nome: c.convencao.nome }
+      ? {
+          he50: dec(c.convencao.he50),
+          he100: dec(c.convencao.he100),
+          noturno: dec(c.convencao.noturno),
+          piso: decOuNulo(c.convencao.piso),
+          nome: c.convencao.nome,
+          contribuicaoMes: c.convencao.contribuicaoMes,
+          contribuicaoPercentual: decOuNulo(c.convencao.contribuicaoPercentual),
+        }
       : CONVENCAO_DA_CLT,
     convencaoId: c.convencaoId,
     configurada: true,
@@ -159,6 +167,7 @@ export function vinculoDoMotor(v: {
   filhosSalarioFamilia: number;
   insalubridade: string;
   periculosidade: boolean;
+  contribuicaoSindical?: boolean;
   valeTransporte: boolean;
   vtCustoDiario?: unknown;
   aprendiz: boolean;
@@ -173,6 +182,7 @@ export function vinculoDoMotor(v: {
     filhosSalarioFamilia: v.filhosSalarioFamilia,
     insalubridade: (["NENHUM", "MINIMO", "MEDIO", "MAXIMO"].includes(v.insalubridade) ? v.insalubridade : "NENHUM") as Insalubridade,
     periculosidade: v.periculosidade,
+    contribuicaoSindical: v.contribuicaoSindical ?? false,
     valeTransporte: v.valeTransporte,
     vtCustoDiario: v.vtCustoDiario == null ? null : Number(v.vtCustoDiario),
     aprendiz: v.aprendiz,
