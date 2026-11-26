@@ -6955,6 +6955,10 @@ model Dp2EmpresaConfig {
   /// PIS sobre a folha de salários (1%), das entidades sem fins lucrativos
   /// (funcionalidade-769): entra na apuração da competência.
   pisSobreFolha     Boolean  @default(false)
+  /// Adiantamento salarial (vale), 26/11/2026, funcionalidade-758: o percentual
+  /// do salário e o dia do pagamento; nulos = a empresa não paga vale.
+  adiantamentoPercentual Decimal? @db.Decimal(5, 2)
+  adiantamentoDia        Int?
   /// RAT/SAT em %: 1, 2 ou 3.
   ratAliquota       Decimal  @default(2) @db.Decimal(5, 2)
   fap               Decimal  @default(1) @db.Decimal(6, 4)

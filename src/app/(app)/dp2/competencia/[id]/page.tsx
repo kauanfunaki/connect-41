@@ -64,6 +64,7 @@ import {
   importarEventosAction,
   lancarEventoAction,
   lancarPorRubricaAction,
+  lancarAdiantamentoAction,
   pedirEventosAoClienteAction,
   reabrirCompetenciaAction,
   removerEventoAction,
@@ -672,6 +673,17 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                 </tbody>
               </table>
             </div>
+          </Secao>
+        )}
+
+        {mensal && etapa === "eventos" && !fechada && podeAgir && cfgDaEmpresa.adiantamento && pessoasParaLancar.length > 0 && (
+          <Secao
+            titulo="Adiantamento salarial"
+            apoio={`${cfgDaEmpresa.adiantamento.percentual}% do salário, pago no dia ${cfgDaEmpresa.adiantamento.dia}. Lança para os empregados com contrato, na rubrica de adiantamento; a folha desconta. Quem já tem adiantamento no mês fica como está.`}
+          >
+            <FormularioDoDp2 acao={lancarAdiantamentoAction} rotulo="Lançar o adiantamento" rotuloEnviando="Lançando…" variante="secondary">
+              <input type="hidden" name="competenciaId" value={comp.id} />
+            </FormularioDoDp2>
           </Secao>
         )}
 

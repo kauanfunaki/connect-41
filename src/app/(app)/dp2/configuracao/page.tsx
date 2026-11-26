@@ -138,6 +138,19 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
                 helper="Entra na apuração da competência, com as compensações de PIS do mês."
               />
             </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CampoForm label="Adiantamento (% do salário)" htmlFor="adiantamentoPercentual" dica="O vale do meio do mês (40% é o comum). Em branco, a empresa não paga adiantamento.">
+                <Input
+                  id="adiantamentoPercentual"
+                  name="adiantamentoPercentual"
+                  inputMode="decimal"
+                  defaultValue={cfg.adiantamento ? fmt(cfg.adiantamento.percentual) : ""}
+                />
+              </CampoForm>
+              <CampoForm label="Dia do adiantamento" htmlFor="adiantamentoDia">
+                <Input id="adiantamentoDia" name="adiantamentoDia" inputMode="numeric" maxLength={2} defaultValue={cfg.adiantamento ? String(cfg.adiantamento.dia) : ""} />
+              </CampoForm>
+            </div>
           </FormularioDoDp2>
         ) : (
           <p className="text-fs-3 text-fg-muted">Você pode ver, mas não alterar a configuração.</p>

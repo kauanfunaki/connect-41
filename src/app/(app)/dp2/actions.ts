@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { adiantamentoDoMes, lerParametrosDoAdiantamento } from "@/lib/dp2/adiantamento";
 import { avisosDaTransferencia, lerTransferencia } from "@/lib/dp2/transferencia";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
@@ -20,7 +21,7 @@ import { calcularRescisaoDaPessoa, dadosDaRescisao, type AvisoDaRescisao } from 
 import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
 import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
 import { camposAjustaveis, lerAjuste, nomeDoCampo } from "@/lib/dp2/ajustesDoCalculo";
-import type { ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
+import { salarioMensalCheio, type ItemDoHolerite, type Provisoes } from "@/lib/dp2/mensal";
 import { SALARIO_OBRIGATORIO, regimeDaCategoria, salarioValido } from "@/lib/dp2/categorias";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -34,6 +35,7 @@ import {
   calcularCompetencia,
   colaboradoresDaCompetencia,
   colaboradoresDaEmpresa,
+  configDaEmpresa,
   garantirRubricas,
   gravarRubricasFixas,
   mediaDaPessoa,
@@ -1140,6 +1142,67 @@ export async function transferirColaboradorAction(_: EstadoDoDp2, fd: FormData):
   return { ok: true, texto: `${pessoa.name} transferido(a) para ${nomeExibicao(para)} em ${t.data.split("-").reverse().join("/")}. ${avisos.join(" ")}` };
 }
 
+// ─── Adiantamento salarial (26/11/2026, funcionalidade-758) ─────────────────
+
+/**
+ * Lança o adiantamento (vale) do mês para os empregados com contrato, pelo
+ * percentual da configuração da empresa, na rubrica ADIANTAMENTO (o cálculo
+ * desconta na folha). Quem já tem adiantamento lançado no mês fica como está.
+ */
+export async function lancarAdiantamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  if (comp.situacao === "FECHADA") return erro("Competência fechada: reabra para lançar.");
+  if (comp.tipo !== "MENSAL") return erro("O adiantamento é da folha mensal.");
+  const cfg = await configDaEmpresa(a.tenantId, comp.companyId);
+  if (!cfg.adiantamento) return erro("Configure o percentual e o dia do adiantamento na Configuração da empresa.");
+  const prisma = getPrisma();
+  const rubrica = await prisma.dp2Rubrica.findFirst({ where: { tenantId: a.tenantId, papel: "ADIANTAMENTO", ativa: true } });
+  if (!rubrica) return erro("A rubrica de adiantamento salarial não está ativa no catálogo.");
+  const pessoas = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes)).filter((p) => p.dp2Vinculo && regimeDaCategoria(p.dp2Vinculo.categoria) === "CLT");
+  const comAdiantamento = new Set(
+    (await prisma.dp2Evento.findMany({ where: { tenantId: a.tenantId, competenciaId, rubricaId: rubrica.id }, select: { personId: true } })).map((e) => e.personId)
+  );
+  const dia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  const linhas = adiantamentoDoMes(
+    pessoas.map((p) => ({
+      personId: p.id,
+      nome: p.name,
+      salarioMensal: salarioMensalCheio(vinculoDoMotor(p.dp2Vinculo!)),
+      admissao: dia(p.admissionDate),
+      desligamento: dia(p.dismissalDate),
+      jaTemAdiantamento: comAdiantamento.has(p.id),
+    })),
+    cfg.adiantamento,
+    comp.ano,
+    comp.mes
+  );
+  const lancar = linhas.filter((l) => !l.fora && l.valor > 0);
+  if (lancar.length === 0) return erro("Ninguém para lançar: quem tem contrato já tem adiantamento no mês ou ficou de fora.");
+  const observacao = `Adiantamento de ${cfg.adiantamento.percentual}% do salário (dia ${cfg.adiantamento.dia})`;
+  await prisma.$transaction([
+    prisma.dp2Evento.createMany({
+      data: lancar.map((l) => ({ tenantId: a.tenantId, competenciaId, personId: l.personId, rubricaId: rubrica.id, valor: l.valor, origem: "DP" as const, observacao, criadoPorId: a.userId })),
+    }),
+    ...(comp.situacao === "CALCULADA" ? [prisma.dp2Competencia.update({ where: { id: competenciaId }, data: { situacao: "ABERTA" } })] : []),
+  ]);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.adiantamento_lancado",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { pessoas: lancar.length, percentual: cfg.adiantamento.percentual, total: lancar.reduce((s, l) => s + l.valor, 0) },
+  });
+  revalidarCompetencia(competenciaId);
+  const fora = linhas.filter((l) => l.fora).length;
+  return { ok: true, texto: `Adiantamento lançado para ${lancar.length} colaborador(es)${fora ? `; ${fora} ficaram de fora` : ""}.` };
+}
+
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────
 
 export async function importarComparativoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -1352,8 +1415,13 @@ export async function salvarConfigDaEmpresaAction(_: EstadoDoDp2, fd: FormData):
   if (fpas && fpas.length !== 3) return erro("O FPAS tem 3 dígitos.");
   if (codTercs && codTercs.length !== 4) return erro("O código de terceiros tem 4 dígitos.");
   if (classTrib && classTrib.length !== 2) return erro("A classificação tributária tem 2 dígitos.");
+  // Adiantamento salarial (funcionalidade-758): os dois vazios = a empresa não paga vale.
+  const adiantamento = lerParametrosDoAdiantamento(texto(fd, "adiantamentoPercentual"), texto(fd, "adiantamentoDia"));
+  if (!adiantamento.ok) return erro(adiantamento.erro);
   const dados = {
     convencaoId,
+    adiantamentoPercentual: adiantamento.parametros?.percentual ?? null,
+    adiantamentoDia: adiantamento.parametros?.dia ?? null,
     patronalNoDas: marcado(fd, "patronalNoDas"),
     pisSobreFolha: marcado(fd, "pisSobreFolha"),
     ratAliquota,
