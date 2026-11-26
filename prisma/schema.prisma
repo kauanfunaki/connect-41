@@ -2989,6 +2989,10 @@ model PipelineItem {
   /// um cartão por solicitação, e é o banco que barra o segundo. A solicitação
   /// manda na coluna do cartão (ver src/lib/solicitacoes/cartao.ts).
   serviceRequestId     String?             @unique
+  /// A capa colorida do cartão, como no Trello (27/11/2026, funcionalidade-845):
+  /// a chave de uma cor da paleta fixa (`CORES_DA_CAPA`, src/lib/kanban/capa.ts),
+  /// nunca o hex. Nula = sem capa.
+  coverColor           String?             @db.VarChar(20)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
@@ -9389,6 +9393,12 @@ model ProcessType {
   /// sequência fixa nem prazo médio. A tela não deve prometer previsão para
   /// um tipo assim.
   variableFlow Boolean @default(false)
+
+  /// A cor do tipo no quadro (27/11/2026, funcionalidade-845): a faixa do
+  /// cartão no kanban de processos, na fila e no cabeçalho do processo. Chave
+  /// da mesma paleta da capa dos cartões (src/lib/kanban/capa.ts); nula = sem
+  /// cor. Quem escolhe é o setor, em Processos › Roteiros.
+  color String? @db.VarChar(20)
 
   active Boolean @default(true)
 

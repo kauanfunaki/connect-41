@@ -476,6 +476,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Em “Situação”, escolha a etapa em que a atividade está.",
           "Em “Responsáveis”, marque quem faz a atividade; em “Participantes”, quem acompanha.",
           "A atividade nova começa com os campos “Vazio”. Preencha “Datas”, “Prioridade” e “Etiquetas”; os outros campos entram por “Adicionar campo”. Embaixo da descrição, “Subatividade”, “Vínculo”, “Checklist” e “Anexo” abrem a seção de cada um.",
+          "Para pôr uma capa colorida no cartão do “Kanban”, como no Trello, clique em “Capa”, ao lado do código da atividade, e escolha a cor. “Sem capa” tira a cor. A troca fica no histórico da atividade.",
           "Em “Comentários e atividade”, escreva no campo de comentário, use @ para mencionar alguém e clique em “Comentar”.",
           "Quando terminar, clique em “Marcar como concluída”, ao lado da “Situação”. Se ainda houver subatividades abertas, marque “Concluir também as subatividades abertas” para fechar todas juntas, ou desmarque para concluir só esta.",
         ],
