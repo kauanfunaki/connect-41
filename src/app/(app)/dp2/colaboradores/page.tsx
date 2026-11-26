@@ -396,7 +396,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
 
       {pessoas.some((p) => p.dp2Vinculo) && (
         <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado e o contrato de experiência em PDF, do cadastro e do contrato do DP 2. O que faltar no cadastro sai com um traço.">
-          <form action="/api/dp2/documentos" method="get" className="flex flex-wrap items-end gap-4">
+          <form action="/api/dp2/documentos" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
             <CampoForm label="Colaborador" htmlFor="doc-pessoa">
               <Select id="doc-pessoa" name="pessoa" defaultValue="" required>
                 <option value="" disabled>
