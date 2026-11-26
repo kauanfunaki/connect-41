@@ -356,12 +356,9 @@ export async function reconciliarCartoesDosProcessos(): Promise<ResultadoDaRecon
     try {
       if (!(await isModuleEnabled(t.id, MODULO_DOS_PROCESSOS))) continue;
       escritorios++;
-      const destino = await listaDeDestino(t.id);
       // Lidos de uma vez, com o que a sincronia usa; a gravação é um por vez.
       const [semCartao, paraConferir] = await Promise.all([
-        destino
-          ? prisma.process.findMany({ where: { tenantId: t.id, cartao: { is: null } }, select: SELECT_DO_PROCESSO, orderBy: { startedAt: "desc" }, take: LOTE_DA_CARGA })
-          : Promise.resolve([] as ProcessoDoCartao[]),
+        prisma.process.findMany({ where: { tenantId: t.id, cartao: { is: null } }, select: SELECT_DO_PROCESSO, orderBy: { startedAt: "desc" }, take: LOTE_DA_CARGA }),
         prisma.process.findMany({
           where: {
             tenantId: t.id,
@@ -371,8 +368,12 @@ export async function reconciliarCartoesDosProcessos(): Promise<ResultadoDaRecon
           select: SELECT_DO_PROCESSO,
         }),
       ]);
-      for (const p of [...semCartao, ...paraConferir]) await sincronizarLido(p, null, destino);
-      verificados += semCartao.length + paraConferir.length;
+      // A lista padrão nasce só quando há processo para pôr nela (sob demanda);
+      // com a abertura desligada, `destino` é nulo e nenhum cartão novo nasce.
+      const destino = semCartao.length > 0 ? await listaDeDestino(t.id) : null;
+      if (destino) for (const p of semCartao) await sincronizarLido(p, null, destino);
+      for (const p of paraConferir) await sincronizarLido(p, null, destino);
+      verificados += (destino ? semCartao.length : 0) + paraConferir.length;
     } catch (err) {
       console.error(`[processos-no-quadro] falha na reconciliação do escritório ${t.id}`, err);
     }
