@@ -3,6 +3,7 @@
 import { formatInstantDateTime, formatarNumero } from "@/lib/format";
 import { ROTULOS, ROTULOS_EXISTENTE, ROTULOS_PRIORIDADE, textoDaTriagem, triagemSchema, type Prioridade, type Status } from "./regras";
 import { ROTULOS_EVENTO } from "./eventos";
+import { descreverEventoDoTeste } from "./teste";
 
 type Quando = Date | string;
 export type MensagemDaLinha = { id: string; authorId: string; body: string; internal: boolean; createdAt: Quando };
@@ -102,6 +103,8 @@ export function descreverEvento(e: Pick<EventoDaLinha, "type" | "actorId" | "dat
       if (categoria) return { texto: confirmada ? `A triagem manteve a categoria ${categoria}, confirmada por quem abriu` : `A triagem automática classificou o chamado em ${categoria}` };
       return { texto: "A triagem automática deixou o chamado para a equipe classificar", detalhe: textoDaTriagem(t.data) };
     }
+    // O período de teste (26/11/2026, funcionalidade-853).
+    case "teste": return descreverEventoDoTeste(d, quem);
     default: return { texto: `${quem} · ${ROTULOS_EVENTO[e.type] ?? "Atualização"}` };
   }
 }

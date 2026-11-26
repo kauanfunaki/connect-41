@@ -67,5 +67,6 @@ export function podeVer(ctx: AuthContext, config: ConfigDeAcesso, chamado: Alvo)
 export function podeResponder(ctx: AuthContext, config: ConfigDeAcesso, chamado: Alvo, status: string, interna: boolean) {
   if (!podeVer(ctx, config, chamado) || ctx.subscriptionReadOnly || ctx.role === "READONLY") return false;
   if (podeOperarNo(ctx, config, chamado.handlingSectorCode)) return status !== "RESOLVIDO" && status !== "CANCELADO";
-  return !interna && (status === "AGUARDANDO_USUARIO" || status === "AGUARDANDO_REQUERENTE") && (chamado.createdById === ctx.userId || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(chamado.requesterSectorCode)));
+  // Em teste (26/11/2026, funcionalidade-853), quem pediu também conversa: tira dúvidas sobre o que testar.
+  return !interna && (status === "AGUARDANDO_USUARIO" || status === "AGUARDANDO_REQUERENTE" || status === "EM_TESTE") && (chamado.createdById === ctx.userId || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(chamado.requesterSectorCode)));
 }

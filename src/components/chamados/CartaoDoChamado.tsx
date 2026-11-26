@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BellRing, CircleCheck, CirclePause, CircleX, Hourglass, Inbox, ListOrdered, LoaderCircle, MessageSquareText, ScanSearch, type LucideIcon } from "lucide-react";
+import { BellRing, CircleCheck, CirclePause, CircleX, FlaskConical, Hourglass, Inbox, ListOrdered, LoaderCircle, MessageSquareText, ScanSearch, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -21,7 +21,7 @@ import { TOM_DA_PRIORIDADE, TOM_DA_SITUACAO } from "@/lib/chamados/tons";
 const ICONE_DA_SITUACAO: Record<Status, LucideIcon> = {
   AGUARDANDO_TRIAGEM: ScanSearch, ABERTO: Inbox, NA_FILA: ListOrdered, EM_ANDAMENTO: LoaderCircle,
   AGUARDANDO_USUARIO: Hourglass, AGUARDANDO_APROVACAO: Hourglass, AGUARDANDO_REQUERENTE: Hourglass,
-  STANDBY: CirclePause, RESOLVIDO: CircleCheck, CANCELADO: CircleX,
+  STANDBY: CirclePause, EM_TESTE: FlaskConical, RESOLVIDO: CircleCheck, CANCELADO: CircleX,
 };
 const PAINEL_DO_TOM: Record<TomDoSelo, string> = {
   marca: "bg-brand/[0.06] border-brand/20 text-brand",
@@ -49,6 +49,8 @@ type Props = {
    */
   naoEDoMeuSetor?: "acompanha" | "abriu";
   prazo?: { vence: Date; pausado: boolean; atrasado: boolean };
+  /** Em teste (26/11/2026, funcionalidade-853): o dia do prazo ("01/12") e se venceu sem retorno. */
+  teste?: { ate: string; vencido: boolean };
   fila?: { posicao: number; total: number; reordenar: boolean };
   /** Do mais novo para o mais antigo. */
   atividades: Atividade[]; ultimaAtividade: Date;
@@ -57,7 +59,7 @@ type Props = {
 
 export function CartaoDoChamado(p: Props) {
   const status = p.status as Status, tom = TOM_DA_SITUACAO[status];
-  const Icone = p.suaVez ? BellRing : ICONE_DA_SITUACAO[status];
+  const Icone = p.suaVez ? (p.teste ? FlaskConical : BellRing) : ICONE_DA_SITUACAO[status];
   const tomDaPrioridade = TOM_DA_PRIORIDADE[p.prioridade as Prioridade];
   const tomDaAtividade = fechado(status) ? "neutro" : TOM_DA_IDADE[idadeDaAtividade(p.ultimaAtividade, p.agora)];
   const painel = p.suaVez ? PAINEL_DO_TOM.atencao : PAINEL_DO_TOM[tom];
@@ -66,9 +68,9 @@ export function CartaoDoChamado(p: Props) {
     <div className={`flex flex-col gap-3 border-b p-4 md:border-b-0 md:border-r ${painel}`}>
       <div className="flex items-center gap-2">
         <Icone size={18} aria-hidden className="shrink-0" />
-        <span className="text-ui font-bold">{p.suaVez ? "Aguardando sua resposta" : ROTULOS[status]}</span>
+        <span className="text-ui font-bold">{p.suaVez ? (p.teste ? `Testar até ${p.teste.ate}` : "Aguardando sua resposta") : p.teste ? `Em teste até ${p.teste.ate}` : ROTULOS[status]}</span>
         {p.naoEDoMeuSetor && <span data-dica={p.atende ? `Quem atende é ${p.atende}` : undefined} className="relative z-10"><Selo tom="neutro" className="font-semibold">{p.naoEDoMeuSetor === "acompanha" ? "Acompanhando" : "Você abriu"}</Selo></span>}
-        {p.prazo?.atrasado && <Selo tom="perigo" className="ml-auto font-semibold">Atrasado</Selo>}
+        {p.teste?.vencido ? <Selo tom="perigo" className="ml-auto font-semibold">Teste vencido</Selo> : p.prazo?.atrasado && <Selo tom="perigo" className="ml-auto font-semibold">Atrasado</Selo>}
       </div>
       <ol aria-label="Atividade recente" className="border-t border-current/15 pt-3">
         {p.atividades.map((a, i) => <li key={a.id} className="grid grid-cols-[14px_minmax(0,1fr)] gap-2.5">

@@ -85,7 +85,8 @@ describe("abertura sem título", () => {
 describe("triagem depois do envio", () => {
   it("Aguardando triagem é situação da triagem, não da equipe", () => {
     expect(STATUS).toContain("AGUARDANDO_TRIAGEM"); expect(ROTULOS.AGUARDANDO_TRIAGEM).toBe("Aguardando triagem");
-    expect(SITUACOES_MANUAIS).not.toContain("AGUARDANDO_TRIAGEM"); expect(SITUACOES_MANUAIS).toHaveLength(STATUS.length - 1);
+    // "Em teste" também fica de fora (funcionalidade-853): entra pelo pedido de teste, com o prazo.
+    expect(SITUACOES_MANUAIS).not.toContain("AGUARDANDO_TRIAGEM"); expect(SITUACOES_MANUAIS).not.toContain("EM_TESTE"); expect(SITUACOES_MANUAIS).toHaveLength(STATUS.length - 2);
     expect(emTriagem("AGUARDANDO_TRIAGEM")).toBe(true); expect(emTriagem("ABERTO")).toBe(false);
   });
   it("separa falha de falta de contexto na frase e no aviso", () => {

@@ -8,7 +8,9 @@ import { chamadoNosDetalhes } from "@/lib/auditoria/metadados";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestaoNo, exigirOperacao, type Contexto } from "./contexto";
 import { podeOperarNo, podeRedirecionar, podeResponder, podeVer, setorQueAtende } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, aberturaSchema, descricaoComRespostas, emTriagem, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado, type RevisaoAprovada } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, aberturaSchema, descricaoComRespostas, emTriagem, emTeste, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado, type RevisaoAprovada } from "./regras";
+import { EFEITO_DO_RETORNO, diaDoPrazo, erroDoPrazo, esperaDecisao, fimDoDia, pedidoDeTesteSchema, podeResponderTeste, prorrogacaoDoTesteSchema, retornoDoTesteSchema } from "./teste";
+import { saoPauloParts } from "@/lib/agenda";
 import { anexosDoChamado } from "./armazenamento";
 import { prepararCatalogo } from "./catalogo-servidor";
 import { A_CLASSIFICAR, categoriasClassificaveis } from "./catalogo";
@@ -34,12 +36,13 @@ export async function chamadoParaAuditoria(tenantId: string, id: string): Promis
   const t = await getPrisma().helpdeskTicket.findFirst({ where: { tenantId, id }, select: { number: true, title: true } }).catch(() => null);
   return t ? chamadoNosDetalhes(t) : {};
 }
-export async function depois(c: Contexto, id: string, action: string) {
+/** `extra`: o que a auditoria precisa além da operação (o retorno do teste, por exemplo). */
+export async function depois(c: Contexto, id: string, action: string, extra: Record<string, string> = {}) {
   const chamado = await chamadoParaAuditoria(c.ctx.tenantId, id);
   // Falhas de entrega não transformam uma gravação confirmada em "falha":
   // eventos pendentes serão retomados pelo motor de alertas.
   await Promise.allSettled([
-    logAudit({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, action: action === "created" ? "helpdesk.created" : "helpdesk.updated", entityType: "HelpdeskTicket", entityId: id, metadata: { operacao: action, ...chamado } }),
+    logAudit({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, action: action === "created" ? "helpdesk.created" : "helpdesk.updated", entityType: "HelpdeskTicket", entityId: id, metadata: { operacao: action, ...extra, ...chamado } }),
     despacharEventos(c.ctx.tenantId, id),
   ]);
 }
@@ -189,7 +192,8 @@ export async function paraAgir(tx: Tx, c: Contexto, id: string, version: number)
   if (r.count !== 1) throw desatualizado();
   return t;
 }
-async function mudarStatus(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof paraAgir>>, novo: Status) {
+/** `registrar` = false: o passo grava o próprio evento, que já diz para onde o chamado foi (os do teste). */
+async function mudarStatus(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof paraAgir>>, novo: Status, registrar = true) {
   const agora = new Date(), ciclo = t.cycles[0];
   if (t.approvalStatus === "PENDING" && !["AGUARDANDO_APROVACAO", "CANCELADO"].includes(novo)) throw new Error("Este chamado aguarda aprovação.");
   if (novo === "AGUARDANDO_APROVACAO" && t.approvalStatus !== "PENDING") throw new Error("Não há aprovação pendente.");
@@ -213,7 +217,23 @@ async function mudarStatus(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof par
     }
   }
   await tx.helpdeskTicket.update({ where: { id: t.id }, data: { status: novo, queueOrder, closedAt: fechado(novo) ? agora : null } });
-  await evento(tx, c.ctx.tenantId, t.id, c.ctx.userId, "status", { from: t.status, to: novo });
+  if (registrar) await evento(tx, c.ctx.tenantId, t.id, c.ctx.userId, "status", { from: t.status, to: novo });
+}
+
+// ── O período de teste (26/11/2026, funcionalidade-853) ─────────────────────
+// As regras e os textos moram em teste.ts. Cada passo grava um evento "teste"
+// (histórico do chamado e aviso no sino) e passa pela auditoria em `depois`.
+/** O que o zod recusou, na frase da regra (e não no JSON do erro). */
+function lerOuRecusar<T>(r: { success: true; data: T } | { success: false; error: { issues: { message: string }[] } }): T {
+  if (!r.success) throw new Error(r.error.issues[0]?.message ?? "Confira os dados do teste.");
+  return r.data;
+}
+const hoje = () => saoPauloParts(new Date()).dateKey;
+/** Conclui o chamado em teste, com ou sem o retorno de quem pediu: fica registrado qual foi o caso. */
+async function concluirTeste(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof paraAgir>>) {
+  await mudarStatus(tx, c, t, "RESOLVIDO", false);
+  await tx.helpdeskTicket.update({ where: { id: t.id }, data: { testFeedback: null } });
+  await evento(tx, c.ctx.tenantId, t.id, c.ctx.userId, "teste", { acao: "concluido", retorno: esperaDecisao(t.testFeedback) ? t.testFeedback : null, de: t.status, para: "RESOLVIDO" });
 }
 
 export async function comentar(c: Contexto, id: string, version: number, input: unknown) {
@@ -256,11 +276,25 @@ async function aprovacaoDaNovaCategoria(tx: Tx, c: Contexto, t: Awaited<ReturnTy
 }
 
 export async function alterar(c: Contexto, id: string, version: number, operacao: string, valor: unknown) {
+  const extra: Record<string, string> = {};
   await getPrisma().$transaction(async tx => {
     await travarEscritorio(tx, c.ctx.tenantId);
     const t = await paraAgir(tx, c, id, version);
     const tenantId = c.ctx.tenantId;
-    if (operacao === "aprovar") {
+    if (operacao === "teste_retorno") {
+      // O retorno do teste (funcionalidade-853): quem abriu o chamado, ou o
+      // administrador do escritório. "Deu tudo certo" conclui; "Encontrei um
+      // problema" volta para o atendimento; os outros deixam o chamado em teste,
+      // e quem atende decide entre prorrogar e concluir.
+      if (!emTeste(t.status)) throw new Error("O chamado não está em teste.");
+      if (!podeResponderTeste({ userId: c.ctx.userId, role: c.ctx.role, somenteLeitura: c.ctx.subscriptionReadOnly }, t)) throw new Error("Só quem abriu o chamado ou o administrador responde o teste.");
+      const d = lerOuRecusar(retornoDoTesteSchema.safeParse(valor));
+      const para = EFEITO_DO_RETORNO[d.retorno];
+      if (para) await mudarStatus(tx, c, t, para, false);
+      await tx.helpdeskTicket.update({ where: { id }, data: { testFeedback: para ? null : d.retorno } });
+      await evento(tx, tenantId, id, c.ctx.userId, "teste", { acao: "retorno", retorno: d.retorno, ...(d.texto ? { texto: d.texto } : {}), ...(para ? { de: t.status, para } : {}) });
+      extra.retorno = d.retorno;
+    } else if (operacao === "aprovar") {
       if (t.createdById === c.ctx.userId) throw new Error("O solicitante não aprova a própria abertura.");
       if (!isFullWrite(c.ctx.role) && !strings(t.approverIds).includes(c.ctx.userId)) throw new Error("Você não é aprovador deste chamado.");
       const d = z.object({ aprovado: z.boolean(), motivo: z.string().trim().min(1).max(2000) }).parse(valor);
@@ -335,11 +369,45 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       // Enquanto a triagem roda (10/11/2026), situação e dados são dela: é ela que
       // grava a categoria, o título e a situação de abertura. O resto (assumir,
       // participantes, prioridade, mensagem) segue liberado.
-      if (emTriagem(t.status) && (operacao === "status" || operacao === "dados")) throw new Error("A triagem automática ainda está analisando este chamado. Aguarde alguns segundos e tente de novo.");
+      if (emTriagem(t.status) && (operacao === "status" || operacao === "dados" || operacao === "teste_pedir")) throw new Error("A triagem automática ainda está analisando este chamado. Aguarde alguns segundos e tente de novo.");
       if (operacao === "status") {
         const novo = z.enum(STATUS).parse(valor);
         if (emTriagem(novo)) throw new Error("Só a triagem automática põe o chamado em Aguardando triagem.");
-        await mudarStatus(tx, c, t, novo);
+        if (emTeste(novo)) throw new Error("Para pôr o chamado em teste, use “Pedir teste”: ele pede o prazo.");
+        // Saindo do teste pelo seletor (funcionalidade-853): resolver é concluir
+        // o teste (com ou sem retorno, registrado); outra situação encerra o
+        // teste, e o evento dele é só histórico — quem avisa é o "status".
+        if (emTeste(t.status) && novo === "RESOLVIDO") await concluirTeste(tx, c, t);
+        else {
+          await mudarStatus(tx, c, t, novo);
+          if (emTeste(t.status)) {
+            await tx.helpdeskTicket.update({ where: { id }, data: { testFeedback: null } });
+            await tx.helpdeskEvent.create({ data: { tenantId, ticketId: id, actorId: c.ctx.userId, type: "teste", data: json({ acao: "encerrado", para: novo }), dispatchedAt: new Date() } });
+          }
+        }
+      }
+      else if (operacao === "teste_pedir") {
+        // Pedir o teste da entrega: quem atende, com o prazo e o que testar.
+        if (emTeste(t.status)) throw new Error("O chamado já está em teste. Para mudar o prazo, prorrogue o teste.");
+        if (t.approvalStatus === "PENDING") throw new Error("Este chamado aguarda aprovação.");
+        const d = lerOuRecusar(pedidoDeTesteSchema.safeParse(valor));
+        const erro = erroDoPrazo(d.ate, hoje()); if (erro) throw new Error(erro);
+        await mudarStatus(tx, c, t, "EM_TESTE", false);
+        await tx.helpdeskTicket.update({ where: { id }, data: { testDueAt: fimDoDia(d.ate), testStartedAt: new Date(), testInstructions: d.oQueTestar || null, testFeedback: null } });
+        await evento(tx, tenantId, id, c.ctx.userId, "teste", { acao: "pedido", ate: d.ate, ...(d.oQueTestar ? { oQueTestar: d.oQueTestar } : {}), de: t.status, para: "EM_TESTE" });
+      } else if (operacao === "teste_prorrogar") {
+        if (!emTeste(t.status)) throw new Error("O chamado não está em teste.");
+        const d = lerOuRecusar(prorrogacaoDoTesteSchema.safeParse(valor));
+        const erro = erroDoPrazo(d.ate, hoje()); if (erro) throw new Error(erro);
+        const antes = t.testDueAt ? diaDoPrazo(t.testDueAt) : null;
+        if (antes === d.ate) throw new Error("Escolha um prazo diferente do atual.");
+        // O retorno pendente ("Não consegui testar", "Outro") foi decidido: o teste segue com o prazo novo.
+        await tx.helpdeskTicket.update({ where: { id }, data: { testDueAt: fimDoDia(d.ate), testFeedback: null } });
+        await evento(tx, tenantId, id, c.ctx.userId, "teste", { acao: "prorrogado", ate: d.ate, ...(antes ? { antes } : {}), ...(d.motivo ? { motivo: d.motivo } : {}) });
+      } else if (operacao === "teste_concluir") {
+        // Concluir mesmo sem retorno: fica registrado como "concluído sem retorno do teste".
+        if (!emTeste(t.status)) throw new Error("O chamado não está em teste.");
+        await concluirTeste(tx, c, t);
       }
       else if (operacao === "assumir") {
         await tx.helpdeskAssignee.upsert({ where: { tenantId_ticketId_userId: { tenantId, ticketId: id, userId: c.ctx.userId } }, create: { tenantId, ticketId: id, userId: c.ctx.userId }, update: {} });
@@ -389,5 +457,5 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       } else throw new Error("Operação desconhecida.");
     }
   });
-  await depois(c, id, operacao);
+  await depois(c, id, operacao, extra);
 }

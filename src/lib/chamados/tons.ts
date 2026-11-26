@@ -17,6 +17,8 @@ export const TOM_DA_SITUACAO: Record<Status, TomDoSelo> = {
   AGUARDANDO_APROVACAO: "atencao",
   AGUARDANDO_REQUERENTE: "atencao",
   STANDBY: "neutro",
+  // Com quem pediu, para testar (funcionalidade-853): espera dele, como "Aguardando usuário".
+  EM_TESTE: "atencao",
   RESOLVIDO: "sucesso",
   CANCELADO: "neutro",
 };

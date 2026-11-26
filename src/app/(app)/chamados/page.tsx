@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BellRing, History, Hourglass, Inbox, CirclePause, Plus, Settings, Ticket } from "lucide-react";
+import { BellRing, FlaskConical, History, Hourglass, Inbox, CirclePause, Plus, Settings, Ticket } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -13,7 +13,8 @@ import { contexto } from "@/lib/chamados/contexto";
 import { podeAbrir, podeGerenciar, podeGerenciarNo, podeVerInterno, escoposDaBusca } from "@/lib/chamados/acesso";
 import { lista, categorias, usuarios, resumoRascunho } from "@/lib/chamados/consultas";
 import { getActiveSectors } from "@/lib/sectors";
-import { aguardandoSolicitante } from "@/lib/chamados/regras";
+import { aguardandoSolicitante, emTeste } from "@/lib/chamados/regras";
+import { diaCurto, diaDoPrazo, estadoDoTeste } from "@/lib/chamados/teste";
 import { slaAtrasado } from "@/lib/chamados/tons";
 import { atividadesRecentes } from "@/lib/chamados/atividade";
 import { isFullWrite } from "@/lib/auth/papeis";
@@ -34,7 +35,7 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
   // abas de atendimento: acompanha os próprios chamados (o gestor, os do setor)
   // em "Abertos", com destaque nos que esperam a resposta dele.
   const internos = podeVerInterno(c.ctx, c.config), reordenar = internos && podeGerenciar(c.ctx, c.config);
-  const abasValidas = internos ? ["fila", "aguardando", "pausa", "historico"] : ["abertos", "historico"];
+  const abasValidas = internos ? ["fila", "aguardando", "pausa", "teste", "historico"] : ["abertos", "historico"];
   const aba = abasValidas.includes(filtros.aba ?? "") ? filtros.aba! : abasValidas[0];
   const [dados, cats, users, setores] = await Promise.all([lista(c, { ...filtros, aba }), categorias(c, true), usuarios(c), getActiveSectors(c.ctx.tenantId)]);
   if (!podeAbrir(c.ctx, c.config) && !podeVerInterno(c.ctx, c.config) && !dados.total && !dados.drafts.length) {
@@ -58,6 +59,8 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
     { id: "fila", texto: "Em Fila", total: dados.counts.fila, Icone: Inbox },
     { id: "aguardando", texto: "Aguardando Usuário", total: dados.counts.aguardando, Icone: Hourglass },
     { id: "pausa", texto: "Em Pausa", total: dados.counts.pausa, Icone: CirclePause },
+    // A entrega em teste com quem pediu (26/11/2026, funcionalidade-853): o filtro da situação.
+    { id: "teste", texto: "Em Teste", total: dados.counts.teste, Icone: FlaskConical },
   ] : [{ id: "abertos", texto: "Abertos", total: dados.counts.abertos, Icone: Ticket }];
   return <PageContainer>
     <PageHeader title="Chamados" action={<div className="group flex flex-wrap items-center gap-2"><BotaoFixarTela code="helpdesk" fixada={fixadas.includes("helpdesk")} />{internos && podeGerenciar(c.ctx, c.config) && <IconButton href="/chamados/configuracoes" variant="framed" size="lg" title="Configurar chamados"><Settings size={16} /></IconButton>}{podeAbrir(c.ctx, c.config) && <Button href="/chamados/novo"><Plus size={14} aria-hidden />Novo chamado</Button>}</div>} />
@@ -73,11 +76,13 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
       { chave: "historico", rotulo: "Histórico", href: url({ aba: "historico", pagina: null }), icone: <History size={14} aria-hidden />, contagem: dados.counts.historico },
     ]} />
     {!internos && !!dados.counts.aguardando && <Link href={url({ aba: "abertos", pagina: null })} className="mb-4 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-ui font-semibold text-warning-fg hover:bg-warning/15"><BellRing size={16} aria-hidden className="shrink-0" />{dados.counts.aguardando === 1 ? "1 chamado aguarda a sua resposta." : `${dados.counts.aguardando} chamados aguardam a sua resposta.`}</Link>}
+    {!internos && !!dados.counts.teste && <Link href={url({ aba: "abertos", pagina: null })} className="mb-4 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-ui font-semibold text-warning-fg hover:bg-warning/15"><FlaskConical size={16} aria-hidden className="shrink-0" />{dados.counts.teste === 1 ? "1 entrega aguarda o seu teste." : `${dados.counts.teste} entregas aguardam o seu teste.`}</Link>}
     <p className="mb-3 text-helper text-fg-secondary tabular-nums">{dados.total === 1 ? "1 chamado" : `${dados.total} chamados`}</p>
     {!dados.rows.length ? <Card><EmptyState icon={<Ticket />} title="Nenhum chamado neste recorte" description={podeAbrir(c.ctx, c.config) ? "Troque a aba ou a busca, ou abra um chamado novo." : "Troque a aba ou a busca."} action={podeAbrir(c.ctx, c.config) ? <Button href="/chamados/novo" variant="secondary"><Plus size={14} aria-hidden />Novo chamado</Button> : undefined} /></Card> : <div className="space-y-3">{dados.rows.map(t => {
       const setor = setores.find(s => s.code === t.requesterSectorCode);
       const posicao = dados.posicoes.get(t.id);
       const autoria = { createdById: t.createdById, responsaveis: t.assignees.map(a => a.userId), equipe };
+      const teste = estadoDoTeste(t, agora);
       return <CartaoDoChamado key={t.id} id={t.id} numero={t.number} titulo={t.title} status={t.status} prioridade={t.priority} version={t.version} criadoEm={t.createdAt}
         categoria={caminhoDaCategoria(cats, t.categoryId) || t.category.name} corCategoria={corDaCategoria(t.categoryId)}
         setor={{ rotulo: setor?.label ?? t.requesterSectorCode, cor: setor?.color ?? "var(--c41-fg-muted)" }}
@@ -87,7 +92,8 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
         fila={t.status === "NA_FILA" && posicao ? { posicao, total: dados.totalFila.get(t.handlingSectorCode) ?? posicao, reordenar: reordenar && podeGerenciarNo(c.ctx, c.config, t.handlingSectorCode) } : undefined}
         atividades={atividadesRecentes(t.events, autoria, nome, dados.comentarios)} ultimaAtividade={t.events[0]?.createdAt ?? t.updatedAt}
         naoEDoMeuSetor={variosSetores && !isFullWrite(c.ctx.role) && !c.ctx.sectors.includes(t.handlingSectorCode) ? (t.createdById === c.ctx.userId ? "abriu" : "acompanha") : undefined}
-        suaVez={!internos && aguardandoSolicitante(t.status)} agora={agora} />;
+        teste={teste && t.testDueAt ? { ate: diaCurto(diaDoPrazo(t.testDueAt)), vencido: teste === "vencido" } : undefined}
+        suaVez={!internos && (aguardandoSolicitante(t.status) || emTeste(t.status))} agora={agora} />;
     })}</div>}
     <Pagination page={dados.page} totalPages={Math.max(1, Math.ceil(dados.total / 25))} buildHref={pagina} total={dados.total} rotulo="chamados" />
   </PageContainer>;

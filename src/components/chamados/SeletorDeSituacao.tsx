@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CheckCircle2, ChevronDown, LoaderCircle } from "lucide-react";
+import { Ban, CheckCircle2, ChevronDown, FlaskConical, LoaderCircle } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
 import { COR_DO_TOM, type TomDoSelo } from "@/components/ui/Selo";
 import { ROTULOS, type Status } from "@/lib/chamados/regras";
@@ -38,10 +38,14 @@ export function SeloDaSituacao({ status }: { status: Status }) {
  * do cartão: o botão com a situação atual, na cor dela, abre só as trocas que o
  * servidor aceita (`situacoesDoSeletor`). Resolver e Cancelar vêm à parte e
  * seguem pedindo confirmação (`onEncerrar`).
+ *
+ * `onPedirTeste` (26/11/2026, funcionalidade-853): entregar para quem pediu
+ * testar, antes de resolver. Abre a janela do prazo; "Em teste" não é uma
+ * troca direta.
  */
-export function SeletorDeSituacao({ atual, opcoes, aprovacaoPendente, salvando, onTrocar, onEncerrar }: {
+export function SeletorDeSituacao({ atual, opcoes, aprovacaoPendente, salvando, onTrocar, onEncerrar, onPedirTeste }: {
   atual: Status; opcoes: Status[]; aprovacaoPendente: boolean; salvando: boolean;
-  onTrocar: (s: Status) => void; onEncerrar: (s: "RESOLVIDO" | "CANCELADO") => void;
+  onTrocar: (s: Status) => void; onEncerrar: (s: "RESOLVIDO" | "CANCELADO") => void; onPedirTeste?: () => void;
 }) {
   const grupos = GRUPOS.map(g => ({ ...g, situacoes: g.situacoes.filter(s => opcoes.includes(s)) })).filter(g => g.situacoes.length);
   const resolver = opcoes.includes("RESOLVIDO"), cancelar = opcoes.includes("CANCELADO");
@@ -61,7 +65,10 @@ export function SeletorDeSituacao({ atual, opcoes, aprovacaoPendente, salvando, 
           <span className="flex min-w-0 flex-col"><span className="text-dropdown font-medium text-fg">{ROTULOS[s]}</span>{DESCRICAO[s] && <span className="text-fs-2 leading-snug text-fg-secondary">{DESCRICAO[s]}</span>}</span>
         </button>)}
       </div>)}
-      {(resolver || cancelar) && <div className={`space-y-0.5 ${grupos.length ? "border-t border-border pt-2" : ""}`}>
+      {(resolver || cancelar || onPedirTeste) && <div className={`space-y-0.5 ${grupos.length ? "border-t border-border pt-2" : ""}`}>
+        {onPedirTeste && <button type="button" onClick={() => { close(); onPedirTeste(); }} className={`${ITEM} text-warning-fg hover:bg-warning/8 focus-visible:bg-warning/8`}>
+          <FlaskConical size={16} aria-hidden className="mt-0.5 shrink-0" /><span className="flex min-w-0 flex-col"><span className="text-dropdown font-medium">Entregar para teste</span><span className="text-fs-2 leading-snug text-fg-secondary">Quem pediu testa até o prazo; o prazo de atendimento fica parado</span></span>
+        </button>}
         {resolver && <button type="button" onClick={() => { close(); onEncerrar("RESOLVIDO"); }} className={`${ITEM} text-success-fg hover:bg-success/8 focus-visible:bg-success/8`}>
           <CheckCircle2 size={16} aria-hidden className="mt-0.5 shrink-0" /><span className="flex min-w-0 flex-col"><span className="text-dropdown font-medium">Resolver o chamado</span><span className="text-fs-2 leading-snug text-fg-secondary">Pede confirmação e avisa quem pediu</span></span>
         </button>}

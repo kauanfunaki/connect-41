@@ -105,6 +105,8 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
     fila: { status: { in: ["AGUARDANDO_TRIAGEM", "ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] } },
     aguardando: { status: { in: ["AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE"] } },
     pausa: { status: "STANDBY" },
+    // A entrega com quem pediu, para testar (26/11/2026, funcionalidade-853).
+    teste: { status: "EM_TESTE" },
     historico: { status: { in: ["RESOLVIDO", "CANCELADO"] } },
   };
   const statusFiltro = filtros.status && STATUS.includes(filtros.status as never) ? { status: filtros.status as never } : null;
@@ -120,7 +122,7 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
     getPrisma().helpdeskTicket.count({ where }),
     getPrisma().helpdeskDraft.findMany({ where: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, submittedAt: null }, orderBy: { updatedAt: "desc" }, take: 20 }),
   ]);
-  const [abertosCount, filaCount, aguardandoCount, pausaCount, historicoCount] = await Promise.all(["abertos", "fila", "aguardando", "pausa", "historico"].map(countAba));
+  const [abertosCount, filaCount, aguardandoCount, pausaCount, testeCount, historicoCount] = await Promise.all(["abertos", "fila", "aguardando", "pausa", "teste", "historico"].map(countAba));
   // Uma fila por setor que atende (12/11/2026): a posição conta dentro do setor do chamado.
   // A lista vem do mais recente (melhoria-784); a posição segue a ordem de atendimento.
   const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: ORDEM_DE_ATENDIMENTO, select: { id: true, handlingSectorCode: true } });
@@ -129,7 +131,7 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   // O texto dos comentários entre esses eventos, para a dica ao lado de "Suporte comentou".
   const idsDosComentarios = rows.flatMap(t => t.events.filter(e => e.type === "comment").map(e => (e.data as { commentId?: unknown } | null)?.commentId)).filter((id): id is string => typeof id === "string");
   const comentarios = idsDosComentarios.length ? await getPrisma().helpdeskComment.findMany({ where: { tenantId: c.ctx.tenantId, id: { in: idsDosComentarios }, ...soOQuePodeLer(c) }, select: { id: true, body: true } }) : [];
-  return { rows, total, page, drafts, comentarios: new Map(comentarios.map(m => [m.id, m.body])), counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes, totalFila: porSetor };
+  return { rows, total, page, drafts, comentarios: new Map(comentarios.map(m => [m.id, m.body])), counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, teste: testeCount, historico: historicoCount }, posicoes, totalFila: porSetor };
 }
 // A busca procura no escopo escolhido ao lado da caixa (26/10/2026): no próprio
 // chamado (título, descrição, protocolo), em quem abriu, no setor solicitante ou
