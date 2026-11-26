@@ -123,7 +123,7 @@ export function PrevistoDoFluxo({
         ) : (
           <Aviso tom="atencao">
             Sem saldo das contas: o previsto parte de zero. Importe o extrato em “Conciliação bancária” ou, se a empresa concilia no Omie,
-            escolha “Do Omie” em Modelo do fluxo › Data de caixa e saldo (o saldo chega na próxima sincronização).
+            escolha “Omie” no saldo inicial, em Modelo do fluxo › Data de caixa e saldo (o saldo chega na próxima sincronização).
           </Aviso>
         ))}
 
