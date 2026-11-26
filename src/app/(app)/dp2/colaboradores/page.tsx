@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NOME_DA_ALOCACAO, rotuloDoTomador, type TipoDeAlocacao } from "@/lib/dp2/alocacao";
+import { situacaoDoCa } from "@/lib/dp2/sst";
 import { IdCard, Pencil, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -38,7 +39,7 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, excluirAlocacaoAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, excluirAlocacaoAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -162,6 +163,12 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
   ]);
   // Alocação em tomador (funcionalidade-772): cessão de mão de obra e trabalho temporário.
   const alocacoes = await getPrisma().dp2Alocacao.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, include: { person: { select: { name: true } } }, orderBy: [{ inicio: "desc" }], take: 50 });
+  // Entregas de EPI (funcionalidade-761): os EPIs da empresa e as últimas entregas.
+  const [episDaEmpresa, entregasDeEpi] = await Promise.all([
+    getPrisma().dp2Epi.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, orderBy: { nome: "asc" } }),
+    getPrisma().dp2EntregaDeEpi.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, include: { person: { select: { name: true } }, epi: { select: { nome: true, ca: true } } }, orderBy: [{ data: "desc" }, { createdAt: "desc" }], take: 50 }),
+  ]);
+  const hojeNoEpi = new Date().toISOString().slice(0, 10);
   const nomeDaEmpresaOutra = new Map(outrasEmpresas.map((c) => [c.id, nomeExibicao(c)]));
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
@@ -937,6 +944,101 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                 </li>
               ))}
             </ul>
+          )}
+        </Secao>
+      )}
+
+      {pessoas.some((p) => p.dp2Vinculo) && (episDaEmpresa.length > 0 || entregasDeEpi.length > 0) && (
+        <Secao titulo="Entrega de EPI" apoio="A entrega de cada equipamento de proteção, com o CA. A ficha de controle sai por colaborador, para assinatura (NR-6). Os EPIs são cadastrados em DP 2 › Configuração da empresa.">
+          {entregasDeEpi.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[720px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>EPI</th>
+                    <th className={TH}>Data</th>
+                    <th className={TH_NUM}>Qtd.</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entregasDeEpi.map((en) => (
+                    <tr key={en.id} className={TR}>
+                      <td className={`${TD} align-middle`}>{en.person.name}</td>
+                      <td className={`${TD} align-middle`}>
+                        {en.epi.nome} <span className="text-fg-muted">· CA {en.epi.ca}</span>
+                      </td>
+                      <td className={`${TD} align-middle tabular-nums`}>{formatCalendarDate(en.data)}</td>
+                      <td className={`${TD_NUM} align-middle`}>{en.quantidade}</td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        <span className="inline-flex gap-2">
+                          <Button href={`/api/dp2/epi/${en.personId}`} variant="secondary" size="sm" download>
+                            Ficha (PDF)
+                          </Button>
+                          {tela.podeAgir && (
+                            <FormularioDoDp2
+                              acao={excluirEntregaDeEpiAction}
+                              rotulo="Excluir"
+                              rotuloEnviando="Excluindo…"
+                              variante="secondary"
+                              tamanho="sm"
+                              confirmar={{ titulo: "Excluir a entrega?", texto: "Ela sai da ficha de EPI do colaborador.", rotulo: "Excluir" }}
+                            >
+                              <input type="hidden" name="entregaId" value={en.id} />
+                            </FormularioDoDp2>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && episDaEmpresa.length > 0 && (
+            <FormularioDoDp2 acao={registrarEntregaDeEpiAction} rotulo="Registrar entrega" rotuloEnviando="Registrando…" variante="secondary">
+              <input type="hidden" name="companyId" value={empresaAtual} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <CampoForm label="Colaborador" htmlFor="epi-personId">
+                  <Select id="epi-personId" name="personId" defaultValue="" required>
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {pessoas
+                      .filter((p) => p.dp2Vinculo && !p.dismissalDate)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="EPI" htmlFor="epi-epiId">
+                  <Select id="epi-epiId" name="epiId" defaultValue="" required>
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {episDaEmpresa.map((e) => {
+                      const ca = situacaoDoCa(e.validadeCa ? e.validadeCa.toISOString().slice(0, 10) : null, hojeNoEpi);
+                      return (
+                        <option key={e.id} value={e.id}>
+                          {`${e.nome} · CA ${e.ca}${ca.tom === "vencido" ? " (CA vencido)" : ""}`}
+                        </option>
+                      );
+                    })}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Data da entrega" htmlFor="epi-data">
+                  <CampoData id="epi-data" name="data" required />
+                </CampoForm>
+                <CampoForm label="Quantidade" htmlFor="epi-quantidade">
+                  <Input id="epi-quantidade" name="quantidade" inputMode="numeric" defaultValue="1" maxLength={3} />
+                </CampoForm>
+              </div>
+            </FormularioDoDp2>
           )}
         </Secao>
       )}

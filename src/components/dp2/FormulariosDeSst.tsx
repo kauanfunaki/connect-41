@@ -38,7 +38,9 @@ const EPC_EPI: [string, string][] = [
   ["2", "Utiliza"],
 ];
 
-export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
+type Ambiente = { id: string; nome: string; agentes: string };
+
+export function FormulariosDeSst({ pessoas, ambientes = [] }: { pessoas: Pessoa[]; ambientes?: Ambiente[] }) {
   return (
     <div className="grid gap-6">
       <div className="grid gap-5 lg:grid-cols-2">
@@ -88,6 +90,18 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
           <FormularioDoDp2 acao={gerarCondicaoAmbientalAction} rotulo="Gerar S-2240" rotuloEnviando="Gerando…" variante="secondary">
             <div className="grid gap-4 sm:grid-cols-2">
               <Colaborador id="amb_personId" pessoas={pessoas} />
+              {ambientes.length > 0 && (
+                <CampoForm label="Ambiente cadastrado" htmlFor="ambienteId" className="sm:col-span-2" dica="O que ficar em branco abaixo vem do ambiente (DP 2 › Configuração da empresa).">
+                  <Select id="ambienteId" name="ambienteId" defaultValue="">
+                    <option value="">Digitar abaixo</option>
+                    {ambientes.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.agentes ? `${a.nome} · ${a.agentes}` : a.nome}
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+              )}
               <CampoForm label="Vale a partir de" htmlFor="inicioCondicao">
                 <CampoData id="inicioCondicao" name="inicioCondicao" required />
               </CampoForm>
@@ -101,7 +115,8 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
                 <Textarea id="atividade" name="atividade" rows={2} maxLength={999} />
               </CampoForm>
               <CampoForm label="EPC" htmlFor="usaEpc">
-                <Select id="usaEpc" name="usaEpc" defaultValue="0">
+                <Select id="usaEpc" name="usaEpc" defaultValue={ambientes.length > 0 ? "" : "0"}>
+                  {ambientes.length > 0 && <option value="">Do ambiente</option>}
                   {EPC_EPI.map(([k, r]) => (
                     <option key={k} value={k}>
                       {r}
@@ -110,7 +125,8 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
                 </Select>
               </CampoForm>
               <CampoForm label="EPI" htmlFor="usaEpi">
-                <Select id="usaEpi" name="usaEpi" defaultValue="0">
+                <Select id="usaEpi" name="usaEpi" defaultValue={ambientes.length > 0 ? "" : "0"}>
+                  {ambientes.length > 0 && <option value="">Do ambiente</option>}
                   {EPC_EPI.map(([k, r]) => (
                     <option key={k} value={k}>
                       {r}

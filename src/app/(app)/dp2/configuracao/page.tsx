@@ -16,7 +16,12 @@ import { configDaEmpresa } from "@/lib/dp2/servidor";
 import { responsaveisDeSst } from "@/lib/dp2/esocial/servidor";
 import { aliquotaPatronal } from "@/lib/dp2/mensal";
 import { abrirTelaDeEmpresaDoDp2 } from "@/lib/dp2/tela";
-import { criarHorarioAction, excluirHorarioAction, salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
+import { criarAmbienteAction, criarEpiAction, criarHorarioAction, excluirAmbienteAction, excluirEpiAction, excluirHorarioAction, salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
+import { situacaoDoCa } from "@/lib/dp2/sst";
+import { CampoData } from "@/components/ui/CampoData";
+import { Selo } from "@/components/ui/Selo";
+
+const NOME_EPC_EPI: Record<string, string> = { "0": "Não se aplica", "1": "Não utiliza", "2": "Utiliza" };
 
 const fmt = (v: number, casas = 2) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: 4 }).format(v);
 
@@ -47,6 +52,12 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
     ).map((g) => [g.horarioId, g._count._all])
   );
   const patronal = aliquotaPatronal(cfg.empresa);
+  // Cadastros de SST (funcionalidade-761): ambientes de trabalho e EPIs.
+  const [ambientes, epis] = await Promise.all([
+    getPrisma().dp2Ambiente.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
+    getPrisma().dp2Epi.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" }, include: { _count: { select: { entregas: true } } } }),
+  ]);
+  const hoje = new Date().toISOString().slice(0, 10);
 
   return (
     <PageContainer>
@@ -288,6 +299,150 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
           <p className="text-fs-3 text-fg-muted">
             PCMSO: {sst.medicoNome ?? "não informado"} · Registros ambientais: {sst.ambientalNome ?? "não informado"}
           </p>
+        )}
+      </Secao>
+      <Secao titulo="Ambientes de trabalho" className="mt-5" apoio="Os setores do LTCAT, com os agentes nocivos (Tabela 24) e o uso de EPC e EPI. O S-2240 do colaborador sai do ambiente escolhido em DP 2 › eSocial.">
+        {ambientes.length > 0 && (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full min-w-[640px] text-fs-3">
+              <thead>
+                <tr>
+                  <th className={TH}>Ambiente</th>
+                  <th className={TH}>Agentes nocivos</th>
+                  <th className={TH}>EPC / EPI</th>
+                  <th className={TH}>
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {ambientes.map((amb) => (
+                  <tr key={amb.id} className={TR}>
+                    <td className={TD}>
+                      <span className="font-medium">{amb.nome}</span>
+                      {amb.atividade && <span className="block text-fg-muted max-w-[360px] truncate" title={amb.atividade}>{amb.atividade}</span>}
+                    </td>
+                    <td className={`${TD} tabular-nums`}>{amb.agentes || "Sem agente nocivo"}</td>
+                    <td className={TD}>
+                      {NOME_EPC_EPI[amb.usaEpc] ?? "—"} / {NOME_EPC_EPI[amb.usaEpi] ?? "—"}
+                    </td>
+                    <td className={`${TD} text-right pr-0`}>
+                      {tela.podeAgir && (
+                        <FormularioDoDp2
+                          acao={excluirAmbienteAction}
+                          rotulo="Excluir"
+                          rotuloEnviando="Excluindo…"
+                          variante="secondary"
+                          tamanho="sm"
+                          confirmar={{ titulo: "Excluir o ambiente?", texto: `O ambiente "${amb.nome}" sai da lista. Os S-2240 já gerados ficam como estão.`, rotulo: "Excluir" }}
+                        >
+                          <input type="hidden" name="ambienteId" value={amb.id} />
+                        </FormularioDoDp2>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tela.podeAgir && (
+          <FormularioDoDp2 acao={criarAmbienteAction} rotulo="Cadastrar ambiente" rotuloEnviando="Cadastrando…" variante="secondary">
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CampoForm label="Nome (setor)" htmlFor="amb-nome">
+                <Input id="amb-nome" name="nome" maxLength={100} placeholder="Produção" required />
+              </CampoForm>
+              <CampoForm label="Agentes nocivos (Tabela 24)" htmlFor="amb-agentes" dica="Separados por vírgula. Sem agente nocivo, deixe vazio.">
+                <Input id="amb-agentes" name="agentes" placeholder="01.18.001, 02.01.006" />
+              </CampoForm>
+              <CampoForm label="EPC" htmlFor="amb-epc">
+                <Select id="amb-epc" name="usaEpc" defaultValue="0">
+                  {Object.entries(NOME_EPC_EPI).map(([k, r]) => (
+                    <option key={k} value={k}>
+                      {r}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+              <CampoForm label="EPI" htmlFor="amb-epi">
+                <Select id="amb-epi" name="usaEpi" defaultValue="0">
+                  {Object.entries(NOME_EPC_EPI).map(([k, r]) => (
+                    <option key={k} value={k}>
+                      {r}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+              <CampoForm label="Atividade" htmlFor="amb-atividade" className="sm:col-span-2 lg:col-span-4">
+                <Input id="amb-atividade" name="atividade" maxLength={999} placeholder="Descrição da atividade, como no LTCAT" />
+              </CampoForm>
+            </div>
+          </FormularioDoDp2>
+        )}
+      </Secao>
+      <Secao titulo="Equipamentos de proteção individual (EPI)" className="mt-5" apoio="O EPI com o número do CA e a validade. A entrega a cada colaborador e a ficha para assinatura ficam em DP 2 › Colaboradores.">
+        {epis.length > 0 && (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full min-w-[640px] text-fs-3">
+              <thead>
+                <tr>
+                  <th className={TH}>EPI</th>
+                  <th className={TH}>CA</th>
+                  <th className={TH}>Validade do CA</th>
+                  <th className={TH}>Entregas</th>
+                  <th className={TH}>
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {epis.map((e) => {
+                  const ca = situacaoDoCa(e.validadeCa ? e.validadeCa.toISOString().slice(0, 10) : null, hoje);
+                  return (
+                    <tr key={e.id} className={TR}>
+                      <td className={`${TD} font-medium`}>{e.nome}</td>
+                      <td className={`${TD} tabular-nums`}>{e.ca}</td>
+                      <td className={TD}>
+                        <Selo tom={ca.tom === "vencido" ? "perigo" : ca.tom === "vence" ? "atencao" : ca.tom === "ok" ? "sucesso" : "neutro"}>{ca.texto}</Selo>
+                      </td>
+                      <td className={`${TD} tabular-nums`}>{e._count.entregas}</td>
+                      <td className={`${TD} text-right pr-0`}>
+                        {tela.podeAgir && e._count.entregas === 0 && (
+                          <FormularioDoDp2
+                            acao={excluirEpiAction}
+                            rotulo="Excluir"
+                            rotuloEnviando="Excluindo…"
+                            variante="secondary"
+                            tamanho="sm"
+                            confirmar={{ titulo: "Excluir o EPI?", texto: `O EPI "${e.nome}" sai da lista da empresa.`, rotulo: "Excluir" }}
+                          >
+                            <input type="hidden" name="epiId" value={e.id} />
+                          </FormularioDoDp2>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tela.podeAgir && (
+          <FormularioDoDp2 acao={criarEpiAction} rotulo="Cadastrar EPI" rotuloEnviando="Cadastrando…" variante="secondary">
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <CampoForm label="Nome" htmlFor="epi-nome">
+                <Input id="epi-nome" name="nome" maxLength={120} placeholder="Luva térmica" required />
+              </CampoForm>
+              <CampoForm label="Número do CA" htmlFor="epi-ca">
+                <Input id="epi-ca" name="ca" inputMode="numeric" maxLength={10} required />
+              </CampoForm>
+              <CampoForm label="Validade do CA" htmlFor="epi-validade">
+                <CampoData id="epi-validade" name="validadeCa" />
+              </CampoForm>
+            </div>
+          </FormularioDoDp2>
         )}
       </Secao>
     </PageContainer>
