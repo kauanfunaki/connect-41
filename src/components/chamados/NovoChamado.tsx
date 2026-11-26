@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, FileImage, FileSpreadsheet, FileText, FileVideo, ScanSearch, Sparkles, Upload, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Aviso } from "@/components/ui/Aviso";
 import { Stepper } from "@/components/ui/Stepper";
 import { SeletorDeSetores } from "@/components/ui/SeletorDeSetores";
 import { Campo, CamposDoChamado, type CategoriaDaTela } from "./CamposDoChamado";
+import { CampoDeCategoria } from "./CampoDeCategoria";
 import { IconeDoArquivo } from "./LinhaDoTempo";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { formatInstantTime } from "@/lib/format";
@@ -144,8 +144,8 @@ export function NovoChamado({ inicial, categorias, setores, atendem, setorPadrao
   }
   function abrirSemEsperar() { pedidoDaRevisao.current?.abort(); abrir(false); }
   useEffect(() => () => pedidoDaRevisao.current?.abort(), []);
-  const opcoesDeCategoria = useMemo(() => categoriasClassificaveis(categorias).map(c => ({ id: c.id, caminho: caminhoDaCategoria(categorias, c.id) })).sort((a, b) => a.caminho.localeCompare(b.caminho, "pt-BR")), [categorias]);
-  const caminhoDe = (id: string) => opcoesDeCategoria.find(o => o.id === id)?.caminho ?? "";
+  const classificaveis = useMemo(() => categoriasClassificaveis(categorias), [categorias]);
+  const caminhoDe = (id: string) => classificaveis.some(c => c.id === id) ? caminhoDaCategoria(categorias, id) : "";
   function responder(i: number, valor: string) { setRespostas(r => r.map((x, j) => j === i ? valor : x)); }
   function subir(file: File) {
     void executar("Enviando arquivo…", async () => {
@@ -187,7 +187,8 @@ export function NovoChamado({ inicial, categorias, setores, atendem, setorPadrao
         </div>
         <Campo label="Título"><Input required minLength={3} maxLength={255} value={dados.title} onChange={e => editar({ ...dados, title: e.target.value })} placeholder="O que você precisa?" /></Campo>
         <div className="space-y-1.5">
-          <Campo label="Categoria"><Select value={categoria} onChange={e => setCategoria(e.target.value)}><option value="">Deixar para a equipe classificar</option>{opcoesDeCategoria.map(o => <option key={o.id} value={o.id}>{o.caminho}</option>)}</Select></Campo>
+          {/* O mesmo campo do "Editar dados" e do "Trocar categoria" (26/11/2026, melhoria-809), com a sugestão da IA marcada na lista. */}
+          <Campo label="Categoria" htmlFor="categoria-da-revisao"><CampoDeCategoria id="categoria-da-revisao" categorias={categorias} escolhiveis={classificaveis} value={categoria} onChange={setCategoria} vazia="Deixar para a equipe classificar" sugerida={revisao?.categoryId} /></Campo>
           {sugerida ? <p className="flex flex-wrap items-start gap-1.5 text-helper text-fg-secondary"><Sparkles size={14} aria-hidden className="mt-0.5 shrink-0 text-brand" /><span>Sugestão da IA: <strong className="text-fg">{sugerida}</strong>{revisao?.motivo ? ` — ${revisao.motivo}` : ""}</span>{categoria !== revisao?.categoryId && <Button variant="link" onClick={() => setCategoria(revisao?.categoryId ?? "")}>Usar a sugestão</Button>}</p>
             : revisao ? <p className="text-helper text-fg-muted">A IA não identificou a categoria só pela descrição. Escolha uma, ou deixe para a equipe classificar.</p> : null}
         </div>

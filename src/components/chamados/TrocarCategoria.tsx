@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { CamposDoChamado, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
+import { CategoriaDoChamado, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
 import type { DadosDoChamado } from "@/lib/chamados/regras";
 
 type Props = {
@@ -19,22 +19,23 @@ type Props = {
 /**
  * "Trocar categoria" (25/11/2026, funcionalidade-827): o administrador corrige
  * a categoria que a triagem deu, mesmo sem ser do setor que atende — o
- * "Editar dados" é da equipe. Só a categoria muda; a escolha é a mesma árvore
- * do "Editar dados" (`CamposDoChamado` com `somenteCategoria`). Se a nova
+ * "Editar dados" é da equipe. Só a categoria muda; a escolha é o mesmo campo
+ * do "Editar dados" (`CategoriaDoChamado`, com os grupos da árvore, desde
+ * 26/11/2026, melhoria-809; antes era a grade de botões). Se a nova
  * categoria pede aprovação, o chamado volta para "Aguardando aprovação".
  */
-export function TrocarCategoria({ inicial, categorias, setores, salvando, erro, onSalvar, onFechar }: Props) {
+export function TrocarCategoria({ inicial, categorias, salvando, erro, onSalvar, onFechar }: Props) {
   const [dados, setDados] = useState(inicial);
   const mudou = dados.categoryId !== inicial.categoryId && !!dados.categoryId;
   const nova = categorias.find((c) => c.id === dados.categoryId);
   return (
-    <Modal open onClose={() => { if (!salvando) onFechar(); }} title="Trocar categoria" maxWidth="max-w-2xl">
+    <Modal open onClose={() => { if (!salvando) onFechar(); }} title="Trocar categoria" maxWidth="max-w-lg">
       <form onSubmit={(e) => { e.preventDefault(); if (mudou) onSalvar(dados.categoryId); }} className="space-y-4">
         <p className="text-ui text-fg-secondary">
           Só a categoria muda; o resto do chamado fica como está. A troca fica no histórico do chamado e na Auditoria.
         </p>
         <fieldset disabled={salvando}>
-          <CamposDoChamado dados={dados} onChange={setDados} categorias={categorias} setores={setores} somenteCategoria />
+          <CategoriaDoChamado dados={dados} onChange={setDados} categorias={categorias} />
         </fieldset>
         {mudou && nova?.requiresApproval && (
           <p className="rounded-md bg-warning/10 p-3 text-ui text-warning-fg">
