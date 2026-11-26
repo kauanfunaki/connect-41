@@ -18,7 +18,7 @@ import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
 import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
 import { lerGuiaDoFgts } from "@/lib/dp2/guiasDaFolha";
 import { guardarArquivo } from "@/lib/drive/servidor";
-import { documentoDoColaborador, lerTipoDeDocumento, quadroDeHorarioDaEmpresa } from "@/lib/dp2/documentosServidor";
+import { documentoDoColaborador, lerTipoDeDocumento, movimentacaoDaEmpresa, quadroDeHorarioDaEmpresa } from "@/lib/dp2/documentosServidor";
 import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
 import { lerTotalizadores } from "@/lib/dp2/esocial/totalizadores";
 import { calcularRescisaoDaPessoa, dadosDaRescisao, type AvisoDaRescisao } from "@/lib/dp2/rescisaoServidor";
@@ -924,7 +924,8 @@ export async function apagarSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Pr
 
 /**
  * Gera o documento escolhido (ficha de registro, contrato de experiência,
- * histórico PPP, ficha de atualização da CTPS ou o quadro de horário) e o
+ * histórico PPP, ficha de atualização da CTPS, o quadro de horário ou a
+ * movimentação de empregados do período) e o
  * guarda em Arquivos › Departamento Pessoal da empresa.
  */
 export async function guardarDocumentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -936,6 +937,7 @@ export async function guardarDocumentoAction(_: EstadoDoDp2, fd: FormData): Prom
   const qual = texto(fd, "tipo");
   let doc: Awaited<ReturnType<typeof quadroDeHorarioDaEmpresa>>;
   if (qual === "QUADRO") doc = await quadroDeHorarioDaEmpresa(a.tenantId, companyId);
+  else if (qual === "MOVIMENTACAO") doc = await movimentacaoDaEmpresa(a.tenantId, companyId, texto(fd, "de"), texto(fd, "ate"));
   else {
     const personId = texto(fd, "pessoa");
     if (!personId) return erro("Escolha o colaborador.");

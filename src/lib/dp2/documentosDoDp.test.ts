@@ -68,3 +68,17 @@ describe("ficha de atualização da CTPS (funcionalidade-776)", () => {
     expect(Buffer.from(pdf).subarray(0, 5).toString()).toBe("%PDF-");
   });
 });
+
+describe("movimentação de empregados (funcionalidade-776)", () => {
+  it("resume entradas e saídas e sai em PDF", async () => {
+    const { pdfDaMovimentacao, resumoDaMovimentacao } = await import("./documentosDoDp");
+    const movs = [
+      { data: "2027-06-02", nome: "Ana", tipo: "ADMISSAO" as const, detalhe: "Padeira" },
+      { data: "2027-06-16", nome: "Joana", tipo: "TRANSFERIDO_PARA" as const, detalhe: "Filial" },
+      { data: "2027-06-20", nome: "Bia", tipo: "AFASTAMENTO" as const, detalhe: "doença" },
+    ];
+    expect(resumoDaMovimentacao(movs, 6)).toEqual({ ativosNoInicio: 6, entraram: 1, sairam: 1, ativosNoFim: 6 });
+    const pdf = await pdfDaMovimentacao({ empresa: "Panificadora", documento: null, de: "2027-06-01", ate: "2027-06-30" }, movs, 6);
+    expect(Buffer.from(pdf).subarray(0, 5).toString()).toBe("%PDF-");
+  });
+});
