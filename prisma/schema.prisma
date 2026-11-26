@@ -1574,6 +1574,7 @@ model Tenant {
   techInternalAttachments TechInternalAttachment[]
   techInternalAcceptanceChecks TechInternalAcceptanceCheck[]
   techInternalSavedFilters TechInternalSavedFilter[]
+  bpoModelosDaTabela      BpoModeloDaTabela[]
   opsWatchers             OpsWatcher[]
   opsSites                OpsSite[]
   opsApps                 OpsApp[]
@@ -2180,6 +2181,7 @@ model Subscription {
 model User {
   techInternalAssignments TechInternalItem[]
   techInternalSavedFilters TechInternalSavedFilter[]
+  bpoModelosDaTabela      BpoModeloDaTabela[]
   personalApiTokens       PersonalApiToken[]
   academiaSessoes         AcademiaSessao[]
   academiaResultados      AcademiaResultado[]
@@ -2792,6 +2794,7 @@ model Person {
   dp2Eventos           Dp2Evento[]
   dp2RubricasFixas     Dp2RubricaFixa[]
   dp2Totalizadores     Dp2TotalizadorEsocial[]
+  dp2Rescisoes         Dp2Rescisao[]
   dp2Ferias            Dp2Ferias[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
   dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
@@ -7154,6 +7157,45 @@ model Dp2Calculo {
   @@map("dp2_calculos")
 }
 
+/// Rescisão gravada (25/11/2026, funcionalidade-746, entrega 2.3): as entradas
+/// e o resultado do cálculo de rescisão do DP 2, ligados ao desligamento da
+/// pessoa (Termination, quando houver um em andamento) e ao S-2299 gerado a
+/// partir dela. Quem tem rescisão no mês sai da folha mensal desse mês.
+model Dp2Rescisao {
+  id               String    @id @default(uuid())
+  tenantId         String
+  companyId        String
+  personId         String
+  /// O desligamento em andamento da pessoa (tela Desligamentos), se havia.
+  terminationId    String?
+  desligamento     DateTime  @db.Date
+  motivo           String    @db.VarChar(40)
+  /// INDENIZADO, TRABALHADO ou DISPENSADO.
+  aviso            String    @db.VarChar(12)
+  periodosVencidos Int       @default(0)
+  faltas           Int       @default(0)
+  saldoFgts        Decimal?  @db.Decimal(12, 2)
+  decimoAdiantado  Decimal   @default(0) @db.Decimal(12, 2)
+  proventos        Decimal   @db.Decimal(12, 2)
+  descontos        Decimal   @db.Decimal(12, 2)
+  liquido          Decimal   @db.Decimal(12, 2)
+  fgts             Decimal   @db.Decimal(12, 2)
+  multaFgts        Decimal?  @db.Decimal(12, 2)
+  /// As linhas do cálculo (verba, valor, memória) e os alertas.
+  linhas           Json
+  alertas          Json
+  /// O S-2299 gerado a partir desta rescisão (Dp2EventoEsocial).
+  eventoEsocialId  String?
+  criadoPorId      String?
+  createdAt        DateTime  @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, desligamento])
+  @@index([tenantId, companyId])
+  @@map("dp2_rescisoes")
+}
+
 /// Férias gravadas (25/11/2026, funcionalidade-745, entrega 2.1): o recibo de
 /// férias de uma pessoa, ligado ao período aquisitivo, com os valores do
 /// cálculo no dia em que se gravou. A folha mensal dos meses do gozo lança a
@@ -8691,6 +8733,34 @@ model BpoCredential {
   @@index([tenantId, companyId])
   @@index([tenantId, sectorCode])
   @@map("bpo_credentials")
+}
+
+/// Os modelos da Tabela dinâmica do BPO (25/11/2026, funcionalidade-816): a
+/// configuração da tabela salva com um nome. `setor` nulo é o modelo pessoal
+/// (só quem criou vê); com o código do setor, todo o setor vê. Os parâmetros
+/// são os do endereço da tela e passam pela mesma leitura dele ao aplicar.
+/// `periodo`: "relativo" (os últimos 6 meses, andando com o calendário) ou
+/// "fixo" (o de/até guardado nos parâmetros).
+model BpoModeloDaTabela {
+  id          String   @id @default(uuid())
+  tenantId    String
+  criadoPorId String
+  /// Código de `Sector`, sem FK; nulo = pessoal.
+  setor       String?  @db.VarChar(40)
+  nome        String   @db.VarChar(80)
+  parametros  Json
+  periodo     String   @db.VarChar(10)
+  comFiltros  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  criadoPor User   @relation(fields: [criadoPorId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, criadoPorId])
+  @@index([tenantId, setor])
+  @@index([criadoPorId])
+  @@map("bpo_modelos_da_tabela")
 }
 
 // Preferências pessoais do usuário — uma linha por usuário, criada sob demanda

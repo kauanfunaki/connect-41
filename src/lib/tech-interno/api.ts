@@ -28,8 +28,9 @@ type ItemDaLista = Awaited<ReturnType<typeof listarItens>>["items"][number];
 /**
  * Um item como a API devolve: códigos estáveis e, ao lado, o rótulo em
  * português. Desde 10/11/2026, o número do item no escritório (`number`), o
- * id curto (`shortId`, "bug-123", aceito no lugar do id em toda rota e
- * ferramenta) e o `url` no endereço curto.
+ * id curto (`shortId`, "BUG-123" — desde 25/11/2026, melhoria-818, com a
+ * sigla do tipo em três letras —, aceito no lugar do id em toda rota e
+ * ferramenta, como o antigo "melhoria-45") e o `url` no endereço curto.
  */
 export function itemParaApi(item: ItemDaLista, base: string) {
   return {

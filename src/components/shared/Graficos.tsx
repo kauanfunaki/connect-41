@@ -794,6 +794,12 @@ export type ParDeColunas = {
   valores: readonly [number, number];
   /** Uma linha a mais na dica e na tabela acessível (ex.: o saldo do mês). */
   dica?: string;
+  /**
+   * O par de hoje (melhoria-822, 25/11/2026): o rótulo do eixo sai em negrito,
+   * na cor do texto. Não clareia a coluna, como o `destaque` de `Colunas`:
+   * aqui o tom mais claro já é o da segunda série.
+   */
+  destaque?: boolean;
 };
 
 /**
@@ -870,7 +876,7 @@ export function ColunasPareadas({
         </div>
         <div className="flex gap-2 @2xl:gap-4 mt-1.5">
           {pares.map((p) => (
-            <span key={p.chave} className="flex-1 min-w-0 text-center text-micro text-fg-muted truncate">
+            <span key={p.chave} className={`flex-1 min-w-0 text-center text-micro truncate ${p.destaque ? "font-semibold text-fg" : "text-fg-muted"}`}>
               {p.rotulo}
             </span>
           ))}

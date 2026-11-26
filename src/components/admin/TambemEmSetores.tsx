@@ -2,8 +2,8 @@
 
 import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Popover } from "@/components/ui/Popover";
+import { SeletorDeSetores } from "@/components/ui/SeletorDeSetores";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Setor = { value: string; label: string; cor?: string; ligado: boolean };
@@ -30,7 +30,8 @@ export function TambemEmSetores({
 }) {
   const { dialog, requestConfirm } = useConfirm();
   if (setores.length === 0) return null;
-  const quantos = setores.filter((s) => s.ligado).length;
+  const ligados = setores.filter((s) => s.ligado).map((s) => s.value);
+  const quantos = ligados.length;
 
   function pedir(setor: Setor) {
     const ligar = !setor.ligado;
@@ -55,7 +56,7 @@ export function TambemEmSetores({
     <>
       <Popover
         align="right"
-        width={240}
+        width={280}
         aria-label={`Outros setores que usam ${nome}`}
         trigger={({ open, toggle }) => (
           <Button
@@ -72,25 +73,23 @@ export function TambemEmSetores({
         )}
       >
         {({ close }) => (
-          <div className="flex flex-col gap-1 p-1">
-            {setores.map((s) => (
-              <Checkbox
-                key={s.value}
-                id={`tambem-${nome}-${s.value}`}
-                checked={s.ligado}
-                onChange={() => {
-                  close();
-                  pedir(s);
-                }}
-                label={
-                  <span className="inline-flex items-center gap-2">
-                    <span className="block size-2.5 rounded-full" style={{ background: s.cor ?? "var(--c41-fg-muted)" }} aria-hidden />
-                    {s.label}
-                  </span>
-                }
-              />
-            ))}
-          </div>
+          // O seletor de setores padrão (25/11/2026, melhoria-812), sem "Todos" e
+          // "Nenhum": cada setor grava na hora, com a confirmação de sempre.
+          <SeletorDeSetores
+            rotulo="Também em"
+            estiloDoRotulo="painel"
+            todosENenhum={false}
+            opcoes={setores.map((s) => ({ value: s.value, label: s.label, cor: s.cor }))}
+            valor={ligados}
+            onChange={(novos) => {
+              const mudou = setores.find((s) => novos.includes(s.value) !== s.ligado);
+              if (!mudou) return;
+              close();
+              pedir(mudou);
+            }}
+            classeDaLista="max-h-56"
+            className="p-1"
+          />
         )}
       </Popover>
       {dialog}
