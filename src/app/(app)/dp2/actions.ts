@@ -789,6 +789,8 @@ export async function reajusteColetivoAction(_: EstadoDoDp2, fd: FormData): Prom
   });
   revalidatePath("/dp2/colaboradores");
   return { ok: true, texto: `Reajuste aplicado a ${previsao.length} colaborador(es) a partir de ${r.data.split("-").reverse().join("/")}. Gere o S-2206 de cada um em DP 2 › eSocial.` };
+}
+
 // ─── Totalizadores do eSocial (26/11/2026, funcionalidade-755) ─────────────
 
 /**
