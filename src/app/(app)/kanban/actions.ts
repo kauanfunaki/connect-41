@@ -23,6 +23,7 @@ import { normalizeAccentColor } from "@/lib/color";
 import { logAudit } from "@/lib/audit";
 import { AVISO_DO_LIMITE, PROFUNDIDADE_MAXIMA, aceitaSubatividade, montarArvore, porOrdem, reposicionar, type NoDaArvore } from "@/lib/kanban/subatividades";
 import { apagarAtividadeComAnexos, subarvoreDoItem } from "@/lib/kanban/exclusaoDeAtividade";
+import { MARCA_DA_CAPA, ehCorDaCapa, textoDaTrocaDeCapa } from "@/lib/kanban/capa";
 import { conferirMovimentoDoCartao, moverCartaoDaSolicitacao } from "@/lib/solicitacoes/cartaoServidor";
 import { concluirSolicitacao } from "@/app/(app)/solicitacoes/actions";
 
@@ -874,6 +875,47 @@ export async function alternarTagItem(
     revalidatePath(base);
     revalidatePath(`${base}/itens/${itemId}`);
   }
+}
+
+/**
+ * A capa colorida do cartão (27/11/2026, funcionalidade-845): uma chave da
+ * paleta (`CORES_DA_CAPA`) ou `null` para tirar. Troca quem edita o cartão,
+ * pela permissão do espaço, como as etiquetas. A troca entra no histórico do
+ * cartão como `TAG_CHANGE` com a marca da capa no `metadata` (ver `capa.ts`).
+ */
+export async function trocarCapaDoItem(pipelineId: string, itemId: string, cor: string | null): Promise<{ error: string } | void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId) return { error: "Não autenticado." };
+  if (cor !== null && !ehCorDaCapa(cor)) return { error: "Cor fora da paleta da capa." };
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return { error: "Sem permissão para editar esta atividade." };
+
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true, coverColor: true } });
+  if (!item) return { error: "Atividade não encontrada." };
+  if ((item.coverColor ?? null) === cor) return;
+
+  try {
+    await prisma.pipelineItem.update({ where: { id: itemId }, data: { coverColor: cor } });
+    if (userId) {
+      await prisma.activity.create({
+        data: {
+          tenantId, pipelineItemId: itemId, userId, type: ActivityType.TAG_CHANGE,
+          content: textoDaTrocaDeCapa(cor),
+          metadata: { campo: MARCA_DA_CAPA, de: item.coverColor, para: cor },
+        },
+      });
+    }
+  } catch (err) {
+    console.error("[trocarCapaDoItem]", err);
+    return { error: "Erro ao trocar a capa. Tente de novo." };
+  }
+
+  const base = boardPath(pipeline);
+  revalidatePath(base);
+  revalidatePath(`${base}/itens/${itemId}`);
 }
 
 export async function alternarResponsavelItem(

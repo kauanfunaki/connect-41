@@ -739,6 +739,15 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Clique em “Publicar versão”. A versão nova vale para os processos abertos daqui em diante; os que estão em andamento continuam na versão em que começaram.",
         ],
       },
+      {
+        titulo: "Escolher a cor de cada tipo de processo",
+        passos: [
+          "No botão “⋯” do alto de “Processos”, escolha “Roteiros dos processos”.",
+          "Na coluna “Cor no quadro”, clique em “Cor” na linha do tipo e escolha uma das cores. “Sem cor” tira a cor do tipo.",
+          "A cor aparece na faixa do cartão em “Ver no kanban”, na etiqueta do tipo na fila e no alto do processo, sempre com o nome do tipo escrito.",
+          "Sugestão, para seguir as cores que o setor já usava no Trello: roxo para Constituição, vermelho para Baixa, verde-limão para Alteração e Filial, amarelo para Alvará e Licenças, e rosa para os outros (regularização e avulsas).",
+        ],
+      },
     ],
     dicas: [
       "Uma etapa com item obrigatório do checklist em aberto não pode ser concluída.",

@@ -11,6 +11,8 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 import { NovaTarefaEmLinha, useNovaTarefaDoTopo } from "./NovaTarefaEmLinha";
 import { segmentoDaTarefa } from "@/lib/enderecoCurto";
+import { capaDoCartao } from "@/lib/kanban/capa";
+import { FaixaDaCapa } from "./CapaDoCartao";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -29,6 +31,8 @@ type Item = {
   lastActivity?: string | null;
   subtaskTotal?: number;
   subtaskDone?: number;
+  /** A capa escolhida no cartão — a chave da paleta (27/11/2026, funcionalidade-845). */
+  coverColor?: string | null;
 };
 
 type Props = {
@@ -131,6 +135,8 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
           >
             {stageItems.map((item, i) => {
               const overdue = isOverdue(item.dueDate, stage.isTerminal);
+              // Sem processo ligado ao cartão ainda (funcionalidade-844), a capa vem só do cartão.
+              const capa = capaDoCartao({ coverColor: item.coverColor });
               return (
                 <Link
                   key={item.id}
@@ -146,12 +152,15 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                     borderLeftColor: color,
                     animationDelay: `${Math.min(i, 8) * 25}ms`,
                   }}
-                  className={`kanban-card-enter group block bg-surface border border-l-[3px] rounded-lg pl-3 pr-3 py-3 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity,background-color] duration-150 hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] ${
+                  className={`kanban-card-enter group block overflow-hidden bg-surface border border-l-[3px] rounded-lg pl-3 pr-3 py-3 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity,background-color] duration-150 hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] ${
                     selectedId === item.id
                       ? "border-brand shadow-[0_0_0_3px_var(--c41-brand-subtle)]"
                       : "border-border hover:border-border-strong"
                   } ${draggingId === item.id ? "opacity-90 shadow-[var(--c41-shadow-lg)] rotate-[-1.5deg]" : ""}`}
                 >
+                  {/* A capa, como no Trello (27/11/2026, funcionalidade-845):
+                      encosta nas bordas do cartão, que corta os cantos de cima. */}
+                  {capa && <FaixaDaCapa cor={capa.cor} className="-mx-3 -mt-3 mb-2.5" />}
                   <div className="flex items-start justify-between gap-2">
                     {/* Até duas linhas: cortado em uma, sem dica, o título longo
                         ficava ilegível no quadro (auditoria de UX, 30/10/2026). */}

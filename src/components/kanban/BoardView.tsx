@@ -23,6 +23,8 @@ type Item = TaskRow & {
   creator?: { id: string; name: string } | null;
   subtaskTotal?: number;
   subtaskDone?: number;
+  /** A capa do cartão no Kanban (27/11/2026, funcionalidade-845). */
+  coverColor?: string | null;
 };
 
 type Props = {

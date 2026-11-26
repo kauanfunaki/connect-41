@@ -113,6 +113,14 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
         select: { id: true, version: true, typeId: true, type: { select: { name: true } } },
       })
     ).map((r) => ({ id: r.id, nome: `${r.type.name}, versão ${r.version}`, href: `/processos/roteiros/${r.typeId}`, empresaId: null })),
+  // A cor do tipo no quadro (27/11/2026, funcionalidade-845) leva à lista dos roteiros.
+  ProcessType: async (tenantId, ids) =>
+    (await getPrisma().processType.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true } })).map((r) => ({
+      id: r.id,
+      nome: r.name,
+      href: "/processos/roteiros",
+      empresaId: null,
+    })),
   Lead: async (tenantId, ids) =>
     (await getPrisma().lead.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true } })).map((r) => ({
       id: r.id,

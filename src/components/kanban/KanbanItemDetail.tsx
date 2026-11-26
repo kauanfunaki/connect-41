@@ -48,7 +48,11 @@ import {
   removerLinkItem,
   editarLancamentoTempo,
   excluirLancamentoTempo,
+  trocarCapaDoItem,
 } from "@/app/(app)/kanban/actions";
+import { SeletorDeCapa } from "@/components/kanban/SeletorDeCapa";
+import { EtiquetaDaCor } from "@/components/kanban/CapaDoCartao";
+import { corDaCapa, ehTrocaDeCapa } from "@/lib/kanban/capa";
 import { ListaDeHoras } from "@/components/shared/ListaDeHoras";
 import { campoDaData } from "@/lib/societario/datas";
 import { boardPath, trilhaDaLista } from "@/lib/kanbanPaths";
@@ -278,6 +282,8 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
   const deleteLinkAction = removerLinkItem.bind(null, id, itemId);
   const editTimeEntryAction = editarLancamentoTempo.bind(null, id, itemId);
   const deleteTimeEntryAction = excluirLancamentoTempo.bind(null, id, itemId);
+  const capaAction = trocarCapaDoItem.bind(null, id, itemId);
+  const capa = corDaCapa(item.coverColor);
 
   const taskCandidates: TaskMentionCandidate[] = otherItems.map((o) => ({ id: o.id, name: nameFor(o), href: `${basePath}/itens/${segmentoDaTarefa(o)}` }));
 
@@ -300,7 +306,8 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
     .map((a) => ({
       id: a.id,
       type: a.type,
-      label: ACTIVITY_LABEL[a.type] ?? a.type,
+      // A troca de capa é gravada como TAG_CHANGE com a marca da capa (27/11/2026).
+      label: a.type === "TAG_CHANGE" && ehTrocaDeCapa(a.metadata) ? "Capa alterada" : (ACTIVITY_LABEL[a.type] ?? a.type),
       createdAtLabel: formatInstantDateTime(a.createdAt),
       userId: a.user.id,
       userName: a.user.name,
@@ -390,6 +397,20 @@ export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb 
             primeiro, como no Controle interno (10/11/2026, pedido do Kauan). */}
         <div className="flex flex-wrap items-center gap-2 mt-1">
           <span className="text-fs-2 text-fg-muted tnum">{idCurto("tarefa", item.number)}</span>
+          {/* A capa do cartão no quadro, como no Trello (27/11/2026,
+              funcionalidade-845): quem edita troca; quem só vê, lê o nome. */}
+          {canAct ? (
+            <SeletorDeCapa
+              valor={item.coverColor}
+              onEscolher={capaAction}
+              rotulo="Capa"
+              textoSemCor="Sem capa"
+              aria-label="Capa do cartão no Kanban"
+              ajuda="A capa aparece no topo do cartão, no Kanban."
+            />
+          ) : (
+            capa && <EtiquetaDaCor cor={capa}>Capa: {capa.nome}</EtiquetaDaCor>
+          )}
           {entity && item.title && <span className="text-fs-3 text-fg-muted">{entity.name}</span>}
           {entity && (
             <Button
