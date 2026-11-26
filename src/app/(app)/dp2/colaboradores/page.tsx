@@ -37,7 +37,7 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, registrarOcorrenciaAction, salvarVinculoAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, reajusteColetivoAction, registrarOcorrenciaAction, salvarVinculoAction } from "../actions";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
 
@@ -136,6 +136,10 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
   const nomeDe = new Map(pessoas.map((p) => [p.id, p.name]));
   const mesDe = (c: string) => c.split("-").reverse().join("/");
   const saldoPendente = saldoInicial.reduce((s, r) => s + r.pendentes, 0);
+  // Histórico salarial da empresa (funcionalidade-760): as últimas mudanças.
+  const historicoSalarial = await getPrisma().dp2HistoricoSalarial.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: [{ data: "desc" }, { createdAt: "desc" }], take: 30 });
+  const nomeNoHistorico = new Map(pessoas.map((p) => [p.id, p.name]));
+  const empresaDoReajuste = tela.empresa.id;
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
 
@@ -153,6 +157,12 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               required
               defaultValue={v ? reais(Number(v.salarioBase)) : aberta?.currentSalary ? reais(Number(aberta?.currentSalary)) : ""}
             />
+          </CampoForm>
+          <CampoForm label="Salário vale desde" htmlFor="salarioDesde" dica="Só quando o salário muda: a data e o motivo vão para o histórico salarial.">
+            <CampoData id="salarioDesde" name="salarioDesde" />
+          </CampoForm>
+          <CampoForm label="Motivo da mudança" htmlFor="motivoSalario">
+            <Input id="motivoSalario" name="motivoSalario" maxLength={120} placeholder="Promoção, mérito, acordo…" />
           </CampoForm>
           <CampoForm label="Tipo" htmlFor="tipoSalario">
             <Select id="tipoSalario" name="tipoSalario" defaultValue={v?.tipoSalario ?? "MENSAL"}>
@@ -764,6 +774,62 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                 <Textarea id="saldo-inicial" name="texto" rows={5} required placeholder={"123.456.789-09;03/2026;150;412,30\n123.456.789-09;04/2026;150;380,00"} className="font-mono" />
               </CampoForm>
             </FormularioDoDp2>
+          )}
+        </Secao>
+      )}
+
+      {pessoas.some((p) => p.dp2Vinculo) && (
+        <Secao titulo="Reajuste coletivo e histórico salarial" apoio="O reajuste da convenção para todos os empregados (CLT) ativos: o percentual e, se houver, o piso. Cada mudança de salário fica no histórico.">
+          {tela.podeAgir && (
+            <FormularioDoDp2
+              acao={reajusteColetivoAction}
+              rotulo="Aplicar reajuste"
+              rotuloEnviando="Aplicando…"
+              variante="secondary"
+              confirmar={{ titulo: "Aplicar o reajuste coletivo?", texto: "O salário de todos os empregados ativos muda a partir da data informada e entra no histórico. O S-2206 de cada um sai depois, em DP 2 › eSocial.", rotulo: "Aplicar" }}
+            >
+              <input type="hidden" name="companyId" value={empresaDoReajuste} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <CampoForm label="Percentual" htmlFor="reaj-percentual">
+                  <Input id="reaj-percentual" name="percentual" inputMode="decimal" suffix="%" placeholder="0,00" />
+                </CampoForm>
+                <CampoForm label="Piso da categoria" htmlFor="reaj-piso" dica="Quem fica abaixo sobe para o piso. Horista: o piso mensal ÷ horas.">
+                  <Input id="reaj-piso" name="piso" inputMode="decimal" prefix="R$" placeholder="0,00" />
+                </CampoForm>
+                <CampoForm label="Vale a partir de" htmlFor="reaj-data">
+                  <CampoData id="reaj-data" name="data" required />
+                </CampoForm>
+                <CampoForm label="Motivo" htmlFor="reaj-motivo">
+                  <Input id="reaj-motivo" name="motivo" maxLength={120} placeholder="Convenção coletiva 2027" />
+                </CampoForm>
+              </div>
+            </FormularioDoDp2>
+          )}
+          {historicoSalarial.length > 0 && (
+            <div className="overflow-x-auto mt-4">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Desde</th>
+                    <th className={TH_NUM}>De</th>
+                    <th className={TH_NUM}>Para</th>
+                    <th className={TH}>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historicoSalarial.map((h) => (
+                    <tr key={h.id} className={TR}>
+                      <td className={TD}>{nomeNoHistorico.get(h.personId) ?? "Fora desta empresa"}</td>
+                      <td className={`${TD} tabular-nums`}>{formatCalendarDate(h.data)}</td>
+                      <td className={TD_NUM}>{h.salarioAnterior !== null ? brl(Number(h.salarioAnterior)) : "—"}</td>
+                      <td className={TD_NUM}>{brl(Number(h.salario))}</td>
+                      <td className={TD}>{h.motivo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Secao>
       )}
