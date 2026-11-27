@@ -16,6 +16,8 @@ import { lancarDiferencas } from "@/lib/dp2/diferencasServidor";
 import { lerAmbiente, lerEntregaDeEpi, lerEpi, lerMedico } from "@/lib/dp2/sst";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
+import { FAIXAS_ETARIAS, faixasGravadas, lerPeriodoDaAdesao, lerPlano, valorDoBeneficiario } from "@/lib/dp2/planoDeSaude";
+import { cnpjValido } from "@/lib/dp2/esocial/documentos";
 import { hojeIso } from "@/lib/datas/calendario";
 import { fimDoGozo, lerAposentadoria, lerRegraDaLicencaPremio, lerUsoDaLicencaPremio, saldoDaLicencaPremio } from "@/lib/dp2/licencaPremio";
 import { regraDaLicencaPremio, usosDaLicencaPremio } from "@/lib/dp2/licencaPremioServidor";
@@ -810,6 +812,126 @@ export async function excluirOcorrenciaAction(_: EstadoDoDp2, fd: FormData): Pro
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ocorrencia_excluida", entityType: "Person", entityId: o.personId, metadata: { ocorrencia: o.id, tipo: o.tipo } });
   revalidatePath("/dp2/colaboradores");
   return { ok: true, texto: "Ocorrência excluída. Se era suspensão de um mês já calculado, calcule a folha de novo." };
+}
+
+// ─── Plano de saúde e odontológico (27/11/2026, funcionalidade-762) ─────────
+
+export async function criarPlanoDeSaudeAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerPlano({
+    nome: texto(fd, "nome"),
+    tipo: texto(fd, "tipo"),
+    cnpjOperadora: texto(fd, "cnpjOperadora"),
+    registroAns: texto(fd, "registroAns"),
+    valorTitular: texto(fd, "valorTitular"),
+    valorDependente: texto(fd, "valorDependente"),
+    faixas: FAIXAS_ETARIAS.map((_, i) => texto(fd, `faixa${i}`)),
+  });
+  if (!lido.ok) return erro(lido.erro);
+  const p = lido.plano;
+  const r = await getPrisma().dp2PlanoDeSaude.create({
+    data: { tenantId: a.tenantId, companyId, nome: p.nome, tipo: p.tipo, cnpjOperadora: p.cnpjOperadora, registroAns: p.registroAns || null, valorTitular: p.valorTitular, valorDependente: p.valorDependente, faixas: p.faixas ?? undefined, criadoPorId: a.userId },
+    select: { id: true },
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.plano_de_saude_criado", entityType: "Company", entityId: companyId, metadata: { plano: r.id, ...p } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Plano "${p.nome}" cadastrado. Inclua os colaboradores e os dependentes logo abaixo.` };
+}
+
+export async function excluirPlanoDeSaudeAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const plano = await prisma.dp2PlanoDeSaude.findFirst({ where: { id: texto(fd, "planoId"), tenantId: a.tenantId }, select: { id: true, companyId: true, nome: true, _count: { select: { adesoes: true } } } });
+  if (!plano) return erro("Plano não encontrado.");
+  const recusa = await empresaDoEscritorio(a, plano.companyId);
+  if (recusa) return erro(recusa);
+  if (plano._count.adesoes > 0) return erro("O plano tem colaboradores: encerre ou exclua as adesões antes. As folhas já fechadas guardam o desconto.");
+  await prisma.dp2PlanoDeSaude.delete({ where: { id: plano.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.plano_de_saude_excluido", entityType: "Company", entityId: plano.companyId, metadata: { plano: plano.id, nome: plano.nome } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Plano "${plano.nome}" excluído.` };
+}
+
+/** Inclui o colaborador no plano, com os dependentes escolhidos (só os dele). */
+export async function aderirAoPlanoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2 nesta empresa.");
+  const prisma = getPrisma();
+  const plano = await prisma.dp2PlanoDeSaude.findFirst({ where: { id: texto(fd, "planoId"), tenantId: a.tenantId, companyId } });
+  if (!plano) return erro("Escolha um plano cadastrado nesta empresa.");
+  const periodo = lerPeriodoDaAdesao({ inicio: texto(fd, "inicio"), fim: texto(fd, "fim") });
+  if (!periodo.ok) return erro(periodo.erro);
+  const marcados = fd.getAll("dependentes").map(String).filter(Boolean);
+  const dependentes = marcados.length ? await prisma.dependente.findMany({ where: { tenantId: a.tenantId, personId: pessoa.id, id: { in: marcados } }, select: { id: true, name: true } }) : [];
+  if (dependentes.length !== marcados.length) return erro(`Só dependentes de ${pessoa.name} entram no plano dele(a). Desmarque os de outros colaboradores.`);
+  const r = await prisma.dp2AdesaoAoPlano.create({
+    data: {
+      tenantId: a.tenantId,
+      companyId,
+      personId: pessoa.id,
+      planoId: plano.id,
+      inicio: new Date(`${periodo.inicio}T00:00:00Z`),
+      fim: periodo.fim ? new Date(`${periodo.fim}T00:00:00Z`) : null,
+      dependentes: dependentes.map((d) => d.id),
+      criadoPorId: a.userId,
+    },
+    select: { id: true },
+  });
+  // O desconto do primeiro mês, com as idades de então (no plano por faixa etária).
+  const [anoIni, mesIni] = periodo.inicio.split("-").map(Number);
+  const valores = { valorTitular: Number(plano.valorTitular), valorDependente: Number(plano.valorDependente), faixas: faixasGravadas(plano.faixas) };
+  const nascimentos = await prisma.dependente.findMany({ where: { id: { in: dependentes.map((d) => d.id) } }, select: { birthDate: true } });
+  const titularNasceu = (await prisma.person.findFirst({ where: { id: pessoa.id }, select: { birthDate: true } }))?.birthDate ?? null;
+  const desconto =
+    valorDoBeneficiario(valores, true, titularNasceu ? titularNasceu.toISOString().slice(0, 10) : null, anoIni, mesIni).valor +
+    nascimentos.reduce((s, d) => s + valorDoBeneficiario(valores, false, d.birthDate ? d.birthDate.toISOString().slice(0, 10) : null, anoIni, mesIni).valor, 0);
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.adesao_ao_plano", entityType: "Person", entityId: pessoa.id, metadata: { adesao: r.id, plano: plano.nome, dependentes: dependentes.map((d) => d.name), ...periodo } });
+  revalidatePath("/dp2/colaboradores");
+  return {
+    ok: true,
+    texto: `${pessoa.name} incluído(a) em ${plano.nome}${dependentes.length ? ` com ${dependentes.length} dependente(s)` : ""}: desconto de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(desconto)} por mês a partir de ${periodo.inicio.slice(5, 7)}/${periodo.inicio.slice(0, 4)}. Calcule a folha do mês.`,
+  };
+}
+
+export async function encerrarAdesaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const ad = await prisma.dp2AdesaoAoPlano.findFirst({ where: { id: texto(fd, "adesaoId"), tenantId: a.tenantId }, select: { id: true, companyId: true, personId: true, inicio: true } });
+  if (!ad) return erro("Adesão não encontrada.");
+  const recusa = await empresaDoEscritorio(a, ad.companyId);
+  if (recusa) return erro(recusa);
+  const periodo = lerPeriodoDaAdesao({ inicio: ad.inicio.toISOString().slice(0, 10), fim: texto(fd, "fim") });
+  if (!periodo.ok) return erro(periodo.erro);
+  if (!periodo.fim) return erro("Informe a data em que o colaborador saiu do plano.");
+  await prisma.dp2AdesaoAoPlano.update({ where: { id: ad.id }, data: { fim: new Date(`${periodo.fim}T00:00:00Z`) } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.adesao_ao_plano_encerrada", entityType: "Person", entityId: ad.personId, metadata: { adesao: ad.id, fim: periodo.fim } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Adesão encerrada em ${periodo.fim.split("-").reverse().join("/")}: o desconto vale até a folha desse mês.` };
+}
+
+export async function excluirAdesaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const ad = await prisma.dp2AdesaoAoPlano.findFirst({ where: { id: texto(fd, "adesaoId"), tenantId: a.tenantId }, select: { id: true, companyId: true, personId: true } });
+  if (!ad) return erro("Adesão não encontrada.");
+  const recusa = await empresaDoEscritorio(a, ad.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2AdesaoAoPlano.delete({ where: { id: ad.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.adesao_ao_plano_excluida", entityType: "Person", entityId: ad.personId, metadata: { adesao: ad.id } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: "Adesão excluída. Se a folha do mês já foi calculada, calcule de novo." };
 }
 
 // ─── Licença-prêmio e aposentadoria (27/11/2026, funcionalidade-763) ───────
@@ -1923,7 +2045,11 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     return erro("Ambiente de trabalho não encontrado nesta empresa.");
   }
 
+  // CNPJ da entidade de previdência complementar (funcionalidade-762): vai no S-1210.
+  const previdenciaCnpj = texto(fd, "previdenciaCnpj").replace(/\D/g, "") || null;
+  if (previdenciaCnpj && !cnpjValido(previdenciaCnpj)) return erro("O CNPJ da entidade de previdência complementar não é válido.");
   const dados = {
+    previdenciaCnpj,
     companyId: pessoa.currentCompanyId,
     salarioBase,
     tipoSalario,

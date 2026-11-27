@@ -79,6 +79,8 @@ export type ExemplosDoMotor = {
   diferencas: CalculoDaPessoa;
   /** O mensalista que autorizou a contribuição sindical, no mês da convenção (funcionalidade-774). */
   sindical: CalculoDaPessoa;
+  /** O mensalista no plano de saúde com 2 dependentes, no odontológico e com coparticipação no mês (funcionalidade-762). */
+  planoDeSaude: CalculoDaPessoa;
   /** O mensalista que recebe 30 dias de licença-prêmio em dinheiro e é exposto a agente nocivo, aposentadoria aos 25 anos (funcionalidade-763). */
   licencaPremio: CalculoDaPessoa;
   ferias: CalculoDeFerias;
@@ -288,6 +290,15 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
       ],
     }),
     sindical: calcularMesDaCategoria({ ...base, convencao: { ...CONVENCAO_DA_CLT, contribuicaoMes: mes }, vinculo: { ...VINCULO, contribuicaoSindical: true }, eventos: [] }),
+    planoDeSaude: calcularMesDaCategoria({
+      ...base,
+      vinculo: VINCULO,
+      eventos: [evento("COPARTICIPACAO_PLANO", null, 45.5)],
+      planos: [
+        { tipo: "SAUDE", nome: "Plano de saúde empresarial", titular: { valor: 180, faixa: "34 a 38" }, dependentes: [{ valor: 100, faixa: "0 a 18" }, { valor: 100, faixa: "0 a 18" }] },
+        { tipo: "ODONTO", nome: "Plano odontológico", titular: { valor: 30, faixa: null }, dependentes: [] },
+      ],
+    }),
     licencaPremio: calcularMesDaCategoria({ ...base, vinculo: { ...VINCULO, grauExposicao: "4" }, eventos: [evento("LICENCA_PREMIO_INDENIZADA", 30, null)] }),
   };
 }
@@ -451,6 +462,17 @@ export const FORMULAS: readonly Formula[] = [
     papeis: ["CONTRIBUICAO_SINDICAL"],
     funcao: "calcularMes (mensal.ts)",
     exemplo: (x) => linha(x.sindical, "CONTRIBUICAO_SINDICAL"),
+  },
+  {
+    id: "plano-de-saude",
+    tema: "MENSAL",
+    nome: "Plano de saúde e odontológico",
+    conta: "A parte do empregado no plano do mês: o valor do titular + o de cada dependente incluído. No plano por faixa etária, cada um paga o valor da faixa da ANS da idade no 1º dia do mês; nos outros, o valor fixo do titular e do dependente. A coparticipação do mês é lançada pelo DP na rubrica própria.",
+    detalhe: "Desconta na folha sem efeito no INSS, no FGTS e no IRRF do mês: a despesa médica só deduz no ajuste anual. O S-1210 informa, por operadora (CNPJ e registro na ANS), o que o titular pagou (com a coparticipação) e o que cada dependente com CPF pagou.",
+    baseLegal: "Lei 9.250/1995, art. 8º, II, a; leiaute do eSocial S-1.3, S-1210 infoIRComplem/planSaude",
+    papeis: ["PLANO_SAUDE", "PLANO_ODONTO", "COPARTICIPACAO_PLANO"],
+    funcao: "descontoDoPlano · planosParaS1210 (planoDeSaude.ts) · calcularMes (mensal.ts)",
+    exemplo: (x) => [...linha(x.planoDeSaude, "PLANO_SAUDE"), ...linha(x.planoDeSaude, "PLANO_ODONTO"), ...linha(x.planoDeSaude, "COPARTICIPACAO_PLANO")],
   },
   {
     id: "licenca-premio",

@@ -2821,6 +2821,7 @@ model Person {
   dp2HistoricoSalarial Dp2HistoricoSalarial[]
   dp2DiferencasRetroativas Dp2DiferencaRetroativa[]
   dp2Ocorrencias       Dp2Ocorrencia[]
+  dp2AdesoesAoPlano    Dp2AdesaoAoPlano[]
   dp2SaldoInicial      Dp2SaldoInicialMedia[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
   dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
@@ -7107,6 +7108,8 @@ model Dp2Vinculo {
   /// Contribuição mensal do empregado à previdência complementar (PGBL, fundo de
   /// pensão), 26/11/2026, funcionalidade-762: desconta na folha e deduz do IRRF.
   previdenciaComplementar Decimal? @db.Decimal(12, 2)
+  /// CNPJ da entidade de previdência complementar (vai no S-1210, funcionalidade-762).
+  previdenciaCnpj      String?  @db.VarChar(14)
   /// O empregado autorizou por escrito o desconto da contribuição sindical
   /// (CLT arts. 545 e 578), 26/11/2026, funcionalidade-774.
   contribuicaoSindical Boolean  @default(false)
@@ -7480,6 +7483,54 @@ model Dp2Epi {
 
   @@index([tenantId, companyId])
   @@map("dp2_epis")
+}
+
+/// Plano de saúde ou odontológico da empresa (27/11/2026, funcionalidade-762):
+/// a operadora (CNPJ e registro na ANS, que vão no S-1210) e a parte do
+/// empregado, pelo titular e por dependente.
+model Dp2PlanoDeSaude {
+  id              String   @id @default(uuid())
+  tenantId        String
+  companyId       String
+  nome            String   @db.VarChar(120)
+  /// "SAUDE" ou "ODONTO".
+  tipo            String   @db.VarChar(6)
+  cnpjOperadora   String   @db.VarChar(14)
+  registroAns     String?  @db.VarChar(6)
+  valorTitular    Decimal  @db.Decimal(12, 2)
+  valorDependente Decimal  @db.Decimal(12, 2)
+  /// O valor de cada uma das 10 faixas etárias da ANS (número[]); nulo = valor fixo.
+  faixas          Json?
+  criadoPorId     String?
+  createdAt       DateTime @default(now())
+
+  adesoes Dp2AdesaoAoPlano[]
+
+  @@index([tenantId, companyId])
+  @@map("dp2_planos_de_saude")
+}
+
+/// O colaborador no plano: desde quando, até quando e os dependentes incluídos
+/// (ids de Dependente). A parte do empregado desconta na folha do mês.
+model Dp2AdesaoAoPlano {
+  id          String    @id @default(uuid())
+  tenantId    String
+  companyId   String
+  personId    String
+  planoId     String
+  inicio      DateTime  @db.Date
+  fim         DateTime? @db.Date
+  dependentes Json
+  criadoPorId String?
+  createdAt   DateTime  @default(now())
+
+  person Person          @relation(fields: [personId], references: [id], onDelete: Cascade)
+  plano  Dp2PlanoDeSaude @relation(fields: [planoId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([personId])
+  @@index([planoId])
+  @@map("dp2_adesoes_ao_plano")
 }
 
 /// Entrega de EPI ao colaborador: a ficha de controle (NR-6).
