@@ -17,7 +17,9 @@ import { saoPauloParts } from "@/lib/agenda";
 import { NovaPendencia, type LancamentoVinculado } from "@/components/pendencias/NovaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
-import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { paginaDePendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { paginaDaUrl } from "@/lib/financeiro/paginaDeContas";
+import { Pagination } from "@/components/shared/Pagination";
 import { enderecoDe } from "@/lib/enderecoCurto";
 import { soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { ROTULO_DO_TIPO, ROTULO_DO_STATUS, ROTULO_DO_PRAZO } from "@/lib/financeiro/pendencias/regras";
@@ -60,10 +62,16 @@ export default async function PendenciasPage({
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const agora = new Date();
 
-  const [{ linhas, contadores, limitado }, lancamento] = await Promise.all([
+  const [{ linhas, contadores, total, pagina, totalDePaginas }, lancamento] = await Promise.all([
     // Só as do setor do módulo (e as de antes de 01/10, sem setor): os pedidos
-    // dos outros setores ficam em Solicitações › Pedidos.
-    listarPendencias({ tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(setor) }, { recorte, empresaId, vencidas }, agora),
+    // dos outros setores ficam em Solicitações › Pedidos. Uma página por vez,
+    // contada no banco (melhoria-571, 27/11/2026).
+    paginaDePendencias(
+      { tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(setor) },
+      { recorte, empresaId, vencidas },
+      agora,
+      paginaDaUrl(params.pagina)
+    ),
     podeAgir && params.lancamento ? lancamentoParaVincular(ctx.tenantId, params.lancamento) : Promise.resolve(null),
   ]);
 
@@ -146,7 +154,7 @@ export default async function PendenciasPage({
       {/* Situação, empresa e prazo no botão "Filtros" — eram uma fileira de
           pílulas mais um formulário com "Aplicar" (conferência de 30/09). */}
       <CascoDaTabela
-        contagem={contarItens(linhas.length, "pendência", "pendências", limitado)}
+        contagem={contarItens(total, "pendência", "pendências")}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -271,10 +279,15 @@ export default async function PendenciasPage({
             </table>
           </TabelaNoDesktop>
           </TabelaFiltravel>
-          {/* Filho direto do casco, como em aprovações (08/10/2026): dentro da
-              tabela, o aviso perdia o recuo e a divisória do pé do cartão. Um só
+          {/* Fora da tabela, como era o aviso do teto que ela substitui: uma só
               para o cartão do celular e a tabela. */}
-          {limitado && <p className="text-micro text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
+          <Pagination
+            page={pagina}
+            totalPages={totalDePaginas}
+            buildHref={(p) => href({ pagina: p > 1 ? String(p) : undefined })}
+            total={total}
+            rotulo="pendências"
+          />
           </>
         )}
       </CascoDaTabela>
