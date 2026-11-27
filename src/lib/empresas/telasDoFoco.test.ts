@@ -54,7 +54,6 @@ const ACOES = [
   "src/app/(app)/dre/actions.ts",
   "src/app/(app)/dre/import-actions.ts",
   "src/app/(app)/dre/orcamento/actions.ts",
-  "src/app/(app)/admin/integracoes/omie-actions.ts",
 ];
 
 const EXPORTACOES = [
@@ -108,6 +107,12 @@ describe("actions que gravam nas telas do foco", () => {
       expect(ler(arquivo)).toMatch(/recusaDoFoco\(|motivoForaDoFoco\(foco/);
     });
   }
+
+  // Integrações é configuração do escritório: a empresa vem do formulário, e o
+  // foco das telas do BPO não vale lá (bug-885, 27/11/2026).
+  it("Integrações não herda a empresa do foco", () => {
+    expect(ler("src/app/(app)/admin/integracoes/omie-actions.ts")).not.toMatch(/recusaDoFoco|motivoForaDoFoco/);
+  });
 
   it("as ações de entrar e sair do foco existem e gravam o cookie", () => {
     const fonte = ler("src/app/(app)/foco-actions.ts");
