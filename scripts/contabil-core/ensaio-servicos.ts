@@ -118,7 +118,7 @@ async function main() {
     // NEO
     const neo = valor(await processarNeo(tenantId, empresaId, { agenciaId: null, mes: "2026-01" }));
     confere("NEO: 1 por regra, 1 por contraparte (CNPJ no NAME), 1 sem regra", neo.associadas === 2 && neo.classificadasPorContraparte === 1 && neo.semRegra === 1, neo);
-    const pend = await listarPendencias(tenantId, empresaId, {});
+    const { itens: pend } = await listarPendencias(tenantId, empresaId, {});
     confere("fila: a pendência traz o motivo do NEO", pend.length === 1 && (pend[0].decisoes[0]?.motivo ?? "").startsWith("Nenhuma regra encontrada"), pend);
     const neo2 = valor(await processarNeo(tenantId, empresaId, { agenciaId: null, mes: null }));
     confere("NEO de novo não duplica nada", neo2.associadas === 0 && neo2.totalPendentes === 1, neo2);

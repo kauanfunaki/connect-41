@@ -38,6 +38,7 @@ import { normalizarParaMatch } from "../motor/texto";
 import { corta } from "@/lib/revisao-contabil/motor/py";
 import type { EntradaClassificacaoManual } from "../entradas";
 import { decDoBanco, empresaDoTenant, falha, limitesDoMes, NAO_ENCONTRADA, ok, type Resultado } from "./base";
+import { lerPagina } from "../tela";
 import { descricaoDaAgencia } from "./cadastros";
 
 export type Tx = Prisma.TransactionClient;
@@ -415,23 +416,43 @@ export async function liberarParaAutomatico(tenantId: string, empresaId: string,
 
 // ─── Consultas ────────────────────────────────────────────────────────────
 
+/**
+ * Pendências por página na fila do NEO (27/11/2026, melhoria-571). Eram as 500 primeiras, com um aviso para
+ * filtrar; a página continua com 500 porque os grupos por padrão marcam só o que está na tela, e uma
+ * página menor obrigaria a classificar o mesmo padrão em mais rodadas.
+ */
+export const PENDENCIAS_POR_PAGINA = 500;
+
 /** As pendências da fila do NEO, com o motivo da última decisão (sem regra, valor suspeito, recusa). */
-export async function listarPendencias(tenantId: string, empresaId: string, filtro: { agenciaId?: string | null; mes?: string | null; busca?: string | null }) {
-  if (!(await empresaDoTenant(tenantId, empresaId))) return [];
+export async function listarPendencias(
+  tenantId: string,
+  empresaId: string,
+  filtro: { agenciaId?: string | null; mes?: string | null; busca?: string | null; pagina?: number },
+) {
+  if (!(await empresaDoTenant(tenantId, empresaId))) return { itens: [], total: 0, pagina: 1 };
   const periodo = filtro.mes ? limitesDoMes(filtro.mes) : null;
-  return getPrisma().coreTransacao.findMany({
-    where: {
-      tenantId, empresaId, status: "pendente", deletedAt: null,
-      ...(filtro.agenciaId ? { agenciaId: filtro.agenciaId } : {}),
-      ...(periodo ? { data: { gte: periodo.inicio, lte: periodo.fim } } : {}),
-      ...(filtro.busca?.trim() ? { historico: { contains: filtro.busca.trim() } } : {}),
-    },
-    select: {
-      id: true, data: true, historico: true, dc: true, valor: true, agenciaId: true, autoRecusadoEm: true,
-      decisoes: { where: { transacaoSemRegra: { not: null } }, select: { motivo: true, estrategia: true }, take: 1 },
-    },
-    orderBy: [{ data: "asc" }, { ordem: "asc" }, { id: "asc" }],
-    take: 500,
-  });
+  const where: Prisma.CoreTransacaoWhereInput = {
+    tenantId, empresaId, status: "pendente", deletedAt: null,
+    ...(filtro.agenciaId ? { agenciaId: filtro.agenciaId } : {}),
+    ...(periodo ? { data: { gte: periodo.inicio, lte: periodo.fim } } : {}),
+    ...(filtro.busca?.trim() ? { historico: { contains: filtro.busca.trim() } } : {}),
+  };
+  const prisma = getPrisma();
+  return lerPagina(
+    filtro.pagina ?? 1,
+    PENDENCIAS_POR_PAGINA,
+    () => prisma.coreTransacao.count({ where }),
+    (skip, take) =>
+      prisma.coreTransacao.findMany({
+        where,
+        select: {
+          id: true, data: true, historico: true, dc: true, valor: true, agenciaId: true, autoRecusadoEm: true,
+          decisoes: { where: { transacaoSemRegra: { not: null } }, select: { motivo: true, estrategia: true }, take: 1 },
+        },
+        orderBy: [{ data: "asc" }, { ordem: "asc" }, { id: "asc" }],
+        skip,
+        take,
+      }),
+  );
 }
 
