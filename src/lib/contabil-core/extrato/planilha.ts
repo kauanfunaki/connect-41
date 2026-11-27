@@ -181,7 +181,14 @@ export function lerBlocos(bytes: Uint8Array, nomeArquivo: string, referenciaAno:
     if (e instanceof ErroDePlanilha) throw e;
     throw new ErroDePlanilha(`Não foi possível abrir a planilha: ${e instanceof Error ? e.message : String(e)}`);
   }
+  return blocosDasLinhas(linhas, ano);
+}
 
+/**
+ * A leitura a partir das linhas já abertas (27/11/2026): a Conciliação bancária ajusta a natureza
+ * (D/C) e o tipo da transação antes de chegar aqui; o Contábil Core segue pelo `lerBlocos`.
+ */
+export function blocosDasLinhas(linhas: Celula[][], ano: number): Bloco[] {
   let mapa: Map<string, number> | null = null;
   let inicio = 0;
   for (let i = 0; i < linhas.length; i++) {
@@ -277,7 +284,15 @@ export function lerBlocos(bytes: Uint8Array, nomeArquivo: string, referenciaAno:
 
 /** `parse_planilha`: as transações em ordem cronológica, com a cadeia de saldos conferida. */
 export function lerPlanilha(bytes: Uint8Array, nomeArquivo: string, referenciaAno: number | null = null, agora = new Date()): Transacao[] {
-  const blocos = lerBlocos(bytes, nomeArquivo, referenciaAno, agora);
+  return transacoesConferidas(lerBlocos(bytes, nomeArquivo, referenciaAno, agora));
+}
+
+/** `lerPlanilha` a partir das linhas já abertas (ver `blocosDasLinhas`). */
+export function lerPlanilhaDasLinhas(linhas: Celula[][], ano: number): Transacao[] {
+  return transacoesConferidas(blocosDasLinhas(linhas, ano));
+}
+
+function transacoesConferidas(blocos: Bloco[]): Transacao[] {
   try {
     validarBlocos(blocos, TOLERANCIA_SALDO);
   } catch (e) {

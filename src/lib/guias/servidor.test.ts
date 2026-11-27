@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // O banco das guias (28/10/2026): a lista do mês calcula a situação pelo
-// envio e pela data, e o envio só liga guia que ainda não tinha.
+// envio e pela data, e o envio só liga guia que ainda não tinha. Desde
+// 27/11/2026 (melhoria-571) a lista é paginada: uma leitura leve do mês decide
+// a página e os cartões, e o resto vem só das guias da página.
 
 const m = vi.hoisted(() => ({ findMany: vi.fn(), updateMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), create: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ guia: m }) }));
@@ -48,13 +50,45 @@ describe("as guias do mês", () => {
       linha({ id: "g4", pagaEm: new Date() }),
     ]);
     const r = await guiasDoMes("t1", "2026-10", "2026-10-28");
-    expect(r.map((g) => [g.id, g.situacao])).toEqual([
+    expect(r.guias.map((g) => [g.id, g.situacao])).toEqual([
       ["g1", "VENCIDA"],
       ["g2", "ABERTA"],
       ["g3", "EMITIDA"],
       ["g4", "PAGA"],
     ]);
-    expect(r[0]).toMatchObject({ empresa: "Empresa Exemplo", valorCentavos: 123456, arquivoId: "arq-1", envioId: null });
+    expect(r.guias[0]).toMatchObject({ empresa: "Empresa Exemplo", valorCentavos: 123456, arquivoId: "arq-1", envioId: null });
+  });
+
+  it("pagina sem teto: as vencidas primeiro, os cartões do mês inteiro e o pesado só da página", async () => {
+    // 60 guias no mês: as 55 primeiras pelo vencimento ainda vão vencer, as 5 últimas já venceram.
+    const leves = Array.from({ length: 60 }, (_, i) =>
+      linha({ id: `g${i + 1}`, vencimento: i < 55 ? "2026-10-30" : "2026-10-20", pagaEm: i < 2 ? new Date() : null })
+    );
+    m.findMany.mockImplementation(async (args: { where: { id?: { in: string[] } } }) =>
+      args.where.id ? leves.filter((g) => args.where.id!.in.includes(g.id)).reverse() : leves
+    );
+
+    const p1 = await guiasDoMes("t1", "2026-10", "2026-10-28");
+    expect(m.findMany.mock.calls[0]![0].take).toBeUndefined();
+    expect(p1).toMatchObject({ total: 60, pagina: 1, totalDePaginas: 2 });
+    expect(p1.contagem).toMatchObject({ VENCIDA: 5, PAGA: 2, EMITIDA: 53 });
+    expect(p1.aPagarCentavos).toBe(58 * 123456);
+    // As vencidas abrem a página, na ordem do banco; a leitura completa só pede as 50.
+    expect(p1.guias.slice(0, 5).map((g) => g.id)).toEqual(["g56", "g57", "g58", "g59", "g60"]);
+    expect(p1.guias).toHaveLength(50);
+    expect(m.findMany.mock.calls[1]![0].where.id.in).toHaveLength(50);
+
+    // Página além do fim cai na última.
+    const p9 = await guiasDoMes("t1", "2026-10", "2026-10-28", {}, 9);
+    expect(p9).toMatchObject({ pagina: 2, totalDePaginas: 2 });
+    expect(p9.guias.map((g) => g.id)).toEqual(Array.from({ length: 10 }, (_, i) => `g${46 + i}`));
+  });
+
+  it("mês sem guia: uma página vazia, sem a segunda leitura", async () => {
+    m.findMany.mockResolvedValue([]);
+    const r = await guiasDoMes("t1", "2026-10", "2026-10-28");
+    expect(r).toMatchObject({ guias: [], total: 0, pagina: 1, totalDePaginas: 1, aPagarCentavos: 0 });
+    expect(m.findMany).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -79,6 +79,8 @@ export type ExemplosDoMotor = {
   diferencas: CalculoDaPessoa;
   /** O mensalista que autorizou a contribuição sindical, no mês da convenção (funcionalidade-774). */
   sindical: CalculoDaPessoa;
+  /** O mensalista que recebe 30 dias de licença-prêmio em dinheiro e é exposto a agente nocivo, aposentadoria aos 25 anos (funcionalidade-763). */
+  licencaPremio: CalculoDaPessoa;
   ferias: CalculoDeFerias;
   /** A folha do mês das férias do exemplo (gozo de 20 dias a partir do dia 3). */
   feriasNaFolha: CalculoDaPessoa | null;
@@ -286,6 +288,7 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
       ],
     }),
     sindical: calcularMesDaCategoria({ ...base, convencao: { ...CONVENCAO_DA_CLT, contribuicaoMes: mes }, vinculo: { ...VINCULO, contribuicaoSindical: true }, eventos: [] }),
+    licencaPremio: calcularMesDaCategoria({ ...base, vinculo: { ...VINCULO, grauExposicao: "4" }, eventos: [evento("LICENCA_PREMIO_INDENIZADA", 30, null)] }),
   };
 }
 
@@ -448,6 +451,28 @@ export const FORMULAS: readonly Formula[] = [
     papeis: ["CONTRIBUICAO_SINDICAL"],
     funcao: "calcularMes (mensal.ts)",
     exemplo: (x) => linha(x.sindical, "CONTRIBUICAO_SINDICAL"),
+  },
+  {
+    id: "licenca-premio",
+    tema: "MENSAL",
+    nome: "Licença-prêmio paga em dinheiro",
+    conta: "Os dias de licença-prêmio não gozada × salário ÷ 30, na folha do mês do pagamento.",
+    detalhe: "O direito vem da convenção (a cada tantos anos de casa, tantos dias). O gozo não muda a folha: a pessoa fica fora com o salário normal (S-2230 motivo 16). O pagamento em dinheiro é indenizatório: sem INSS, FGTS e IRRF.",
+    baseLegal: "Súmula 136 do STJ; Lei 8.212/1991, art. 28, § 9º",
+    papeis: ["LICENCA_PREMIO_INDENIZADA"],
+    funcao: "saldoDaLicencaPremio (licencaPremio.ts) · calcularMes (mensal.ts)",
+    exemplo: (x) => linha(x.licencaPremio, "LICENCA_PREMIO_INDENIZADA"),
+  },
+  {
+    id: "aposentadoria-especial",
+    tema: "MENSAL",
+    nome: "Adicional da aposentadoria especial",
+    conta: "Base do INSS da pessoa × 12%, 9% ou 6%, conforme o grau de exposição do contrato (aposentadoria aos 15, 20 ou 25 anos). Entra nos encargos e vai com o GILRAT na DCTFWeb.",
+    detalhe: "O grau vem do LTCAT e vai no grauExp do S-1200. No Simples (patronal no DAS) não é calculado. Quem se aposenta pela especial não pode continuar exposto: o cálculo avisa.",
+    baseLegal: "Lei 8.212/1991, art. 22, II; Lei 8.213/1991, art. 57, §§ 6º e 8º",
+    papeis: [],
+    funcao: "adicionalDaAposentadoriaEspecial (licencaPremio.ts) · calcularEncargos (mensal.ts)",
+    exemplo: (x) => x.licencaPremio.encargos.memoria.filter((m) => m.startsWith("Adicional")),
   },
   {
     id: "previdencia-complementar",

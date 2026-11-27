@@ -55,15 +55,17 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Upload size={16} className="text-brand" />
-        <h2 className="text-card-title font-semibold text-fg">Importar extrato OFX</h2>
+        <h2 className="text-card-title font-semibold text-fg">Importar extrato</h2>
       </div>
+      {/* A planilha do banco (funcionalidade-398, 27/11/2026), para os bancos sem OFX. */}
+      <p className="text-helper text-fg-secondary max-w-[70ch]">OFX ou a planilha do extrato que o banco exporta (.xls, .xlsx ou .csv).</p>
       <form
         ref={formRef}
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!arquivo) {
-            setErro("Escolha o arquivo OFX.");
+            setErro("Escolha o arquivo do extrato.");
             return;
           }
           if (ocupado) return;
@@ -84,7 +86,7 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
         }}
       >
         <input type="hidden" name="bankAccountId" value={bankAccountId} />
-        <FileDropzoneField key={versao} name="arquivo" accept=".ofx" maxSizeMb={MAXIMO_MB} compacto onFileChange={setArquivo} />
+        <FileDropzoneField key={versao} name="arquivo" accept=".ofx,.xls,.xlsx,.xlsm,.csv" maxSizeMb={MAXIMO_MB} compacto onFileChange={setArquivo} />
         {/* O rodapé padrão, à direita como o "Lançar" e o "Criar versão"
             (08/10/2026): o "Importar" ficava à esquerda, embaixo do campo. */}
         <FormFooter pending={pendente} submitLabel="Importar" pendingLabel="Importando…" submitDisabled={!arquivo || trazendo} erro={erro} size="sm" semDivisoria />

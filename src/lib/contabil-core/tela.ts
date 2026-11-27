@@ -46,6 +46,34 @@ export const ROTULO_DO_TIPO_DE_CONTA: Record<string, string> = {
 export const ABAS = ["painel", "importacoes", "extrato", "neo", "regras", "contrapartes", "registros", "notas", "comprovantes", "cartoes", "conciliacao", "relatorios", "configuracoes"] as const;
 export type Aba = (typeof ABAS)[number];
 
+/**
+ * A página que dá para mostrar (27/11/2026, melhoria-571): a pedida, sem passar da última. Página além do
+ * fim (link antigo, a última esvaziou depois de classificar ou desativar) cai na última que tem linhas;
+ * lista vazia é a página 1.
+ */
+export function paginaNoIntervalo(pedida: number, total: number, porPagina: number): number {
+  const ultima = Math.max(1, Math.ceil(total / porPagina));
+  const p = Number.isFinite(pedida) ? Math.floor(pedida) : 1;
+  return Math.min(Math.max(1, p), ultima);
+}
+
+/**
+ * Lê uma página no banco (melhoria-571): conta o recorte e busca a página pedida ao mesmo tempo; se ela
+ * passou do fim, busca de novo a última. Quem chama monta o `count` e o `findMany` com o mesmo `where`.
+ */
+export async function lerPagina<T>(
+  pedida: number,
+  porPagina: number,
+  contar: () => Promise<number>,
+  buscar: (skip: number, take: number) => Promise<T[]>,
+): Promise<{ itens: T[]; total: number; pagina: number }> {
+  const inicial = paginaNoIntervalo(pedida, Number.MAX_SAFE_INTEGER, porPagina);
+  const [total, primeira] = await Promise.all([contar(), buscar((inicial - 1) * porPagina, porPagina)]);
+  const pagina = paginaNoIntervalo(inicial, total, porPagina);
+  const itens = pagina === inicial ? primeira : await buscar((pagina - 1) * porPagina, porPagina);
+  return { itens, total, pagina };
+}
+
 /** Competência do mês corrente, "AAAA-MM", no fuso do escritório. */
 export function mesAtual(agora = new Date()): string {
   // en-CA formata ano e mês como "2026-11".

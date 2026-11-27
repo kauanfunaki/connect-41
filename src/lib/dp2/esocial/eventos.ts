@@ -91,6 +91,8 @@ export type TrabalhadorEsocial = {
    * ideADC por instrumento e um idePeriodo por mês de referência.
    */
   perAnt?: PeriodosAnteriores[];
+  /** Grau de exposição a agente nocivo (funcionalidade-763): vai no infoAgNocivo/grauExp do empregado (1 = não exposto). */
+  grauExp?: string | null;
 };
 
 /** Um instrumento (convenção, acordo, dissídio…) e as diferenças de cada mês. */
@@ -377,6 +379,8 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
                 el("indApurIR", "0"),
               ])
             ),
+            // Empregado (categorias 1xx): o grau de exposição a agente nocivo, do contrato (aposentadoria especial).
+            t.categoria.startsWith("1") ? el("infoAgNocivo", [el("grauExp", /^[1-4]$/.test(t.grauExp ?? "") ? t.grauExp : "1")]) : null,
           ]),
         ]),
       ]),

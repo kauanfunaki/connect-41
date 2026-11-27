@@ -39,11 +39,14 @@ import {
 import { podeDesfazer, podeQuebrar } from "@/lib/financeiro/cobranca/acordo";
 import {
   filaDeCobranca,
-  listarAcordos,
+  paginaDeAcordos,
   dadosDaAbaRegua,
   MODULO_DE_COBRANCA,
+  type AcordoMontado,
   type LinhaDeCobranca,
 } from "@/lib/financeiro/cobranca/consultas";
+import { paginaDaUrl } from "@/lib/financeiro/paginaDeContas";
+import { Pagination } from "@/components/shared/Pagination";
 import { quebrarAcordo, desfazerAcordo } from "./actions";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
@@ -120,7 +123,9 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
       {aba === "fila" && escopo && (
         <Fila tenantId={ctx.tenantId} userId={ctx.userId} setores={setores} escopo={escopo} escolha={escolha} params={params} podeAgir={podeAgir} />
       )}
-      {aba === "acordos" && escopo && <Acordos escopo={escopo} status={params.status} podeAgir={podeAgir} />}
+      {aba === "acordos" && escopo && (
+        <Acordos escopo={escopo} status={params.status} pedida={paginaDaUrl(params.pagina)} naUrl={naUrl ?? undefined} podeAgir={podeAgir} />
+      )}
       {aba === "regua" && <Regua tenantId={ctx.tenantId} empresas={noSeletor} soDaBase={empresasDeTodas} gerencia={gerencia} filtroDosEnvios={params.envios} naUrl={naUrl ?? undefined} />}
     </PageContainer>
   );
@@ -355,7 +360,7 @@ function GruposDaFila({ linhas, hojeKey, podeAgir }: { linhas: LinhaDeCobranca[]
 
 // ─── Acordos ────────────────────────────────────────────────────────────────
 
-type AcordoDaLista = Awaited<ReturnType<typeof listarAcordos>>["acordos"][number];
+type AcordoDaLista = AcordoMontado;
 
 function BarraDasParcelas({ and, cor, rotulo }: { and: AndamentoDoAcordo; cor: string; rotulo: string }) {
   const pct = and.total > 0 ? Math.round((and.pagas / and.total) * 100) : 0;
@@ -468,20 +473,35 @@ function DetalheDoAcordo({ a, motivoDeNaoDesfazer }: { a: AcordoDaLista; motivoD
  * Os acordos em tabela, com o andamento em barra (Cobrança A, 04/11/2026):
  * uma linha por acordo, a parcela vencida à vista, e o texto e as parcelas no
  * "Ver parcelas". Eram cartões empilhados com três linhas de texto cada.
+ *
+ * Paginada no servidor (27/11/2026, melhoria-571): eram até 500 de uma vez,
+ * sem aviso. Os cartões do topo contam todos os acordos, não a página.
  */
 async function Acordos({
   escopo,
   status,
+  pedida,
+  naUrl,
   podeAgir,
 }: {
   /** Uma empresa, ou todas — só quando pedido (`?empresa=todas`). */
   escopo: EscopoDaEscolha;
   status: string | undefined;
+  pedida: number;
+  /** A empresa como vai na URL, para a paginação não a perder. */
+  naUrl: string | undefined;
   podeAgir: boolean;
 }) {
   const filtroStatus = STATUS_DE_ACORDO.find((s) => s === status) ?? null;
-  const { acordos, contagem } = await listarAcordos(escopo, { status: filtroStatus });
   const hojeKey = saoPauloParts(new Date()).dateKey;
+  const { acordos, contagem, total, pagina, totalDePaginas, ativos } = await paginaDeAcordos(escopo, { status: filtroStatus }, pedida, hojeKey);
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams({ aba: "acordos" });
+    if (naUrl) q.set("empresa", naUrl);
+    if (filtroStatus) q.set("status", filtroStatus);
+    if (p > 1) q.set("pagina", String(p));
+    return `/cobranca?${q}`;
+  };
 
   const linhas = acordos.map((a) => {
     const and = andamentoDoAcordo(
@@ -531,11 +551,11 @@ async function Acordos({
     return { a, and, cor, selo, motivo, menu, vencida };
   });
 
-  // Os totais olham os acordos ativos; com outro filtro de situação, não há ativos na lista.
-  const ativos = linhas.filter((l) => l.a.status === "ATIVO");
-  const veAtivos = !filtroStatus || filtroStatus === "ATIVO";
-  const emAberto = ativos.reduce((s, l) => s + l.and.emAbertoCentavos, 0);
-  const comVencida = ativos.filter((l) => l.vencida).length;
+  // Os totais olham todos os acordos ativos, não só os da página; com outro
+  // filtro de situação, a tela não os mostra (e a consulta não os lê).
+  const veAtivos = ativos !== null;
+  const emAberto = ativos?.emAbertoCentavos ?? 0;
+  const comVencida = ativos?.comVencida ?? 0;
 
   return (
     <>
@@ -554,7 +574,7 @@ async function Acordos({
       />
 
       <CascoDaTabela
-        contagem={contarItens(acordos.length, "acordo", "acordos", false)}
+        contagem={contarItens(total, "acordo", "acordos")}
         filtros={
           // Situação (com a contagem de cada uma) no botão "Filtros"; a empresa
           // é o seletor da fileira de cima (13/10/2026).
@@ -571,7 +591,7 @@ async function Acordos({
           />
         }
       >
-        {acordos.length === 0 ? (
+        {total === 0 ? (
           <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Acordos nascem no título vencido, na fila: escolha os títulos do sacado e simule as parcelas." />
         ) : (
           <>
@@ -645,6 +665,8 @@ async function Acordos({
           </>
         )}
       </CascoDaTabela>
+      {/* Fora do casco, como nas outras listas paginadas. */}
+      <Pagination page={pagina} totalPages={totalDePaginas} total={total} rotulo="acordos" buildHref={hrefDaPagina} />
     </>
   );
 }

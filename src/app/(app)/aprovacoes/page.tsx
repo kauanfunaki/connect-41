@@ -27,6 +27,8 @@ import { MODULO_DE_APROVACOES } from "@/lib/financeiro/aprovacao/servidor";
 import { SITUACOES_DA_FILA, situacaoDaFila, whereDaFilaDeAprovacoes, type SituacaoDaFila } from "@/lib/financeiro/aprovacao/fila";
 import { empresaDaFilaDeAprovacoes } from "@/lib/financeiro/aprovacao/filaServidor";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Pagination } from "@/components/shared/Pagination";
+import { paginaDaUrl, totalDePaginas } from "@/lib/financeiro/paginaDeContas";
 import { usuariosAtivosDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +36,12 @@ export const dynamic = "force-dynamic";
 const MODULE = MODULO_DE_APROVACOES;
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
-const LIMITE = 500;
+/**
+ * Contas da fila por página (27/11/2026, melhoria-571): a fila ia até 500
+ * contas de uma vez, com o aviso "filtre por empresa"; agora o banco traz só a
+ * página aberta, e a contagem e os totais do topo somam o recorte inteiro.
+ */
+const POR_PAGINA = 50;
 
 /**
  * Aprovações por alçada: a fila do que espera decisão e o cadastro das alçadas.
@@ -92,6 +99,7 @@ export default async function AprovacoesPage({
           userId={ctx.userId}
           empresaId={empresaId}
           situacao={situacaoDaFila(params.situacao)}
+          paginaPedida={paginaDaUrl(params.pagina)}
           podeAgir={podeAgir}
           gerencia={gerencia}
         />
@@ -107,6 +115,7 @@ async function Fila({
   userId,
   empresaId,
   situacao,
+  paginaPedida,
   podeAgir,
   gerencia,
 }: {
@@ -114,12 +123,13 @@ async function Fila({
   userId: string;
   empresaId: string | null;
   situacao: SituacaoDaFila;
+  paginaPedida: number;
   podeAgir: boolean;
   gerencia: boolean;
 }) {
   const prisma = getPrisma();
   const base = whereDaFilaDeAprovacoes(tenantId, empresaId);
-  const [linhas, contagem] = await Promise.all([
+  const buscarPagina = (p: number) =>
     prisma.financeEntry.findMany({
       where: { ...base, approvalStatus: { in: [...situacao.status] } },
       select: {
@@ -148,8 +158,11 @@ async function Fila({
         },
       },
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],
-      take: LIMITE + 1,
-    }),
+      skip: (p - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+    });
+  const [primeira, contagem] = await Promise.all([
+    buscarPagina(paginaPedida),
     prisma.financeEntry.groupBy({
       by: ["approvalStatus"],
       where: { ...base, approvalStatus: { in: ["AGUARDANDO", "REPROVADO"] } },
@@ -162,9 +175,18 @@ async function Fila({
   const aguardando = soma("AGUARDANDO");
   const reprovadas = soma("REPROVADO");
 
+  // O total da lista sai da mesma contagem dos totais do topo: a situação do
+  // filtro é aguardando, reprovadas ou as duas, e o `groupBy` já conta cada uma.
+  let total = 0;
+  for (const s of situacao.status) total += soma(s)?._count._all ?? 0;
+  const ultima = totalDePaginas(total, POR_PAGINA);
+  // Página além do fim (link antigo, a fila andou): mostra a última que existe.
+  const pagina = Math.min(paginaPedida, ultima);
+  const linhas = pagina === paginaPedida ? primeira : await buscarPagina(pagina);
+
   // O veredito e o histórico de cada linha, calculados uma vez: cartão e tabela
   // mostram a mesma decisão, e `podeDecidir` não roda duas vezes por conta.
-  const decididas = linhas.slice(0, LIMITE).map((l) => {
+  const decididas = linhas.map((l) => {
     const valorCentavos = centavosDeDecimal(l.amount);
     const veredito = podeDecidir({ ...l, valorCentavos }, { tipo: "EQUIPE", userId, gerenciaOSetor: gerencia }, "APROVAR");
     const eventos: EventoDaAprovacao[] = l.approvalEvents.map((e) => ({
@@ -193,6 +215,15 @@ async function Fila({
     const q = new URLSearchParams();
     if (empresaId) q.set("empresa", empresaId);
     if (chave !== "todas") q.set("situacao", chave);
+    const s = q.toString();
+    return s ? `/aprovacoes?${s}` : "/aprovacoes";
+  };
+  // A página leva a empresa e a situação junto; a 1 fica sem `?pagina=`.
+  const hrefPagina = (p: number) => {
+    const q = new URLSearchParams();
+    if (empresaId) q.set("empresa", empresaId);
+    if (situacao.chave !== "todas") q.set("situacao", situacao.chave);
+    if (p > 1) q.set("pagina", String(p));
     const s = q.toString();
     return s ? `/aprovacoes?${s}` : "/aprovacoes";
   };
@@ -229,7 +260,7 @@ async function Fila({
       {/* Situação no botão "Filtros" (conferência de 30/09); a empresa saiu
           para o seletor do topo (15/10/2026). */}
       <CascoDaTabela
-        contagem={contarItens(decididas.length, "conta", "contas", linhas.length > LIMITE)}
+        contagem={contarItens(total, "conta", "contas")}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -280,6 +311,8 @@ async function Fila({
               ))}
             </CartoesNoCelular>
 
+            {/* Desde a paginação (27/11/2026, melhoria-571) o funil das colunas
+                filtra a página aberta, como em Exigências e Certificados. */}
             <TabelaFiltravel
               linhas={decididas.map(({ l }) => ({
                 id: l.id,
@@ -350,10 +383,10 @@ async function Fila({
             </table>
             </TabelaNoDesktop>
             </TabelaFiltravel>
-            {linhas.length > LIMITE && <p className="text-micro text-fg-muted mt-3">Mostrando as {LIMITE} primeiras. Filtre por empresa.</p>}
           </>
         )}
       </CascoDaTabela>
+      <Pagination page={pagina} totalPages={ultima} buildHref={hrefPagina} total={total} rotulo="contas" />
     </>
   );
 }

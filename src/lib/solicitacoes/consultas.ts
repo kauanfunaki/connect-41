@@ -8,6 +8,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
+import { totalDePaginas } from "@/lib/financeiro/paginaDeContas";
 import type { AnexoDaConversa, MensagemDaConversa } from "@/lib/financeiro/pendencias/consultas";
 import { situacaoDaResposta, type SituacaoDaResposta, type StatusDaSolicitacao } from "./regras";
 
@@ -78,7 +79,11 @@ export type LinhaDaFila = {
 
 export type ContadoresDaFila = { novas: number; minhas: number; atrasadas: number; aguardando: number };
 
+/** Teto da lista do portal (`listarDoCliente`); a fila da equipe pagina. */
 const LIMITE_DA_LISTA = 500;
+
+/** Solicitações por página na fila da equipe — paginada no servidor desde 27/11/2026 (melhoria-571). */
+export const SOLICITACOES_POR_PAGINA = 50;
 
 /** O status de cada recorte da fila. "Minhas" é o em aberto que está com a pessoa. */
 export function whereDoRecorteDaEquipe(recorte: RecorteDaEquipe, userId: string): Prisma.ServiceRequestWhereInput {
@@ -102,21 +107,28 @@ export function whereDoRecorteDaEquipe(recorte: RecorteDaEquipe, userId: string)
  * Quantas a fila da pessoa mostra num recorte, sem setor nem empresa
  * filtrados — o balão da aba "Recebidas" (10/11/2026, pedido
  * do Kauan: balão como nos Chamados), no recorte padrão da tela. Mesmo
- * `where` da lista, contado no banco: a lista para em 500, o balão não.
+ * `where` da lista, contado no banco.
  */
 export async function contarDaEquipe(escopo: EscopoDaEquipe, recorte: RecorteDaEquipe): Promise<number> {
   return getPrisma().serviceRequest.count({ where: { AND: [whereDaEquipe(escopo), whereDoRecorteDaEquipe(recorte, escopo.userId)] } });
 }
 
 /**
- * A fila da equipe. Os contadores ignoram o recorte (são o mapa da fila, como
- * na pendência), mas respeitam setor e empresa filtrados.
+ * A fila da equipe, uma página por vez. Os contadores ignoram o recorte (são o
+ * mapa da fila, como na pendência), mas respeitam setor e empresa filtrados.
+ *
+ * Paginada no servidor desde 27/11/2026 (melhoria-571): ia até as 500 mais
+ * recentes, com o aviso "filtre para ver o resto". Agora traz só a página
+ * aberta (`skip`/`take`), e `total` conta o recorte inteiro no banco. Página
+ * além do fim (link antigo, a fila andou) cai na última que existe. O `id` no
+ * fim da ordem deixa a ordem estável entre as páginas, no empate de horário.
  */
 export async function listarParaEquipe(
   escopo: EscopoDaEquipe,
   filtros: { recorte: RecorteDaEquipe; setor: string | null; empresaId: string | null; atrasadas: boolean },
-  agora: Date
-): Promise<{ linhas: LinhaDaFila[]; contadores: ContadoresDaFila; limitado: boolean }> {
+  agora: Date,
+  paginaPedida = 1
+): Promise<{ linhas: LinhaDaFila[]; contadores: ContadoresDaFila; total: number; pagina: number; totalDePaginas: number }> {
   const prisma = getPrisma();
   const base: Prisma.ServiceRequestWhereInput = {
     AND: [
@@ -126,12 +138,17 @@ export async function listarParaEquipe(
     ],
   };
   const atrasadas = whereDaRespostaAtrasada(agora);
+  const where: Prisma.ServiceRequestWhereInput = {
+    AND: [base, filtros.atrasadas ? atrasadas : whereDoRecorteDaEquipe(filtros.recorte, escopo.userId)],
+  };
+  const pedida = Math.max(1, Math.floor(paginaPedida) || 1);
 
-  const [linhas, novas, minhas, nAtrasadas, aguardando] = await Promise.all([
+  const buscarPagina = (p: number) =>
     prisma.serviceRequest.findMany({
-      where: { AND: [base, filtros.atrasadas ? atrasadas : whereDoRecorteDaEquipe(filtros.recorte, escopo.userId)] },
-      orderBy: [{ lastMessageAt: "desc" }],
-      take: LIMITE_DA_LISTA + 1,
+      where,
+      orderBy: [{ lastMessageAt: "desc" }, { id: "desc" }],
+      skip: (p - 1) * SOLICITACOES_POR_PAGINA,
+      take: SOLICITACOES_POR_PAGINA,
       select: {
         id: true,
         number: true,
@@ -145,15 +162,22 @@ export async function listarParaEquipe(
         assignee: { select: { name: true } },
         _count: { select: { messages: true, attachments: true } },
       },
-    }),
+    });
+
+  const [primeira, total, novas, minhas, nAtrasadas, aguardando] = await Promise.all([
+    buscarPagina(pedida),
+    prisma.serviceRequest.count({ where }),
     prisma.serviceRequest.count({ where: { AND: [base, { status: "ABERTA" }] } }),
     prisma.serviceRequest.count({ where: { AND: [base, whereDoRecorteDaEquipe("minhas", escopo.userId)] } }),
     prisma.serviceRequest.count({ where: { AND: [base, atrasadas] } }),
     prisma.serviceRequest.count({ where: { AND: [base, { status: "AGUARDANDO_CLIENTE" }] } }),
   ]);
+  const ultima = totalDePaginas(total, SOLICITACOES_POR_PAGINA);
+  const pagina = Math.min(pedida, ultima);
+  const linhas = pagina === pedida ? primeira : await buscarPagina(pagina);
 
   return {
-    linhas: linhas.slice(0, LIMITE_DA_LISTA).map((s) => ({
+    linhas: linhas.map((s) => ({
       id: s.id,
       numero: s.number,
       assunto: s.subject.label,
@@ -169,7 +193,9 @@ export async function listarParaEquipe(
       anexos: s._count.attachments,
     })),
     contadores: { novas, minhas, atrasadas: nAtrasadas, aguardando },
-    limitado: linhas.length > LIMITE_DA_LISTA,
+    total,
+    pagina,
+    totalDePaginas: ultima,
   };
 }
 

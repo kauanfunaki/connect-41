@@ -14,6 +14,8 @@ import type { EntradaAgencia, EntradaConta, EntradaContraparte, EntradaRegra } f
 import { descricaoDaAgencia, reapontar, type BancoDoReapontamento, type ItemDoReapontamento } from "../cadastro/reapontamento";
 import type { Distribuicoes } from "../cartoes/servico";
 import { ehDuplicado, empresaDoTenant, falha, NAO_ENCONTRADA, ok, type Resultado } from "./base";
+import { lerPagina } from "../tela";
+import { POR_PAGINA } from "./consultas";
 
 export { descricaoDaAgencia };
 
@@ -281,22 +283,33 @@ export async function reapontarContasSinteticas(tenantId: string, empresaId: str
 
 // ─── Contrapartes ─────────────────────────────────────────────────────────
 
-export async function listarContrapartes(tenantId: string, empresaId: string, busca?: string) {
-  if (!(await empresaDoTenant(tenantId, empresaId))) return [];
-  const termo = busca?.trim();
+/** A aba Contrapartes, uma página por vez (27/11/2026, melhoria-571: eram as 500 primeiras, sem aviso). */
+export async function listarContrapartes(tenantId: string, empresaId: string, filtro: { busca?: string; pagina?: number } = {}) {
+  if (!(await empresaDoTenant(tenantId, empresaId))) return { itens: [], total: 0, pagina: 1 };
+  const termo = filtro.busca?.trim();
   const digitos = termo?.replace(/\D/g, "");
-  return getPrisma().coreContraparte.findMany({
-    where: {
-      tenantId, empresaId, deletedAt: null,
-      ...(termo ? { OR: [{ razaoSocial: { contains: termo } }, { nomeFantasia: { contains: termo } }, ...(digitos ? [{ documento: { contains: digitos } }] : [])] } : {}),
-    },
-    select: {
-      id: true, tipo: true, documento: true, razaoSocial: true, nomeFantasia: true, origem: true, ativa: true, contaContabilId: true,
-      contaContabil: { select: { codigo: true, descricao: true } },
-    },
-    orderBy: { razaoSocial: "asc" },
-    take: 500,
-  });
+  const where: Prisma.CoreContraparteWhereInput = {
+    tenantId, empresaId, deletedAt: null,
+    ...(termo ? { OR: [{ razaoSocial: { contains: termo } }, { nomeFantasia: { contains: termo } }, ...(digitos ? [{ documento: { contains: digitos } }] : [])] } : {}),
+  };
+  const prisma = getPrisma();
+  return lerPagina(
+    filtro.pagina ?? 1,
+    POR_PAGINA,
+    () => prisma.coreContraparte.count({ where }),
+    (skip, take) =>
+      prisma.coreContraparte.findMany({
+        where,
+        select: {
+          id: true, tipo: true, documento: true, razaoSocial: true, nomeFantasia: true, origem: true, ativa: true, contaContabilId: true,
+          contaContabil: { select: { codigo: true, descricao: true } },
+        },
+        // O id desempata: com razão social repetida, a mesma linha não aparece em duas páginas.
+        orderBy: [{ razaoSocial: "asc" }, { id: "asc" }],
+        skip,
+        take,
+      }),
+  );
 }
 
 /**
@@ -355,27 +368,42 @@ export async function salvarContraparte(
 
 // ─── Regras ───────────────────────────────────────────────────────────────
 
-export async function listarRegras(tenantId: string, empresaId: string, filtro: { busca?: string; agenciaId?: string | null; apenasAtivas?: boolean } = {}) {
-  if (!(await empresaDoTenant(tenantId, empresaId))) return [];
+/** A aba Regras, uma página por vez (27/11/2026, melhoria-571: eram as 1.000 primeiras, sem aviso). */
+export async function listarRegras(
+  tenantId: string,
+  empresaId: string,
+  filtro: { busca?: string; agenciaId?: string | null; apenasAtivas?: boolean; pagina?: number } = {},
+) {
+  if (!(await empresaDoTenant(tenantId, empresaId))) return { itens: [], total: 0, pagina: 1 };
   const termo = filtro.busca?.trim();
-  return getPrisma().coreRegra.findMany({
-    where: {
-      tenantId, empresaId, deletedAt: null,
-      ...(filtro.apenasAtivas ? { ativa: true } : {}),
-      // A global vale para a agência: sem ela no filtro, o contador concluiria que a regra sumiu.
-      ...(filtro.agenciaId ? { OR: [{ agenciaId: filtro.agenciaId }, { agenciaId: null }] } : {}),
-      ...(termo
-        ? { AND: [{ OR: [{ descricao: { contains: termo } }, { historico: { contains: termo } }, { conta: { codigo: { contains: termo } } }, { conta: { descricao: { contains: termo } } }] }] }
-        : {}),
-    },
-    select: {
-      id: true, descricao: true, historico: true, dc: true, tipo: true, manterHistorico: true, ativa: true, agenciaId: true, contaId: true,
-      conta: { select: { codigo: true, descricao: true } },
-      agencia: { select: { bancoSigla: true, agencia: true, numero: true, digito: true } },
-    },
-    orderBy: { historico: "asc" },
-    take: 1000,
-  });
+  const where: Prisma.CoreRegraWhereInput = {
+    tenantId, empresaId, deletedAt: null,
+    ...(filtro.apenasAtivas ? { ativa: true } : {}),
+    // A global vale para a agência: sem ela no filtro, o contador concluiria que a regra sumiu.
+    ...(filtro.agenciaId ? { OR: [{ agenciaId: filtro.agenciaId }, { agenciaId: null }] } : {}),
+    ...(termo
+      ? { AND: [{ OR: [{ descricao: { contains: termo } }, { historico: { contains: termo } }, { conta: { codigo: { contains: termo } } }, { conta: { descricao: { contains: termo } } }] }] }
+      : {}),
+  };
+  const prisma = getPrisma();
+  return lerPagina(
+    filtro.pagina ?? 1,
+    POR_PAGINA,
+    () => prisma.coreRegra.count({ where }),
+    (skip, take) =>
+      prisma.coreRegra.findMany({
+        where,
+        select: {
+          id: true, descricao: true, historico: true, dc: true, tipo: true, manterHistorico: true, ativa: true, agenciaId: true, contaId: true,
+          conta: { select: { codigo: true, descricao: true } },
+          agencia: { select: { bancoSigla: true, agencia: true, numero: true, digito: true } },
+        },
+        // O id desempata: o mesmo texto pode estar numa regra global e numa de banco.
+        orderBy: [{ historico: "asc" }, { id: "asc" }],
+        skip,
+        take,
+      }),
+  );
 }
 
 export async function salvarRegra(tenantId: string, empresaId: string, regraId: string | null, d: EntradaRegra, ativa = true): Promise<Resultado<{ id: string; nome: string }>> {

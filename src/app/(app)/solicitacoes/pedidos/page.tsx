@@ -17,7 +17,9 @@ import { NovaPendencia } from "@/components/pendencias/NovaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
 import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
-import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { paginaDePendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { paginaDaUrl } from "@/lib/financeiro/paginaDeContas";
+import { Pagination } from "@/components/shared/Pagination";
 import { enderecoDe } from "@/lib/enderecoCurto";
 import { ROTULO_DO_PRAZO, ROTULO_DO_STATUS, ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
 import { dosSetores, setorDaPendencia, setorPadraoDasPendencias, MODULO_DO_CANAL } from "@/lib/financeiro/pendencias/setor";
@@ -58,10 +60,12 @@ export default async function PedidosAoClientePage({
   const agora = new Date();
 
   const codigos = setor ? [setor] : opcoesDeSetor.map((s) => s.code);
-  const { linhas, contadores, limitado } = await listarPendencias(
+  // Uma página por vez, contada no banco (melhoria-571, 27/11/2026).
+  const { linhas, contadores, total, pagina, totalDePaginas } = await paginaDePendencias(
     { tenantId: ctx.tenantId, companyIds: null, setores: dosSetores(codigos, padrao) },
     { recorte, empresaId, vencidas },
-    agora
+    agora,
+    paginaDaUrl(params.pagina)
   );
   const nomeDoSetor = (s: string | null) => labels[setorDaPendencia(s, padrao)] ?? setorDaPendencia(s, padrao);
 
@@ -127,7 +131,7 @@ export default async function PedidosAoClientePage({
       </div>
 
       <CascoDaTabela
-        contagem={contarItens(linhas.length, "pedido", "pedidos", limitado)}
+        contagem={contarItens(total, "pedido", "pedidos")}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -175,7 +179,6 @@ export default async function PedidosAoClientePage({
                   </PeDoCartao>
                 </Cartao>
               ))}
-              {limitado && <p className="text-fs-1 text-fg-muted mt-1">Mostrando os 500 primeiros. Filtre por setor ou empresa para ver o resto.</p>}
             </CartoesNoCelular>
 
             <TabelaFiltravel
@@ -253,9 +256,15 @@ export default async function PedidosAoClientePage({
                     ))}
                   </tbody>
                 </table>
-                {limitado && <p className="text-fs-1 text-fg-muted mt-3">Mostrando os 500 primeiros. Filtre por setor ou empresa para ver o resto.</p>}
               </TabelaNoDesktop>
             </TabelaFiltravel>
+            <Pagination
+              page={pagina}
+              totalPages={totalDePaginas}
+              buildHref={(p) => href({ pagina: p > 1 ? String(p) : undefined })}
+              total={total}
+              rotulo="pedidos"
+            />
           </>
         )}
       </CascoDaTabela>

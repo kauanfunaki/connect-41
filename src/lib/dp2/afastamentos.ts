@@ -34,7 +34,13 @@ export type AfastamentoNoMes = {
 const DIA = 86_400_000;
 const data = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
 const br = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
-export const NOME_DO_MOTIVO: Record<string, string> = { "01": "acidente ou doença do trabalho", "03": "doença", "17": "licença-maternidade" };
+export const NOME_DO_MOTIVO: Record<string, string> = {
+  "01": "acidente ou doença do trabalho",
+  "03": "doença",
+  "06": "aposentadoria por incapacidade permanente",
+  "16": "licença remunerada",
+  "17": "licença-maternidade",
+};
 
 /** Lê os afastamentos dos XML de S-2230 da pessoa; o mesmo início com fim informado depois vale o mais recente. */
 export function afastamentosDosXml(xmls: readonly string[]): AfastamentoDaPessoa[] {
@@ -75,6 +81,14 @@ export function afastamentosNoMes(afastamentos: readonly AfastamentoDaPessoa[], 
       diasEmpresa = Math.max(0, Math.round((Math.min(ate, fimDaEmpresa) - de) / DIA) + 1);
       diasInss = dias - diasEmpresa;
       if (a.motivo === "01" && diasInss > 0) alerta = `Afastamento por acidente do trabalho desde ${br(a.inicio)}: o FGTS continua sobre o salário dos ${diasInss} dia(s) pagos pelo INSS. Lance a base do FGTS até o Connect calcular sozinho.`;
+    } else if (a.motivo === "06") {
+      // Aposentadoria por incapacidade permanente (funcionalidade-763): o contrato fica suspenso (CLT art. 475).
+      diasInss = dias;
+      alerta = `Aposentadoria por incapacidade permanente desde ${br(a.inicio)}: o contrato fica suspenso e o salário de ${dias} dia(s) deste mês sai da folha.`;
+    } else if (a.motivo === "16") {
+      // Licença remunerada (licença-prêmio, funcionalidade-763): o salário segue normal.
+      diasEmpresa = dias;
+      alerta = `Licença remunerada desde ${br(a.inicio)} (${dias} dia(s) no mês): o salário segue normal.`;
     } else if (a.motivo === "17") {
       diasMaternidade = dias;
       alerta = `Licença-maternidade desde ${br(a.inicio)}: o salário de ${dias} dia(s) deste mês é salário-maternidade, deduzido do INSS na DCTFWeb.`;

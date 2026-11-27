@@ -28,6 +28,7 @@ import type { TabelasDaCompetencia } from "./tabelas";
 import { MARCA_DA_FIXA } from "./rubricasFixas";
 import { ehDomestico } from "./categorias";
 import { diasPeloInss, type AfastamentoNoMes } from "./afastamentos";
+import { adicionalDaAposentadoriaEspecial, alertasDaAposentadoria } from "./licencaPremio";
 
 export type Insalubridade = "NENHUM" | "MINIMO" | "MEDIO" | "MAXIMO";
 
@@ -54,6 +55,8 @@ export type VinculoDoMotor = {
   aprendiz: boolean;
   /** Categoria do eSocial (Tabela 1); sem ela, empregado (101). Ver categorias.ts. */
   categoria?: string;
+  /** Grau de exposição a agente nocivo (grauExp do S-1200): "2", "3" e "4" geram o adicional da aposentadoria especial (funcionalidade-763). */
+  grauExposicao?: string | null;
 };
 
 export type ConvencaoDoMotor = {
@@ -108,6 +111,8 @@ export type Encargos = {
   inssEmpresa: number;
   rat: number;
   terceiros: number;
+  /** Adicional do GILRAT para a aposentadoria especial (12%, 9% ou 6%), funcionalidade-763. */
+  aposentadoriaEspecial?: number;
   fgts: number;
   total: number;
   memoria: string[];
@@ -171,6 +176,8 @@ export type EntradaMensal = {
    * pelo INSS saem do salário; os avisos vão para os alertas.
    */
   afastamentos?: readonly AfastamentoNoMes[];
+  /** A aposentadoria registrada do colaborador (funcionalidade-763): vira aviso no cálculo. */
+  aposentadoria?: { tipo: string; desde: string } | null;
 };
 
 export const FGTS_ALIQUOTA = 8;
@@ -322,7 +329,7 @@ export function encargosDoDomestico(base: number, fgts: number): Encargos {
   };
 }
 
-export function calcularEncargos(base: number, fgts: number, empresa: EmpresaDoMotor): Encargos {
+export function calcularEncargos(base: number, fgts: number, empresa: EmpresaDoMotor, grauExposicao?: string | null): Encargos {
   const memoria: string[] = [];
   if (empresa.patronalNoDas) {
     memoria.push("Contribuição patronal no DAS (Simples): só o FGTS");
@@ -335,8 +342,20 @@ export function calcularEncargos(base: number, fgts: number, empresa: EmpresaDoM
   memoria.push(`INSS da empresa: ${reais(base)} × ${pct(INSS_EMPRESA_ALIQUOTA)} = ${reais(inssEmpresa)}`);
   memoria.push(`RAT ajustado: ${reais(base)} × ${pct(empresa.ratAliquota)} × FAP ${num(empresa.fap)} = ${reais(rat)}`);
   memoria.push(`Terceiros: ${reais(base)} × ${pct(empresa.terceirosAliquota)} = ${reais(terceiros)}`);
+  // Aposentadoria especial (funcionalidade-763): o adicional do GILRAT de quem é exposto a agente nocivo.
+  const especial = adicionalDaAposentadoriaEspecial(base, grauExposicao);
+  if (especial.valor > 0) memoria.push(`Adicional da aposentadoria especial: ${reais(base)} × ${pct(especial.aliquota)} = ${reais(especial.valor)} (Lei 8.212/1991, art. 22, II; Lei 8.213/1991, art. 57, § 6º)`);
   memoria.push(`FGTS ${reais(fgts)}`);
-  return { base, inssEmpresa, rat, terceiros, fgts, total: r2(inssEmpresa + rat + terceiros + fgts), memoria };
+  return {
+    base,
+    inssEmpresa,
+    rat,
+    terceiros,
+    ...(especial.valor > 0 ? { aposentadoriaEspecial: especial.valor } : {}),
+    fgts,
+    total: r2(inssEmpresa + rat + terceiros + especial.valor + fgts),
+    memoria,
+  };
 }
 
 export function calcularProvisoes(base: number, empresa: EmpresaDoMotor, aprendiz: boolean, domestico = false): Provisoes {
@@ -480,6 +499,10 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
         diferencasRetroativas += ev.valor ?? 0;
         itens.push({ ...itemDaRubrica(r, ev.valor ?? 0, "", ev.memoria ?? "Diferenças de meses anteriores (INSS apurado mês a mês)"), incideInss: false });
         break;
+      case "LICENCA_PREMIO_INDENIZADA":
+        // Licença-prêmio não gozada paga em dinheiro: indenizatória (Súmula 136 do STJ).
+        itens.push(itemDaRubrica(r, q * diaDoSalario, `${num(q)} dias`, `${num(q)} dia(s) de licença-prêmio não gozada × ${reais(cheio)} ÷ 30 (indenizatória: sem INSS, FGTS e IRRF)`));
+        break;
       case "INSS_DIFERENCA":
         inssDasDiferencas += ev.valor ?? 0;
         itens.push(itemDaRubrica(r, ev.valor ?? 0, "", ev.memoria ?? "INSS das diferenças, pela tabela de cada mês"));
@@ -608,7 +631,8 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // Os encargos patronais das diferenças retroativas entram no custo do mês.
   const baseDosEncargos = r2(baseInss + diferencasRetroativas);
-  const encargos = ehDomestico(v.categoria) ? encargosDoDomestico(baseDosEncargos, fgts) : calcularEncargos(baseDosEncargos, fgts, e.empresa);
+  const encargos = ehDomestico(v.categoria) ? encargosDoDomestico(baseDosEncargos, fgts) : calcularEncargos(baseDosEncargos, fgts, e.empresa, v.grauExposicao);
+  alertas.push(...alertasDaAposentadoria(e.aposentadoria, v.grauExposicao));
   // A provisão é do salário do mês: as férias gozadas não provisionam férias de novo.
   const provisoes = calcularProvisoes(r2(Math.max(0, baseInss - baseDasFerias)), e.empresa, v.aprendiz, ehDomestico(v.categoria));
   if (feriasDoMes.length) alertas.push(`Férias no mês (${feriasDoMes.map((f) => f.periodo).join(", ")}): pagas no recibo; aqui entram no INSS e no FGTS do mês.`);

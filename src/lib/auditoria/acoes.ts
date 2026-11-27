@@ -512,6 +512,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.parcelamento_excluido": x("excluiu um parcelamento de encargos no DP 2"),
   "folha.parcela_paga": c("marcou uma parcela de parcelamento como paga no DP 2"),
   "folha.parcela_reaberta": c("desmarcou o pagamento de uma parcela de parcelamento no DP 2"),
+  "folha.licenca_premio_registrada": c("registrou gozo ou pagamento de licença-prêmio no DP 2"),
+  "folha.aposentadoria_registrada": c("registrou a aposentadoria de um colaborador no DP 2"),
   "folha.colaborador_transferido": c("transferiu um colaborador para outra empresa no DP 2"),
   "folha.reajuste_coletivo": c("aplicou um reajuste coletivo de salários no DP 2"),
   "folha.ocorrencia_registrada": c("registrou uma advertência ou suspensão no DP 2"),

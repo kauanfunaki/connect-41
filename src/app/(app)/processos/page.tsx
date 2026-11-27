@@ -35,7 +35,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * Processos por página (13/11/2026, melhoria-662): a fila ia inteira para a
- * tela, até 500 linhas. Os contadores seguem contando a fila toda do filtro.
+ * tela, até 500 linhas. Os contadores seguem contando a fila toda do filtro —
+ * desde 27/11/2026 (melhoria-571) sem o teto de 500, que cortava calado.
  */
 const POR_PAGINA = 50;
 
@@ -103,6 +104,9 @@ export default async function ProcessosPage({
   // instante em que alguém gravasse algo entre as duas.
   // A busca entra antes dos contadores, como os outros filtros: o cartão
   // "Em exigência" diz quantos da busca estão em exigência.
+  // Sem teto (27/11/2026, melhoria-571): a situação é derivada dos protocolos e
+  // dos feriados, e o banco não filtra por ela; a leitura é a leve, e o pesado
+  // (etapas liberadas e cartão dos Quadros) vem só para a página, logo abaixo.
   const todas = filtrarPelaBusca(
     await listarFilaLeve(
       ctx.tenantId,

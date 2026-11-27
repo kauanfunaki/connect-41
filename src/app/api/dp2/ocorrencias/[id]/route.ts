@@ -17,7 +17,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!(await podeNoModulo(ctx, "dp2_colaboradores", "ver"))) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   const prisma = getPrisma();
   const o = await prisma.dp2Ocorrencia.findFirst({ where: { id, tenantId: ctx.tenantId }, include: { person: { select: { name: true, cpf: true } } } });
-  if (!o) return NextResponse.json({ error: "Ocorrência não encontrada." }, { status: 404 });
+  if (!o || (o.tipo !== "ADVERTENCIA" && o.tipo !== "SUSPENSAO")) return NextResponse.json({ error: "Ocorrência não encontrada." }, { status: 404 });
   const foraDoFoco = await recusaDoFoco(ctx, [o.companyId]);
   if (foraDoFoco) return NextResponse.json({ error: foraDoFoco }, { status: 403 });
   const empresa = await prisma.company.findFirst({ where: { id: o.companyId, tenantId: ctx.tenantId }, select: { name: true, tradeName: true, displayName: true, cnpj: true, cpf: true, kind: true, city: true } });

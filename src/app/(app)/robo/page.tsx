@@ -17,6 +17,8 @@ import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDateTime, formatarNumero } from "@/lib/format";
 import { ROTULO_DO_STATUS, TIPOS_DE_TAREFA, ehTipoDeTarefa, maquinaSemSinal, motivoParaPessoa, tiposDaArea, type StatusDaTarefa } from "@/lib/robo/tarefas";
 import { Aviso } from "@/components/ui/Aviso";
+import { Pagination } from "@/components/shared/Pagination";
+import { paginaDaUrl, totalDePaginas } from "@/lib/financeiro/paginaDeContas";
 import type { TomDoSelo } from "@/components/ui/Selo";
 
 // Módulo próprio desde 03/11/2026, para a tela estar no menu do Societário.
@@ -32,6 +34,14 @@ const TOM: Record<StatusDaTarefa, TomDoSelo> = {
   CANCELADA: "neutro",
 };
 
+/**
+ * Tarefas por página (27/11/2026, melhoria-571): a tela mostrava só as 100
+ * mais recentes; agora pagina no banco, e os totais contam a fila inteira.
+ */
+const POR_PAGINA = 50;
+/** Quantas tarefas recentes dizem de que máquina mostrar o sinal — o recorte de antes da paginação. */
+const TAREFAS_DO_SINAL = 100;
+
 const TH = "py-2 pr-3 font-medium";
 const TD = "py-2.5 pr-3 align-top";
 
@@ -40,47 +50,71 @@ const TD = "py-2.5 pr-3 align-top";
  * para alguém olhar. A máquina é uma automação do Ops Center; o sinal de vida
  * é o dela lá. Ver `src/lib/robo/`.
  */
-export default async function RoboDoSocietarioPage() {
+export default async function RoboDoSocietarioPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   const ctx = await getAuthContext();
   const setores = ctx.tenantId ? ((await setoresDoModulo(ctx.tenantId, MODULE)) ?? "societario") : "societario";
   if (!ctx.tenantId || !canActOnSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
+  const params = await searchParams;
   const prisma = getPrisma();
   // Só as do Societário: a geração do SPED (06/11/2026) usa a mesma fila e
   // aparece no Gerar SPED.
-  const tarefas = await prisma.robotTask.findMany({
-    where: { tenantId: ctx.tenantId, kind: { in: tiposDaArea("societario") } },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: { id: true, kind: true, status: true, companyId: true, machineSlug: true, attempts: true, reason: true, fileId: true, createdAt: true, finishedAt: true },
-  });
+  const daArea = { tenantId: ctx.tenantId, kind: { in: tiposDaArea("societario") } };
+  const buscarPagina = (p: number) =>
+    prisma.robotTask.findMany({
+      where: daArea,
+      // O id desempata as pedidas no mesmo instante: a página não repete nem pula tarefa.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (p - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+      select: { id: true, kind: true, status: true, companyId: true, machineSlug: true, attempts: true, reason: true, fileId: true, createdAt: true, finishedAt: true },
+    });
+  const pedida = paginaDaUrl(params.pagina);
+  // Os totais do topo e o ritmo da atualização contam a fila inteira, não a
+  // página: eram contados nas 100 tarefas que a tela trazia.
+  const [porSituacao, primeira, recentes, emExecucao] = await Promise.all([
+    prisma.robotTask.groupBy({ by: ["status"], where: daArea, _count: { _all: true } }),
+    buscarPagina(pedida),
+    // O sinal da máquina continua o das que pegaram as tarefas mais recentes,
+    // como antes da paginação; só o slug, sem trazer a tarefa.
+    prisma.robotTask.findMany({ where: daArea, orderBy: { createdAt: "desc" }, take: TAREFAS_DO_SINAL, select: { machineSlug: true } }),
+    prisma.robotTask.findMany({ where: { ...daArea, status: "EM_EXECUCAO" }, select: { id: true } }),
+  ]);
+  const contar = (...status: StatusDaTarefa[]) =>
+    porSituacao.filter((s) => (status as string[]).includes(s.status)).reduce((n, s) => n + s._count._all, 0);
+  const total = porSituacao.reduce((n, s) => n + s._count._all, 0);
+  const ultima = totalDePaginas(total, POR_PAGINA);
+  // Página além do fim (link antigo): mostra a última que existe.
+  const pagina = Math.min(pedida, ultima);
+  const tarefas = pagina === pedida ? primeira : await buscarPagina(pagina);
+
   const [empresas, maquinas] = await Promise.all([
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, id: { in: [...new Set(tarefas.map((t) => t.companyId).filter((id): id is string => !!id))] } },
       select: { id: true, name: true, displayName: true },
     }),
     prisma.opsWatcher.findMany({
-      where: { tenantId: ctx.tenantId, slug: { in: [...new Set(tarefas.map((t) => t.machineSlug).filter((s): s is string => !!s))] } },
+      where: { tenantId: ctx.tenantId, slug: { in: [...new Set(recentes.map((t) => t.machineSlug).filter((s): s is string => !!s))] } },
       select: { slug: true, name: true, lastHeartbeatAt: true, isActive: true },
     }),
   ]);
   const nomeDaEmpresa = new Map(empresas.map((e) => [e.id, nomeExibicao(e)]));
   // Parada no captcha esperando alguém (06/11/2026): a linha leva à tela espelhada,
-  // para quem não viu o aviso no sino.
-  const emExecucao = tarefas.filter((t) => t.status === "EM_EXECUCAO").map((t) => t.id);
+  // para quem não viu o aviso no sino. Procura em toda tarefa em execução, não
+  // só nas da página: o número também acelera a atualização da tela.
   const pedindoAjuda = new Set(
     emExecucao.length
       ? (
           await prisma.robotAssist.findMany({
-            where: { tenantId: ctx.tenantId, taskId: { in: emExecucao }, endedAt: null, deadlineAt: { gt: new Date() } },
+            where: { tenantId: ctx.tenantId, taskId: { in: emExecucao.map((t) => t.id) }, endedAt: null, deadlineAt: { gt: new Date() } },
             select: { taskId: true },
           })
         ).map((s) => s.taskId)
       : [],
   );
-  const naFila = tarefas.filter((t) => t.status === "PENDENTE" || t.status === "EM_EXECUCAO").length;
-  const paradas = tarefas.filter((t) => t.status === "PRECISA_DE_GENTE").length;
+  const naFila = contar("PENDENTE", "EM_EXECUCAO");
+  const paradas = contar("PRECISA_DE_GENTE");
   // A máquina parada (04/11/2026): o robô roda no PC de alguém, e com ele desligado
   // nada é lido sem que ninguém saiba. Só as ativas no Ops Center contam.
   const agora = new Date();
@@ -191,6 +225,13 @@ export default async function RoboDoSocietarioPage() {
           </table>
         </div>
       )}
+      <Pagination
+        page={pagina}
+        totalPages={ultima}
+        buildHref={(p) => (p > 1 ? `/robo?pagina=${p}` : "/robo")}
+        total={total}
+        rotulo="tarefas"
+      />
     </PageContainer>
   );
 }
