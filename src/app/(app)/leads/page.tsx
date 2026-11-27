@@ -13,6 +13,8 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Pagination } from "@/components/shared/Pagination";
+import { paginaDaUrl, totalDePaginas } from "@/lib/financeiro/paginaDeContas";
 import { escritorioDaFicha } from "@/lib/leads/servidor";
 import {
   MODULO_LEADS,
@@ -25,8 +27,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Teto da lista, como na fila de solicitações: acima disso, filtrar. */
-const LIMITE = 500;
+/**
+ * Leads por página (27/11/2026, melhoria-571): a lista ia até os 500 mais
+ * recentes, com o aviso "filtre para ver o resto"; agora o banco traz só a
+ * página aberta, e a contagem é a do recorte inteiro.
+ */
+const POR_PAGINA = 50;
 
 const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" };
 
@@ -60,37 +66,57 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           ? params.responsavel!
           : undefined;
 
-  const encontrados = await prisma.lead.findMany({
-    where: {
-      tenantId: ctx.tenantId,
-      ...(status ? { status: { in: [...status] } } : {}),
-      ...(origem ? { source: origem } : {}),
-      ...(responsavel !== undefined ? { assigneeId: responsavel } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: LIMITE + 1,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      companyName: true,
-      source: true,
-      status: true,
-      createdAt: true,
-      assignee: { select: { name: true } },
-    },
-  });
-  const limitado = encontrados.length > LIMITE;
-  const leads = encontrados.slice(0, LIMITE);
+  const where = {
+    tenantId: ctx.tenantId,
+    ...(status ? { status: { in: [...status] } } : {}),
+    ...(origem ? { source: origem } : {}),
+    ...(responsavel !== undefined ? { assigneeId: responsavel } : {}),
+  };
+  const buscarPagina = (p: number) =>
+    prisma.lead.findMany({
+      where,
+      // O id desempata quem chegou no mesmo instante: a página não repete nem pula lead.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (p - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        companyName: true,
+        source: true,
+        status: true,
+        createdAt: true,
+        assignee: { select: { name: true } },
+      },
+    });
+  const pedida = paginaDaUrl(params.pagina);
+  const [total, primeira] = await Promise.all([prisma.lead.count({ where }), buscarPagina(pedida)]);
+  const ultima = totalDePaginas(total, POR_PAGINA);
+  // Página além do fim (link antigo, o recorte encolheu): mostra a última que existe.
+  const pagina = Math.min(pedida, ultima);
+  const leads = pagina === pedida ? primeira : await buscarPagina(pagina);
   const filtrando = Boolean(params.situacao || origem || responsavel !== undefined);
+
+  // A página leva os filtros junto; a 1 fica sem `?pagina=`.
+  function hrefDaPagina(p: number) {
+    const q = new URLSearchParams();
+    for (const chave of ["situacao", "origem", "responsavel"] as const) {
+      const valor = params[chave];
+      if (valor) q.set(chave, valor);
+    }
+    if (p > 1) q.set("pagina", String(p));
+    const s = q.toString();
+    return s ? `/leads?${s}` : "/leads";
+  }
 
   return (
     <PageContainer>
       <PageHeader title="Leads" />
 
       <CascoDaTabela
-        contagem={contarItens(leads.length, "lead", "leads", limitado)}
+        contagem={contarItens(total, "lead", "leads")}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -155,9 +181,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                   </PeDoCartao>
                 </Cartao>
               ))}
-              {limitado && <p className="text-micro text-fg-muted mt-1">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
             </CartoesNoCelular>
 
+            {/* Desde a paginação (27/11/2026, melhoria-571) o funil das colunas
+                filtra a página aberta, como em Exigências e Certificados. */}
             <TabelaFiltravel
               linhas={leads.map((l) => ({
                 id: l.id,
@@ -230,12 +257,12 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                     ))}
                   </tbody>
                 </table>
-                {limitado && <p className="text-micro text-fg-muted mt-3">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
               </TabelaNoDesktop>
             </TabelaFiltravel>
           </>
         )}
       </CascoDaTabela>
+      <Pagination page={pagina} totalPages={ultima} buildHref={hrefDaPagina} total={total} rotulo="leads" />
     </PageContainer>
   );
 }
