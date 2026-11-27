@@ -24,6 +24,7 @@ import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
 import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
 import { lerGuiaDoFgts } from "@/lib/dp2/guiasDaFolha";
 import { guardarArquivo } from "@/lib/drive/servidor";
+import { gerarParcelas, lerPagamento, lerParcelamento } from "@/lib/dp2/parcelamentos";
 import { documentoDoColaborador, lerTipoDeDocumento, movimentacaoDaEmpresa, quadroDeHorarioDaEmpresa } from "@/lib/dp2/documentosServidor";
 import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
 import { lerTotalizadores } from "@/lib/dp2/esocial/totalizadores";
@@ -1044,6 +1045,87 @@ export async function guardarDocumentoAction(_: EstadoDoDp2, fd: FormData): Prom
   revalidatePath("/arquivos");
   return { ok: true, texto: `"${guardado.nome}" guardado em Arquivos › Departamento Pessoal.${doc.faltas.length ? ` Falta no cadastro: ${doc.faltas.join("; ")}.` : ""}` };
 }
+
+// ─── Parcelamento de encargos (27/11/2026, funcionalidade-764) ──────────────
+
+export async function criarParcelamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerParcelamento({
+    tipo: texto(fd, "tipo"),
+    numero: texto(fd, "numero"),
+    valorConsolidado: texto(fd, "valorConsolidado"),
+    quantidade: texto(fd, "quantidade"),
+    primeiroVencimento: texto(fd, "primeiroVencimento"),
+    observacao: texto(fd, "observacao"),
+  });
+  if (!lido.ok) return erro(lido.erro);
+  const p = lido.parcelamento;
+  const parcelas = gerarParcelas(p);
+  const criado = await getPrisma().dp2Parcelamento.create({
+    data: {
+      tenantId: a.tenantId,
+      companyId,
+      tipo: p.tipo,
+      numero: p.numero,
+      valorConsolidado: p.valorConsolidado,
+      quantidade: p.quantidade,
+      primeiroVencimento: new Date(`${p.primeiroVencimento}T00:00:00Z`),
+      observacao: p.observacao,
+      criadoPorId: a.userId,
+      parcelas: { create: parcelas.map((x) => ({ tenantId: a.tenantId, numero: x.numero, vencimento: new Date(`${x.vencimento}T00:00:00Z`), valor: x.valor })) },
+    },
+    select: { id: true },
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.parcelamento_criado", entityType: "Company", entityId: companyId, metadata: { parcelamento: criado.id, ...p } });
+  revalidatePath("/dp2");
+  return { ok: true, texto: `Parcelamento ${p.numero} cadastrado: ${p.quantidade} parcela(s) de ${brlDp2(parcelas[0].valor)} a partir de ${p.primeiroVencimento.split("-").reverse().join("/")}.` };
+}
+
+export async function excluirParcelamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const p = await prisma.dp2Parcelamento.findFirst({ where: { id: texto(fd, "parcelamentoId"), tenantId: a.tenantId }, select: { id: true, companyId: true, numero: true } });
+  if (!p) return erro("Parcelamento não encontrado.");
+  const recusa = await empresaDoEscritorio(a, p.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2Parcelamento.delete({ where: { id: p.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.parcelamento_excluido", entityType: "Company", entityId: p.companyId, metadata: { parcelamento: p.id, numero: p.numero } });
+  revalidatePath("/dp2");
+  return { ok: true, texto: `Parcelamento ${p.numero} excluído.` };
+}
+
+/** Marca a próxima parcela em aberto (ou a escolhida) como paga, com a data e o valor pago; ou desfaz. */
+export async function pagarParcelaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const parcela = await prisma.dp2ParcelaDoParcelamento.findFirst({
+    where: { id: texto(fd, "parcelaId"), tenantId: a.tenantId },
+    include: { parcelamento: { select: { companyId: true, numero: true } } },
+  });
+  if (!parcela) return erro("Parcela não encontrada.");
+  const recusa = await empresaDoEscritorio(a, parcela.parcelamento.companyId);
+  if (recusa) return erro(recusa);
+  if (texto(fd, "desfazer") === "1") {
+    await prisma.dp2ParcelaDoParcelamento.update({ where: { id: parcela.id }, data: { pagaEm: null, valorPago: null, pagaPorId: null } });
+    await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.parcela_reaberta", entityType: "Company", entityId: parcela.parcelamento.companyId, metadata: { parcelamento: parcela.parcelamento.numero, parcela: parcela.numero } });
+    revalidatePath("/dp2");
+    return { ok: true, texto: `Parcela ${parcela.numero} do parcelamento ${parcela.parcelamento.numero} voltou para em aberto.` };
+  }
+  const lido = lerPagamento({ pagaEm: texto(fd, "pagaEm"), valorPago: texto(fd, "valorPago") }, { valor: Number(parcela.valor) });
+  if (!lido.ok) return erro(lido.erro);
+  await prisma.dp2ParcelaDoParcelamento.update({ where: { id: parcela.id }, data: { pagaEm: new Date(`${lido.pagaEm}T00:00:00Z`), valorPago: lido.valorPago, pagaPorId: a.userId } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.parcela_paga", entityType: "Company", entityId: parcela.parcelamento.companyId, metadata: { parcelamento: parcela.parcelamento.numero, parcela: parcela.numero, ...lido } });
+  revalidatePath("/dp2");
+  return { ok: true, texto: `Parcela ${parcela.numero} do parcelamento ${parcela.parcelamento.numero} paga em ${lido.pagaEm.split("-").reverse().join("/")} (${brlDp2(lido.valorPago)}).` };
+}
+
+const brlDp2 = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
 // ─── Guias da folha (26/11/2026, funcionalidade-744) ────────────────────────
 
