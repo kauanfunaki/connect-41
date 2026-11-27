@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { Card } from "@/components/ui/Card";
@@ -62,10 +62,26 @@ export function RodadaDoTeste({
         setErro(r.erro);
         return;
       }
-      if (r.valendo) setUsados((u) => (u.includes(r.nivel) ? u : [...u, r.nivel]));
       setResultado(null);
       setRodada(r);
     });
+  }
+
+  // A tentativa valendo só conta quando termina (melhoria-886): o nível trava
+  // ao chegar o resultado, e não ao começar.
+  function terminar(r: ResultadoDoEnvio) {
+    if (rodada?.valendo) {
+      const n = rodada.nivel;
+      setUsados((u) => (u.includes(n) ? u : [...u, n]));
+    }
+    setResultado(r);
+  }
+
+  // Cancelar devolve a tentativa: a sessão fica sem envio, e começar de novo
+  // traz o mesmo conteúdo com o tempo zerado (o servidor retoma a sessão).
+  function cancelar() {
+    setRodada(null);
+    setResultado(null);
   }
 
   function deNovo() {
@@ -78,11 +94,28 @@ export function RodadaDoTeste({
     return <ResultadoDaRodada teste={teste} resultado={resultado} onDeNovo={deNovo} />;
   }
   if (rodada) {
-    if (rodada.teste === "atalhos") return <RodadaDeAtalhos rodada={rodada} onFim={setResultado} />;
-    return rodada.teste === "logica" ? (
-      <RodadaDeLogica rodada={rodada} onFim={setResultado} />
-    ) : (
-      <RodadaDeDigitacao rodada={rodada} onFim={setResultado} />
+    const emCurso =
+      rodada.teste === "atalhos" ? (
+        <RodadaDeAtalhos rodada={rodada} onFim={terminar} />
+      ) : rodada.teste === "logica" ? (
+        <RodadaDeLogica rodada={rodada} onFim={terminar} />
+      ) : (
+        <RodadaDeDigitacao rodada={rodada} onFim={terminar} />
+      );
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="mx-auto flex w-full max-w-2xl justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={cancelar}
+            title={rodada.valendo ? "A tentativa de hoje volta: ao começar de novo, o mesmo conteúdo, com o tempo zerado." : undefined}
+          >
+            <X size={14} aria-hidden /> Cancelar
+          </Button>
+        </div>
+        {emCurso}
+      </div>
     );
   }
 
@@ -119,7 +152,7 @@ export function RodadaDoTeste({
             />
             <p className="text-helper text-fg-muted">
               {modo === "valendo"
-                ? "Vale para o ranking do mês. Uma tentativa por dia em cada nível, e ela conta assim que o teste aparece, mesmo se você sair no meio."
+                ? "Vale para o ranking do mês. Uma tentativa por dia em cada nível, que conta quando você termina. Se cancelar no meio, ela volta com o mesmo conteúdo."
                 : "Sem limite e fora do ranking: para pegar o jeito."}
             </p>
           </div>

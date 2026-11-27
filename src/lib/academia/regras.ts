@@ -139,12 +139,23 @@ export function mesesParaEscolher(atual: string, quantos = 12): string[] {
  * (userId, teste, nivel, diaValendo) faz o resto: a segunda tentativa valendo
  * do mesmo dia, no mesmo nível, não entra — nem com duas abas ao mesmo tempo.
  *
- * Começar conta: a tentativa do dia é gasta quando o texto ou as questões
- * aparecem, e não quando o resultado é enviado. No Hub ela só contava ao
- * enviar, e dava para abrir as questões, desistir e começar de novo com
- * outras (o "aperto barato" pedido pelo Kauan).
+ * Cancelar devolve a tentativa (27/11/2026, melhoria-886, opção A escolhida
+ * pelo Kauan): a tentativa do dia só é gasta quando o resultado é enviado.
+ * Quem cancela ou sai no meio começa de novo com o MESMO texto ou as MESMAS
+ * questões, e o tempo zerado — e não com outras, o "aperto barato" do Hub,
+ * em que dava para desistir até cair um conteúdo mais fácil.
  */
 export const diaValendoDaSessao = (valendo: boolean, agora: Date = new Date()) => (valendo ? diaDoInstante(agora) : null);
+
+/**
+ * O que fazer com a sessão valendo de hoje neste nível ao começar: nenhuma →
+ * sorteia o conteúdo; não enviada (cancelada, abandonada ou com o tempo
+ * esgotado) → retoma com o mesmo conteúdo; enviada → a tentativa já foi usada.
+ */
+export function tentativaDeHoje(sessao: { submittedAt: Date | null } | null): "nova" | "retomar" | "usada" {
+  if (!sessao) return "nova";
+  return sessao.submittedAt ? "usada" : "retomar";
+}
 
 /** Pode começar valendo neste nível? `usadosHoje` são os níveis já tentados hoje neste teste. */
 export function podeComecarValendo(usadosHoje: Iterable<string>, nivel: Nivel): boolean {

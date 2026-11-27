@@ -21,7 +21,7 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import {
   MODULO_ACADEMIA, NIVEIS, QUESTOES_POR_RODADA, ROTULO_DO_NIVEL, ROTULO_DO_TESTE, TESTES, TESTE_DO_DESAFIO, VALIDADE_DA_SESSAO_MS,
   VALIDADE_DO_DESAFIO_MS, diaDoInstante, diaValendoDaSessao, ehNivel, mesDoInstante, motivoSemTeste, podeAdministrarAcademia,
-  podeFazerTeste, setorDoResultado, type Nivel, type Teste,
+  podeFazerTeste, setorDoResultado, tentativaDeHoje, type Nivel, type Teste,
 } from "./regras";
 import { avaliarDigitacao } from "./digitacao";
 import { gerarTextoDeNumeros } from "./numeros";
@@ -162,10 +162,10 @@ export async function mediaParaTela(ctx: Pick<Quem, "tenantId" | "userId">, mes:
 
 // ─── O resumo da pessoa (Início e o painel do topo) ──────────────────────────
 
-/** Os níveis com a tentativa valendo de hoje já usada, por teste. */
+/** Os níveis com a tentativa valendo de hoje já usada, por teste. Só a enviada conta: a cancelada volta (melhoria-886). */
 async function usadosHoje(ctx: Pick<Quem, "userId">, agora: Date): Promise<Record<Teste, Nivel[]>> {
   const sessoes = await getPrisma().academiaSessao.findMany({
-    where: { userId: ctx.userId, diaValendo: diaDoInstante(agora) },
+    where: { userId: ctx.userId, diaValendo: diaDoInstante(agora), submittedAt: { not: null } },
     select: { teste: true, nivel: true },
   });
   const r: Record<Teste, Nivel[]> = { digitacao: [], numeros: [], logica: [], atalhos: [] };
@@ -346,9 +346,12 @@ type Payload =
  * questões), grava a sessão com nonce e validade e devolve o que a tela
  * mostra — nunca a alternativa certa.
  *
- * Valendo, a sessão grava o dia: a chave única recusa a segunda do mesmo dia
- * no mesmo nível (ver `diaValendoDaSessao`). O conteúdo é escolhido antes de
- * gravar: sem texto no nível, a tentativa do dia não é gasta.
+ * Valendo, a sessão grava o dia, e a chave única deixa uma por dia no mesmo
+ * nível. Enviada, a tentativa do dia acabou. Não enviada (a pessoa cancelou,
+ * saiu no meio ou deixou o tempo acabar), ela é retomada com o MESMO conteúdo
+ * e o tempo zerado (melhoria-886): cancelar não gasta a tentativa e também não
+ * troca o texto ou as questões. O conteúdo é escolhido antes de gravar: sem
+ * texto no nível, nada é gravado.
  */
 export async function comecarRodada(ctx: Quem, raw: unknown): Promise<RodadaServida | { erro: string }> {
   if (!(await ligada(ctx))) return { erro: "A Academia não está disponível." };
@@ -360,64 +363,40 @@ export async function comecarRodada(ctx: Quem, raw: unknown): Promise<RodadaServ
   const agora = new Date();
   const diaValendo = diaValendoDaSessao(valendo, agora);
 
+  let retomada: { id: string; payload: Payload | null } | null = null;
   if (diaValendo) {
-    const usada = await db.academiaSessao.findFirst({ where: { userId: ctx.userId, teste, nivel, diaValendo }, select: { id: true } });
-    if (usada) return { erro: jaUsada(teste, nivel) };
+    const deHoje = await db.academiaSessao.findFirst({ where: { userId: ctx.userId, teste, nivel, diaValendo }, select: { id: true, submittedAt: true, payload: true } });
+    const caso = tentativaDeHoje(deHoje);
+    if (caso === "usada") return { erro: jaUsada(teste, nivel) };
+    if (caso === "retomar" && deHoje) retomada = { id: deHoje.id, payload: deHoje.payload as unknown as Payload | null };
   }
 
-  let payload: Payload;
-  let paraTela:
-    | { texto: string }
-    | { questoes: Extract<RodadaServida, { teste: "logica" }>["questoes"] }
-    | { pedidos: Extract<RodadaServida, { teste: "atalhos" }>["pedidos"] };
-  if (teste === "atalhos") {
-    const pedidos = sortearPedidos(nivel, () => randomInt(1_000_000) / 1_000_000);
-    payload = { tipo: "atalhos", pedidos };
-    paraTela = {
-      pedidos: pedidos.flatMap((id) => {
-        const a = atalhoPorId(id);
-        return a ? [{ id: a.id, acao: a.acao, onde: a.onde }] : [];
-      }),
-    };
-  } else if (teste === "numeros") {
-    const semente = randomInt(2 ** 31 - 1);
-    const texto = gerarTextoDeNumeros(nivel, semente);
-    payload = { tipo: "texto", texto, semente };
-    paraTela = { texto };
-  } else if (teste === "digitacao") {
-    const where = { tenantId: ctx.tenantId, nivel, ativo: true };
-    const quantos = await db.academiaTexto.count({ where });
-    if (quantos === 0) return { erro: semConteudo(teste, nivel) };
-    const escolhido = await db.academiaTexto.findFirst({ where, orderBy: { id: "asc" }, skip: randomInt(quantos), select: { id: true, conteudo: true } });
-    if (!escolhido) return { erro: semConteudo(teste, nivel) };
-    const texto = escolhido.conteudo.replace(/\r\n/g, "\n").trim();
-    payload = { tipo: "texto", texto, textoId: escolhido.id };
-    paraTela = { texto };
-  } else {
-    const ids = await db.academiaQuestao.findMany({ where: { tenantId: ctx.tenantId, nivel, ativo: true }, select: { id: true }, take: 2000 });
-    if (ids.length === 0) return { erro: semConteudo(teste, nivel) };
-    const sorteadas = embaralhar(ids.map((q) => q.id)).slice(0, QUESTOES_POR_RODADA);
-    const lidas = await db.academiaQuestao.findMany({
-      where: { tenantId: ctx.tenantId, id: { in: sorteadas } },
-      select: { id: true, enunciado: true, imagemUrl: true, alternativas: true, correta: true },
-    });
-    const porId = new Map(lidas.map((q) => [q.id, q]));
-    const questoes = sorteadas.flatMap((id) => {
-      const q = porId.get(id);
-      return q ? [q] : [];
-    });
-    payload = { tipo: "questoes", questoes: questoes.map((q) => ({ id: q.id, correta: q.correta })) };
-    paraTela = { questoes: questoes.map((q) => ({ id: q.id, enunciado: q.enunciado, imagemUrl: q.imagemUrl, alternativas: lerAlternativas(q.alternativas) })) };
-  }
+  // Retomando, o mesmo conteúdo; se ele não serve mais (questão apagada), sorteia outro.
+  const conteudo = (retomada && (await conteudoDoPayload(ctx.tenantId, teste, retomada.payload))) || (await sortearConteudo(ctx.tenantId, teste, nivel));
+  if ("erro" in conteudo) return conteudo;
+  const { payload, paraTela } = conteudo;
 
   const nonce = randomBytes(16).toString("hex");
   const expiraEm = new Date(agora.getTime() + VALIDADE_DA_SESSAO_MS[teste]);
   try {
-    const sessao = await db.academiaSessao.create({
-      data: { tenantId: ctx.tenantId, userId: ctx.userId, teste, nivel, valendo, diaValendo, nonce, payload, startedAt: agora, expiresAt: expiraEm },
-      select: { id: true },
-    });
-    const base = { sessaoId: sessao.id, nonce, nivel, valendo, expiraEm: expiraEm.toISOString() };
+    let sessaoId: string;
+    if (retomada) {
+      // Nonce novo: a aba antiga, se ainda aberta, não envia mais.
+      const { count } = await db.academiaSessao.updateMany({
+        where: { id: retomada.id, submittedAt: null },
+        data: { nonce, payload, startedAt: agora, expiresAt: expiraEm },
+      });
+      // Enviada nesse meio-tempo (outra aba): a tentativa acabou.
+      if (count === 0) return { erro: jaUsada(teste, nivel) };
+      sessaoId = retomada.id;
+    } else {
+      const sessao = await db.academiaSessao.create({
+        data: { tenantId: ctx.tenantId, userId: ctx.userId, teste, nivel, valendo, diaValendo, nonce, payload, startedAt: agora, expiresAt: expiraEm },
+        select: { id: true },
+      });
+      sessaoId = sessao.id;
+    }
+    const base = { sessaoId, nonce, nivel, valendo, expiraEm: expiraEm.toISOString() };
     if ("pedidos" in paraTela) return { ...base, teste: "atalhos", pedidos: paraTela.pedidos };
     return "texto" in paraTela
       ? { ...base, teste: teste as "digitacao" | "numeros", texto: paraTela.texto }
@@ -427,6 +406,84 @@ export async function comecarRodada(ctx: Quem, raw: unknown): Promise<RodadaServ
     if (isPrismaUniqueError(e)) return { erro: jaUsada(teste, nivel) };
     throw e;
   }
+}
+
+type ParaTela =
+  | { texto: string }
+  | { questoes: Extract<RodadaServida, { teste: "logica" }>["questoes"] }
+  | { pedidos: Extract<RodadaServida, { teste: "atalhos" }>["pedidos"] };
+type Conteudo = { payload: Payload; paraTela: ParaTela };
+
+const pedidosNaTela = (pedidos: string[]): Extract<RodadaServida, { teste: "atalhos" }>["pedidos"] =>
+  pedidos.flatMap((id) => {
+    const a = atalhoPorId(id);
+    return a ? [{ id: a.id, acao: a.acao, onde: a.onde }] : [];
+  });
+
+/** O conteúdo novo da rodada: o texto, os números, as questões ou os atalhos sorteados. */
+async function sortearConteudo(tenantId: string, teste: Teste, nivel: Nivel): Promise<Conteudo | { erro: string }> {
+  const db = getPrisma();
+  if (teste === "atalhos") {
+    const pedidos = sortearPedidos(nivel, () => randomInt(1_000_000) / 1_000_000);
+    return { payload: { tipo: "atalhos", pedidos }, paraTela: { pedidos: pedidosNaTela(pedidos) } };
+  }
+  if (teste === "numeros") {
+    const semente = randomInt(2 ** 31 - 1);
+    const texto = gerarTextoDeNumeros(nivel, semente);
+    return { payload: { tipo: "texto", texto, semente }, paraTela: { texto } };
+  }
+  if (teste === "digitacao") {
+    const where = { tenantId, nivel, ativo: true };
+    const quantos = await db.academiaTexto.count({ where });
+    if (quantos === 0) return { erro: semConteudo(teste, nivel) };
+    const escolhido = await db.academiaTexto.findFirst({ where, orderBy: { id: "asc" }, skip: randomInt(quantos), select: { id: true, conteudo: true } });
+    if (!escolhido) return { erro: semConteudo(teste, nivel) };
+    const texto = escolhido.conteudo.replace(/\r\n/g, "\n").trim();
+    return { payload: { tipo: "texto", texto, textoId: escolhido.id }, paraTela: { texto } };
+  }
+  const ids = await db.academiaQuestao.findMany({ where: { tenantId, nivel, ativo: true }, select: { id: true }, take: 2000 });
+  if (ids.length === 0) return { erro: semConteudo(teste, nivel) };
+  const sorteadas = embaralhar(ids.map((q) => q.id)).slice(0, QUESTOES_POR_RODADA);
+  const questoes = await questoesNaOrdem(tenantId, sorteadas);
+  return {
+    payload: { tipo: "questoes", questoes: questoes.map((q) => ({ id: q.id, correta: q.correta })) },
+    paraTela: { questoes: questoes.map(naTela) },
+  };
+}
+
+/** A questão como a tela mostra: sem a alternativa certa. */
+const naTela = (q: { id: string; enunciado: string; imagemUrl: string | null; alternativas: ReturnType<typeof lerAlternativas> }) => ({ id: q.id, enunciado: q.enunciado, imagemUrl: q.imagemUrl, alternativas: q.alternativas });
+
+/** As questões pelos ids, na ordem pedida, com a certa (só para o payload) e o que a tela mostra. */
+async function questoesNaOrdem(tenantId: string, ids: string[]) {
+  const lidas = await getPrisma().academiaQuestao.findMany({
+    where: { tenantId, id: { in: ids } },
+    select: { id: true, enunciado: true, imagemUrl: true, alternativas: true, correta: true },
+  });
+  const porId = new Map(lidas.map((q) => [q.id, q]));
+  return ids.flatMap((id) => {
+    const q = porId.get(id);
+    return q ? [{ id: q.id, enunciado: q.enunciado, imagemUrl: q.imagemUrl, alternativas: lerAlternativas(q.alternativas), correta: q.correta }] : [];
+  });
+}
+
+/**
+ * O conteúdo da sessão retomada, refeito a partir do que foi servido. Nulo
+ * quando não dá para repetir igual (questão apagada, payload de outro teste):
+ * aí a rodada sorteia de novo.
+ */
+async function conteudoDoPayload(tenantId: string, teste: Teste, payload: Payload | null): Promise<Conteudo | null> {
+  if (!payload) return null;
+  if (payload.tipo === "texto" && (teste === "digitacao" || teste === "numeros")) return { payload, paraTela: { texto: payload.texto } };
+  if (payload.tipo === "atalhos" && teste === "atalhos") return { payload, paraTela: { pedidos: pedidosNaTela(payload.pedidos) } };
+  if (payload.tipo === "questoes" && teste === "logica") {
+    const ids = payload.questoes.map((q) => q.id);
+    const questoes = await questoesNaOrdem(tenantId, ids);
+    if (questoes.length !== ids.length) return null;
+    // A certa vem do payload servido, e não do cadastro, que pode ter mudado.
+    return { payload, paraTela: { questoes: questoes.map(naTela) } };
+  }
+  return null;
 }
 
 const jaUsada = (teste: Teste, nivel: Nivel) =>
