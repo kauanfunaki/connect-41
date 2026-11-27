@@ -215,6 +215,13 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "fiscal.sped.upload.criado": c("abriu no motor SPED o envio em partes"),
   "fiscal.sped.upload.concluido": c("concluiu no motor SPED o envio em partes, na"),
   "fiscal.sped.upload.cancelado": x("cancelou no motor SPED o envio em partes"),
+  // O cadastro fiscal da empresa (27/11/2026, funcionalidade-899).
+  "fiscal.cadastro.atualizado": o("atualizou do acervo o cadastro fiscal da empresa"),
+  "fiscal.produto.editado": e("editou um produto do cadastro fiscal da empresa"),
+  "fiscal.produto.lote": e("editou em lote produtos do cadastro fiscal da empresa"),
+  "fiscal.participante.editado": e("editou um fornecedor ou cliente do cadastro fiscal da empresa"),
+  "fiscal.vinculo_ncm.salvo": e("salvou o vínculo do NCM com o cClassTrib", { comNome: false }),
+  "fiscal.vinculo_ncm.excluido": x("excluiu o vínculo do NCM com o cClassTrib", { comNome: false }),
   "autorizacoes.quem_recebe": e("mudou quem recebe as autorizações de acesso"),
   "autorizacoes.salvar": e("atualizou a autorização de acesso"),
   "autorizacoes.serpro": o("conferiu no Serpro a autorização de acesso"),

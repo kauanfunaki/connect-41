@@ -126,6 +126,9 @@ const EMPRESA: Ligacao[] = [
   { modelo: "WorkShift", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["turno", "turnos"] },
   { modelo: "BenefitCatalog", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["benefício cadastrado", "benefícios cadastrados"] },
   { modelo: "CompanyPartner", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["sócio", "sócios"] },
+  // O cadastro fiscal (27/11/2026, funcionalidade-899): nasce do acervo e vai junto com a empresa.
+  { modelo: "FiscalProduto", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["produto do cadastro fiscal", "produtos do cadastro fiscal"] },
+  { modelo: "FiscalParticipante", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["fornecedor ou cliente do cadastro fiscal", "fornecedores e clientes do cadastro fiscal"] },
   { modelo: "CompanyRescisaoConfig", campo: "company", fk: "companyId", tratamento: "cascata" },
   // DP 2 (11/11/2026): a folha calculada da empresa (lançamentos, cálculos e
   // comparativos vão juntos com a competência), a configuração e os contratos.
