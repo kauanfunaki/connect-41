@@ -7019,6 +7019,10 @@ model Dp2Convencao {
   /// (nulo = março) e o percentual do salário (nulo = um dia de trabalho).
   contribuicaoMes        Int?
   contribuicaoPercentual Decimal? @db.Decimal(6, 2)
+  /// Licença-prêmio (funcionalidade-763): a cada `licencaPremioAnos` anos de
+  /// casa, `licencaPremioDias` dias de licença remunerada. Nulos = não tem.
+  licencaPremioAnos      Int?
+  licencaPremioDias      Int?
   observacoes    String?  @db.Text
   ativa          Boolean  @default(true)
   createdAt      DateTime @default(now())
@@ -7106,6 +7110,10 @@ model Dp2Vinculo {
   /// O empregado autorizou por escrito o desconto da contribuição sindical
   /// (CLT arts. 545 e 578), 26/11/2026, funcionalidade-774.
   contribuicaoSindical Boolean  @default(false)
+  /// Grau de exposição a agente nocivo (grauExp do S-1200), conforme o LTCAT
+  /// (27/11/2026, funcionalidade-763): "1" não exposto; "2", "3" e "4" dão a
+  /// aposentadoria especial aos 15, 20 e 25 anos e o adicional de 12%, 9% e 6%.
+  grauExposicao        String?  @db.VarChar(1)
   /// Horário de trabalho (Dp2Horario), 25/11/2026, funcionalidade-752: dá as
   /// horas por mês e a jornada do eSocial.
   horarioId            String?
@@ -7562,13 +7570,18 @@ model Dp2Ocorrencia {
   tenantId    String
   companyId   String
   personId    String
-  /// "ADVERTENCIA" ou "SUSPENSAO".
-  tipo        String   @db.VarChar(12)
+  /// "ADVERTENCIA", "SUSPENSAO", "LICENCA_PREMIO_GOZO", "LICENCA_PREMIO_PAGA"
+  /// ou "APOSENTADORIA" (27/11/2026: licença-prêmio e aposentadoria).
+  tipo        String   @db.VarChar(20)
   /// A data da advertência ou o primeiro dia da suspensão.
   data        DateTime @db.Date
   /// Dias de suspensão (0 na advertência).
   dias        Int      @default(0)
   motivo      String   @db.Text
+  /// Na aposentadoria: o tipo (IDADE, TEMPO, PROGRAMADA, ESPECIAL, INCAPACIDADE).
+  detalhe     String?  @db.VarChar(20)
+  /// Na aposentadoria: o número do benefício (NB) no INSS.
+  beneficio   String?  @db.VarChar(10)
   criadoPorId String?
   createdAt   DateTime @default(now())
 

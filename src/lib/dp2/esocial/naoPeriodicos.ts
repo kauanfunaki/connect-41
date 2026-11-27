@@ -246,6 +246,8 @@ export function eventoS2206(
 export const MOTIVOS_DE_AFASTAMENTO: [string, string][] = [
   ["01", "Acidente ou doença do trabalho"],
   ["03", "Acidente ou doença não relacionada ao trabalho"],
+  ["06", "Aposentadoria por incapacidade permanente"],
+  ["16", "Licença remunerada (lei, empresa ou convenção)"],
   ["17", "Licença-maternidade"],
 ];
 
