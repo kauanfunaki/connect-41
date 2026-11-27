@@ -28,6 +28,8 @@ import {
 } from "./regras";
 import { avaliarRegua, lerPassos, PASSOS_PADRAO, type VereditoDaRegua } from "./regua";
 import { resumoDoAcordo, type ResumoDoAcordo } from "./acordo";
+import { andamentoDoAcordo } from "./organizacao";
+import { totalDePaginas } from "../paginaDeContas";
 
 export const MODULO_DE_COBRANCA = "bpo_cobranca";
 
@@ -478,6 +480,86 @@ export async function listarAcordos(escopo: EscopoFinanceiro, filtro: { status?:
   return {
     acordos: acordos.map(montarAcordo),
     contagem: Object.fromEntries(porStatus.map((p) => [p.status, p._count._all])) as Partial<Record<StatusDoAcordo, number>>,
+  };
+}
+
+/** Acordos por página na aba Acordos (27/11/2026, melhoria-571). */
+export const ACORDOS_POR_PAGINA = 50;
+
+/**
+ * A aba Acordos paginada no servidor (27/11/2026, melhoria-571). Era
+ * `listarAcordos` com `take: 500`, sem aviso.
+ *
+ * A contagem por situação já vinha do banco (`groupBy`) e dá o total da
+ * lista. "Em aberto nos acordos" e "Com parcela vencida" somavam os ativos que
+ * a tela trouxe; agora uma leitura leve de **todos** os ativos (só as
+ * parcelas) faz a conta, e o acordo inteiro — empresa, sacado, títulos
+ * originais — vem só da página. Os ativos só se leem quando a tela os mostra:
+ * sem filtro de situação ou com "Ativo".
+ */
+export async function paginaDeAcordos(
+  escopo: EscopoFinanceiro,
+  filtro: { status?: StatusDoAcordo | null },
+  pedida: number,
+  hojeKey: string
+) {
+  const prisma = getPrisma();
+  const doEscopo: Prisma.CollectionAgreementWhereInput = {
+    tenantId: escopo.tenantId,
+    ...(escopo.companyIds === null ? {} : { companyId: { in: escopo.companyIds } }),
+  };
+  const where: Prisma.CollectionAgreementWhereInput = { ...doEscopo, ...(filtro.status ? { status: filtro.status } : {}) };
+  const veAtivos = !filtro.status || filtro.status === "ATIVO";
+  const buscar = (p: number) =>
+    prisma.collectionAgreement.findMany({
+      where,
+      select: SELECAO_DO_ACORDO,
+      orderBy: [{ agreedAt: "desc" }, { id: "asc" }],
+      skip: (p - 1) * ACORDOS_POR_PAGINA,
+      take: ACORDOS_POR_PAGINA,
+    });
+
+  const [porStatus, primeira, ativos] = await Promise.all([
+    prisma.collectionAgreement.groupBy({ by: ["status"], where: doEscopo, _count: { _all: true } }),
+    buscar(pedida),
+    veAtivos
+      ? prisma.collectionAgreement.findMany({
+          where: { ...doEscopo, status: "ATIVO" },
+          select: { parcelas: { select: { amount: true, dueDate: true, paidAt: true, status: true, closeReason: true } } },
+        })
+      : null,
+  ]);
+  const contagem = Object.fromEntries(porStatus.map((p) => [p.status, p._count._all])) as Partial<Record<StatusDoAcordo, number>>;
+  const total = filtro.status ? (contagem[filtro.status] ?? 0) : porStatus.reduce((s, p) => s + p._count._all, 0);
+  const ultima = totalDePaginas(total, ACORDOS_POR_PAGINA);
+  // Página além do fim (link antigo, a última esvaziou): a última que existe.
+  const pagina = Math.min(pedida, ultima);
+  const acordos = pagina === pedida ? primeira : await buscar(pagina);
+
+  // Os cartões dos ativos, com a mesma regra da barra de parcelas da linha.
+  const andamentos = (ativos ?? []).map((a) =>
+    andamentoDoAcordo(
+      a.parcelas.map((p) => ({
+        valorCentavos: centavosDeDecimal(p.amount),
+        vencimentoKey: saoPauloParts(p.dueDate).dateKey,
+        pago: p.paidAt !== null,
+        encerrada: p.closeReason !== null || p.status === "CANCELADO",
+      })),
+      hojeKey
+    )
+  );
+  return {
+    acordos: acordos.map(montarAcordo),
+    contagem,
+    total,
+    pagina,
+    totalDePaginas: ultima,
+    ativos: ativos
+      ? {
+          emAbertoCentavos: andamentos.reduce((s, a) => s + a.emAbertoCentavos, 0),
+          comVencida: andamentos.filter((a) => a.vencidas > 0).length,
+        }
+      : null,
   };
 }
 

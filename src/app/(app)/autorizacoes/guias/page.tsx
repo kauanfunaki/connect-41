@@ -15,7 +15,9 @@ import { getAuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { acessoAsAutorizacoes } from "@/lib/autorizacoes/servidor";
 import { guiasDoMes } from "@/lib/guias/servidor";
-import { contarPorSituacao, ROTULO_DA_SITUACAO, type SituacaoDaGuia } from "@/lib/guias/situacao";
+import { ROTULO_DA_SITUACAO, type SituacaoDaGuia } from "@/lib/guias/situacao";
+import { paginaDaUrl } from "@/lib/financeiro/paginaDeContas";
+import { Pagination } from "@/components/shared/Pagination";
 import { rotaDeEnviarOArquivo, rotaDoEnvio } from "@/lib/envios/regras";
 import { hojeIso, dataBR } from "@/lib/datas/calendario";
 import { moeda } from "@/lib/financeiro/formato";
@@ -38,11 +40,17 @@ export default async function GuiasDoMesPage({ searchParams }: { searchParams: P
   const params = await searchParams;
   const hoje = hojeIso();
   const mes = params.mes && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.mes) ? params.mes : hoje.slice(0, 7);
-  const guias = await guiasDoMes(acesso.tenantId, mes, hoje, await scopedCompanyWhere(ctx));
-  const conta = contarPorSituacao(guias.map((g) => g.situacao));
-  const aPagar = guias.filter((g) => g.situacao !== "PAGA").reduce((s, g) => s + (g.valorCentavos ?? 0), 0);
-  // As vencidas primeiro; depois a ordem do vencimento, que já vem do banco.
-  const ordenadas = [...guias].sort((a, b) => Number(b.situacao === "VENCIDA") - Number(a.situacao === "VENCIDA"));
+  // Paginada no servidor (27/11/2026, melhoria-571): a página já vem na ordem
+  // da tela (as vencidas primeiro), e os cartões contam o mês inteiro.
+  const {
+    guias: ordenadas,
+    total,
+    pagina,
+    totalDePaginas,
+    contagem: conta,
+    aPagarCentavos: aPagar,
+  } = await guiasDoMes(acesso.tenantId, mes, hoje, await scopedCompanyWhere(ctx), paginaDaUrl(params.pagina));
+  const hrefDaPagina = (p: number) => `/autorizacoes/guias?mes=${mes}${p > 1 ? `&pagina=${p}` : ""}`;
 
   return (
     <PageContainer>
@@ -62,14 +70,14 @@ export default async function GuiasDoMesPage({ searchParams }: { searchParams: P
       <FaixaDeTotais
         className="mb-6"
         itens={[
-          { rotulo: "A pagar no mês", valor: moeda(aPagar), detalhe: `${guias.length - conta.PAGA} de ${guias.length} guias`, icone: <FileText /> },
+          { rotulo: "A pagar no mês", valor: moeda(aPagar), detalhe: `${total - conta.PAGA} de ${total} guias`, icone: <FileText /> },
           { rotulo: "Vencidas", valor: String(conta.VENCIDA), tom: conta.VENCIDA > 0 ? "text-danger" : undefined, icone: <AlertTriangle /> },
           { rotulo: "Sem envio ao cliente", valor: String(conta.EMITIDA), icone: <Send /> },
           { rotulo: "Pagas", valor: String(conta.PAGA), detalhe: `${conta.ABERTA} abertas e ${conta.ENVIADA} só enviadas`, icone: <CheckCircle2 /> },
         ]}
       />
 
-      {guias.length === 0 ? (
+      {total === 0 ? (
         <EmptyState
           title="Nenhuma guia neste mês"
           description="As guias entram aqui quando são emitidas pelo Connect, em Emitir guia na ficha da empresa."
@@ -133,6 +141,7 @@ export default async function GuiasDoMesPage({ searchParams }: { searchParams: P
           </table>
         </div>
       )}
+      <Pagination page={pagina} totalPages={totalDePaginas} total={total} rotulo="guias" buildHref={hrefDaPagina} />
 
       <NotaDeFonte>
         Entram as guias emitidas pelo Connect a partir de 28/10/2026 (DAS, DAS do MEI, DCTFWeb, DARF e parcela), no mês do vencimento; a
