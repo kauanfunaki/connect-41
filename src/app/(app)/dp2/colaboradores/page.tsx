@@ -671,6 +671,18 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               Quadro de horário da empresa (PDF)
             </Button>
           </form>
+          <form action="/api/dp2/movimentacao" method="get" target="_blank" className="mt-4 flex flex-wrap items-end gap-4">
+            <input type="hidden" name="empresa" value={tela.empresa.id} />
+            <CampoForm label="Movimentação de empregados: de" htmlFor="mov-de">
+              <CampoData id="mov-de" name="de" required />
+            </CampoForm>
+            <CampoForm label="Até" htmlFor="mov-ate">
+              <CampoData id="mov-ate" name="ate" required />
+            </CampoForm>
+            <Button type="submit" variant="ghost">
+              Movimentação (PDF)
+            </Button>
+          </form>
           {tela.podeAgir && (
             <FormularioDoDp2 acao={guardarDocumentoAction} rotulo="Guardar nos Arquivos" rotuloEnviando="Guardando…" variante="secondary" className="mt-4">
               <input type="hidden" name="companyId" value={tela.empresa.id} />
@@ -694,7 +706,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                     <option value="CTPS">Ficha de atualização da CTPS</option>
                     <option value="PPP">Histórico PPP (S-2240 e ASO)</option>
                     <option value="QUADRO">Quadro de horário da empresa</option>
+                    <option value="MOVIMENTACAO">Movimentação de empregados (período)</option>
                   </Select>
+                </CampoForm>
+                <CampoForm label="De (movimentação)" htmlFor="gd-de">
+                  <CampoData id="gd-de" name="de" />
+                </CampoForm>
+                <CampoForm label="Até" htmlFor="gd-ate">
+                  <CampoData id="gd-ate" name="ate" />
                 </CampoForm>
               </div>
             </FormularioDoDp2>

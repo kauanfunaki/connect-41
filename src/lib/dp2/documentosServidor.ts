@@ -13,6 +13,7 @@ import { afastamentosDosXml, NOME_DO_MOTIVO } from "./afastamentos";
 import type { ItemDoHolerite } from "./mensal";
 import { competenciaDe } from "./tabelas";
 import { linhasDoQuadro, pdfDoQuadroDeHorario } from "./quadroDeHorario";
+import { pdfDaMovimentacao, type MovimentoDeEmpregado } from "./documentosDoDp";
 import { faltasDoDocumento, pdfDaFichaDaCtps, pdfDaFichaDeRegistro, pdfDoContratoDeExperiencia, type DadosDoDocumento } from "./documentosDoDp";
 
 export type TipoDeDocumento = "FICHA" | "EXPERIENCIA" | "PPP" | "CTPS";
@@ -166,4 +167,64 @@ export async function quadroDeHorarioDaEmpresa(tenantId: string, companyId: stri
     data: hoje.toISOString().slice(0, 10),
   });
   return { ok: true, pdf, nome: `Quadro de horario ${nomeExibicao(empresa)}.pdf`, companyId, faltas: quadro.semHorario.length ? [`Sem horário no contrato: ${quadro.semHorario.join(", ")}`] : [] };
+}
+
+/**
+ * A movimentação de empregados da empresa no período: admissões, desligamentos,
+ * transferências entre empresas do grupo e afastamentos e retornos (S-2230),
+ * com os ativos no início e no fim.
+ */
+export async function movimentacaoDaEmpresa(tenantId: string, companyId: string, de: string, ate: string): Promise<DocumentoGerado> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(de) || !/^\d{4}-\d{2}-\d{2}$/.test(ate) || de > ate) return { ok: false, erro: "Informe o período da movimentação (de e até).", status: 400 };
+  const prisma = getPrisma();
+  const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId } });
+  if (!empresa) return { ok: false, erro: "Empresa não encontrada.", status: 404 };
+  const passaram = await prisma.dp2Transferencia.findMany({ where: { tenantId, OR: [{ companyId }, { deCompanyId: companyId }] }, select: { personId: true } });
+  const pessoas = await prisma.person.findMany({
+    where: { tenantId, isInternal: false, type: "COLABORADOR", dp2Vinculo: { isNot: null }, OR: [{ currentCompanyId: companyId }, { id: { in: passaram.map((t) => t.personId) } }] },
+    select: { id: true, name: true, currentCompanyId: true, admissionDate: true, dismissalDate: true, cargo: { select: { name: true } } },
+  });
+  const ids = pessoas.map((p) => p.id);
+  const [transferencias, s2230] = await Promise.all([
+    prisma.dp2Transferencia.findMany({ where: { tenantId, personId: { in: ids } }, orderBy: { data: "asc" } }),
+    prisma.dp2EventoEsocial.findMany({ where: { tenantId, personId: { in: ids }, tipo: "S-2230", situacao: { not: "REJEITADO" } }, select: { personId: true, xml: true }, orderBy: { createdAt: "asc" } }),
+  ]);
+  const nomes = new Map(
+    (
+      await prisma.company.findMany({
+        where: { tenantId, id: { in: [...new Set(transferencias.flatMap((t) => [t.companyId, t.deCompanyId]))] } },
+        select: { id: true, name: true, tradeName: true, displayName: true },
+      })
+    ).map((c) => [c.id, nomeExibicao(c)])
+  );
+  // A empresa da pessoa numa data, pelas transferências.
+  const empresaEm = (personId: string, atual: string | null, data: string) => {
+    const daPessoa = transferencias.filter((t) => t.personId === personId);
+    if (daPessoa.length === 0) return atual;
+    let empresaNaData = daPessoa[0].deCompanyId;
+    for (const t of daPessoa) if (dia(t.data)! <= data) empresaNaData = t.companyId;
+    return empresaNaData;
+  };
+  const movimentos: MovimentoDeEmpregado[] = [];
+  let ativosNoInicio = 0;
+  for (const p of pessoas) {
+    const adm = dia(p.admissionDate);
+    const desl = dia(p.dismissalDate);
+    if (adm && adm < de && (!desl || desl >= de) && empresaEm(p.id, p.currentCompanyId, de) === companyId) ativosNoInicio++;
+    if (adm && adm >= de && adm <= ate && empresaEm(p.id, p.currentCompanyId, adm) === companyId) movimentos.push({ data: adm, nome: p.name, tipo: "ADMISSAO", detalhe: p.cargo?.name ?? "" });
+    if (desl && desl >= de && desl <= ate && empresaEm(p.id, p.currentCompanyId, desl) === companyId) movimentos.push({ data: desl, nome: p.name, tipo: "DESLIGAMENTO", detalhe: "" });
+    for (const t of transferencias.filter((x) => x.personId === p.id)) {
+      const d = dia(t.data)!;
+      if (d < de || d > ate) continue;
+      if (t.deCompanyId === companyId) movimentos.push({ data: d, nome: p.name, tipo: "TRANSFERIDO_PARA", detalhe: nomes.get(t.companyId) ?? "outra empresa" });
+      if (t.companyId === companyId) movimentos.push({ data: d, nome: p.name, tipo: "VEIO_DE", detalhe: nomes.get(t.deCompanyId) ?? "outra empresa" });
+    }
+    for (const a of afastamentosDosXml(s2230.filter((x) => x.personId === p.id).map((x) => x.xml))) {
+      const motivo = NOME_DO_MOTIVO[a.motivo] ? `${a.motivo} · ${NOME_DO_MOTIVO[a.motivo]}` : `motivo ${a.motivo}`;
+      if (a.inicio >= de && a.inicio <= ate && empresaEm(p.id, p.currentCompanyId, a.inicio) === companyId) movimentos.push({ data: a.inicio, nome: p.name, tipo: "AFASTAMENTO", detalhe: motivo });
+      if (a.fim && a.fim >= de && a.fim <= ate && empresaEm(p.id, p.currentCompanyId, a.fim) === companyId) movimentos.push({ data: a.fim, nome: p.name, tipo: "RETORNO", detalhe: motivo });
+    }
+  }
+  const pdf = await pdfDaMovimentacao({ empresa: nomeExibicao(empresa), documento: formatDocumento(empresa.kind, empresa.cnpj, empresa.cpf) || null, de, ate }, movimentos, ativosNoInicio);
+  return { ok: true, pdf, nome: `Movimentacao de empregados ${de.split("-").reverse().join("-")} a ${ate.split("-").reverse().join("-")}.pdf`, companyId, faltas: [] };
 }
