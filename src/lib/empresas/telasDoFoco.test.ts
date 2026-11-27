@@ -32,6 +32,7 @@ const TELAS = [
   "src/app/(app)/dre/orcamento/page.tsx",
   "src/app/(app)/sped-contabil/page.tsx",
   "src/app/(app)/documentos-fiscais/page.tsx",
+  "src/app/(app)/documentos-fiscais/cadastro/page.tsx",
   "src/app/(app)/colaboradores-clientes/page.tsx",
 ];
 

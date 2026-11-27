@@ -1282,6 +1282,16 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Montar o cadastro fiscal da empresa",
+        passos: [
+          "Em Documentos fiscais, clique em “Cadastro fiscal”. A empresa é a da faixa “Trabalhando em”.",
+          "Clique em “Atualizar do acervo”: o Connect lê as notas da empresa no acervo do SPED e cria os produtos e os fornecedores e clientes. Repita quando entrarem notas novas; nada é apagado.",
+          "Em “Produtos”, use os recortes “Sem NCM” e “Sem cClassTrib” para ver o que falta. O lápis edita um produto; para vários, marque e clique em “Editar marcados”.",
+          "Em “Fornecedores e clientes”, informe a UF, a inscrição estadual, o regime e se é contribuinte do ICMS — a nota no acervo não traz esses dados.",
+          "Em “NCM e cClassTrib”, vincule o NCM à classificação do IBS/CBS. Todo produto com o NCM e sem cClassTrib próprio passa a usar o do vínculo, em todas as empresas.",
+        ],
+      },
+      {
         titulo: "Lançar o documento no financeiro",
         passos: [
           "Na ficha do documento, vá até o quadro “Lançamento”.",

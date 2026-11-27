@@ -2609,6 +2609,9 @@ model Company {
   people                   Person[]
   departments              Department[]
   partners                 CompanyPartner[]
+  /// O cadastro fiscal da empresa (27/11/2026, funcionalidade-899).
+  produtosFiscais          FiscalProduto[]
+  participantesFiscais     FiscalParticipante[]
   cargos                   Cargo[]
   vagas                    Vaga[]
   payrollCompetencies      PayrollCompetency[]
@@ -4441,6 +4444,104 @@ model FiscalDocument {
 /// caem fora do ABRASF e do padrão nacional, nem de quais municípios. Aqui ela
 /// fica guardada, uma linha por arquivo (o SHA-256 junta os reenvios), para a
 /// contagem por município e, depois, para a leitura assistida do resíduo.
+/// Produto do cadastro fiscal da empresa (27/11/2026, funcionalidade-899): o
+/// "Arquivos › Produtos" do Domínio Escrita Fiscal. Nasce dos itens das notas do
+/// acervo do SPED ("Atualizar do acervo") e ganha à mão o que a nota não traz
+/// para o Connect — CEST, unidade, grupo, origem e o cClassTrib/CST de IBS/CBS.
+///
+/// Na saída o código é da própria empresa (`participanteDocumento` vazio); na
+/// entrada é o código do fornecedor, que só identifica junto com o CNPJ dele.
+model FiscalProduto {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  companyId             String
+  /// CNPJ/CPF do fornecedor (só dígitos) no produto de entrada; "" no de saída.
+  participanteDocumento String    @default("") @db.VarChar(14)
+  codigo                String    @db.VarChar(120)
+  descricao             String    @db.VarChar(500)
+  /// 8 dígitos; "" quando a nota não trouxe.
+  ncm                   String    @default("") @db.VarChar(8)
+  cest                  String?   @db.VarChar(7)
+  unidade               String?   @db.VarChar(6)
+  grupo                 String?   @db.VarChar(60)
+  /// Origem da mercadoria (0 a 8, tabela A do ICMS).
+  origem                String?   @db.VarChar(1)
+  /// Tipo do item no SPED (00 a 99, registro 0200).
+  tipoItem              String    @default("99") @db.VarChar(2)
+  /// Classificação tributária do IBS/CBS (6 dígitos). Nulo usa o vínculo do NCM.
+  cClassTrib            String?   @db.VarChar(6)
+  cstIbsCbs             String?   @db.VarChar(3)
+  /// ENTRADA ou SAIDA.
+  sentido               String    @db.VarChar(7)
+  /// Quantas linhas de nota trazem o produto, e a nota mais recente.
+  ocorrencias           Int       @default(0)
+  ultimaNotaEm          DateTime?
+  /// Quando alguém mexeu à mão: a atualização do acervo não troca mais a
+  /// descrição nem o NCM.
+  editadoEm             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, companyId, participanteDocumento, codigo])
+  @@index([companyId])
+  @@index([tenantId, companyId, ncm])
+  @@map("fiscal_produtos")
+}
+
+/// Fornecedor ou cliente do cadastro fiscal da empresa (27/11/2026,
+/// funcionalidade-899): o "Fornecedores" e "Clientes" do Domínio Escrita
+/// Fiscal. Nasce das notas do acervo; UF, inscrição estadual, regime e o
+/// indicador de contribuinte se informam à mão (o acervo não guarda).
+model FiscalParticipante {
+  id                String    @id @default(uuid())
+  tenantId          String
+  companyId         String
+  /// CNPJ (14) ou CPF (11), só dígitos.
+  documento         String    @db.VarChar(14)
+  nome              String    @db.VarChar(180)
+  /// FORNECEDOR, CLIENTE ou AMBOS.
+  papel             String    @db.VarChar(10)
+  uf                String?   @db.VarChar(2)
+  inscricaoEstadual String?   @db.VarChar(30)
+  /// SIMPLES, MEI ou NORMAL.
+  regime            String?   @db.VarChar(8)
+  /// Indicador da IE do destinatário: 1 contribuinte, 2 isento, 9 não contribuinte.
+  contribuinteIcms  String?   @db.VarChar(1)
+  documentos        Int       @default(0)
+  primeiraNotaEm    DateTime?
+  ultimaNotaEm      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, companyId, documento])
+  @@index([companyId])
+  @@map("fiscal_participantes")
+}
+
+/// O vínculo do NCM com a classificação tributária do IBS/CBS (27/11/2026,
+/// funcionalidade-899): o "IBS e CBS › Vínculo de NCM/NBS por cClassTrib" do
+/// Domínio. Do escritório, e não da empresa: vale para todo produto com o NCM
+/// que não tem cClassTrib próprio.
+model FiscalVinculoNcm {
+  id            String   @id @default(uuid())
+  tenantId      String
+  ncm           String   @db.VarChar(8)
+  cClassTrib    String   @db.VarChar(6)
+  cstIbsCbs     String?  @db.VarChar(3)
+  observacao    String?  @db.VarChar(200)
+  /// Nome de quem gravou por último.
+  atualizadoPor String   @db.VarChar(150)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, ncm])
+  @@map("fiscal_vinculos_ncm")
+}
+
 model FiscalXmlRefusal {
   id String @id @default(uuid()) @db.VarChar(36)
   tenantId String @db.VarChar(191)

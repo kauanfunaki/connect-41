@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { Upload, FileText, Truck, Hourglass, CheckCircle2, EyeOff, FileX2 } from "lucide-react";
+import { Upload, FileText, Truck, Hourglass, CheckCircle2, EyeOff, FileX2, Package } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
@@ -69,6 +69,10 @@ export default async function DocumentosFiscaisPage({
       title="Documentos fiscais"
       action={
         <div className="flex flex-wrap items-center gap-2">
+          {/* O cadastro fiscal (27/11/2026, funcionalidade-899). */}
+          <Button href="/documentos-fiscais/cadastro" variant="secondary">
+            <Package size={14} /> Cadastro fiscal
+          </Button>
           <Button href="/documentos-fiscais/cte" variant="secondary">
             <Truck size={14} /> Consultar CT-e
           </Button>
