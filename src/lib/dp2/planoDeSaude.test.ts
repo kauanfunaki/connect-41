@@ -64,7 +64,9 @@ describe("S-1210 com plano de saúde e previdência complementar", () => {
   it("sem CNPJ da previdência e com dependente sem CPF, avisa sem bloquear; sem nada, não leva o grupo", () => {
     const ev = eventoS1210(empregador, "2026-11", "2026-12-05", { ...t, irComplementar: { previdencia: { cnpj: null, valor: 400 }, planos: [], semCpf: ["Beto"] } }, id());
     expect(ev.xml).not.toContain("infoIRComplem");
-    expect(ev.pendencias.filter((p) => !p.bloqueia).map((p) => p.texto).join(" ")).toMatch(/CNPJ da entidade.*Beto|Beto.*CNPJ da entidade/s);
+    const avisos = ev.pendencias.filter((p) => !p.bloqueia).map((p) => p.texto).join(" ");
+    expect(avisos).toContain("CNPJ da entidade de previdência");
+    expect(avisos).toContain("dependente Beto");
     expect(eventoS1210(empregador, "2026-11", "2026-12-05", t, id()).xml).not.toContain("infoIRComplem");
   });
 });
