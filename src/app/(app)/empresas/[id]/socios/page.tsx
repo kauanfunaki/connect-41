@@ -23,7 +23,11 @@ import { LerContratoSocial } from "@/components/societario/ia/LerContratoSocial"
 import { lerContratoSocialAction } from "@/app/(app)/processos/ia/actions";
 import { AGENTE_CONTRATO } from "@/lib/societario/iaDoSetor";
 import { registroDaRota } from "@/lib/enderecoCurtoServidor";
-import { endereco as enderecoCurto } from "@/lib/enderecoCurto";
+import { endereco as enderecoCurto, enderecoDe } from "@/lib/enderecoCurto";
+import { DadosSocietariosDaEmpresa } from "@/components/empresas/DadosSocietariosDaEmpresa";
+import { QuadroSocietarioPorData } from "@/components/empresas/QuadroSocietarioPorData";
+import { dadosSocietariosDaEmpresa, quadrosDaEmpresa } from "@/lib/societario/quadroServidor";
+import { campoDaData } from "@/lib/societario/datas";
 
 const PERCENTUAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 });
 const INTEIRO = new Intl.NumberFormat("pt-BR");
@@ -87,6 +91,10 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
 
   const novoHref = `${fichaDaEmpresa}/socios/novo`;
 
+  // Os dados societários e o quadro por data (27/11/2026, melhoria-892).
+  const [dadosSocietarios, quadros] = await Promise.all([dadosSocietariosDaEmpresa(ctx.tenantId, companyId), quadrosDaEmpresa(ctx.tenantId, companyId)]);
+  const administrador = socios.find((s) => s.administrator && (!s.document || s.document.length === 11)) ?? null;
+
   // Ler contrato social pela IA: da coordenação do Societário (decisão de 28/09).
   const coordenaSocietario =
     (await isModuleEnabled(ctx.tenantId, "societario_processos")) &&
@@ -123,6 +131,21 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
       {coordenaSocietario && (
         <div className="mb-4 flex">
           <LerContratoSocial companyId={companyId} acao={lerContratoSocialAction} desligada={!leitorDoContratoLigado} />
+        </div>
+      )}
+
+      {dadosSocietarios && (
+        <div className="mb-4">
+          <DadosSocietariosDaEmpresa
+            companyId={companyId}
+            dados={{
+              ...dadosSocietarios,
+              juntaRegistradoEmCampo: campoDaData(dadosSocietarios.juntaRegistradoEm),
+              juntaRegistradoEmTexto: dadosSocietarios.juntaRegistradoEm ? formatInstantDate(dadosSocietarios.juntaRegistradoEm) : null,
+            }}
+            administrador={administrador && { nome: administrador.name, cpf: administrador.document, cargo: administrador.qualification }}
+            podeEditar={podeEditar}
+          />
         </div>
       )}
 
@@ -237,6 +260,26 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
           </Card>
         </>
       )}
+
+      <div className="mt-4">
+        <QuadroSocietarioPorData
+          companyId={companyId}
+          quadros={quadros.map((q) => ({
+            id: q.id,
+            data: formatInstantDate(q.data),
+            capitalSocial: q.capitalSocial,
+            socios: q.socios,
+            origem: q.origem,
+            processo: q.processo && { href: enderecoDe("processo", { id: q.processo.id, number: q.processo.numero }), numero: q.processo.numero },
+            registradoPor: q.registradoPor,
+            mudancas: q.mudancas,
+          }))}
+          hoje={campoDaData(new Date())}
+          podeGuardar={podeEditar}
+          podeExcluir={podeEditar && podeExcluir(ctx)}
+          temSocios={socios.length > 0}
+        />
+      </div>
     </PageContainer>
   );
 }

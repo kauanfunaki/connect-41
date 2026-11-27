@@ -64,6 +64,9 @@ import { ObservacoesDoProcesso } from "@/components/societario/ObservacoesDoProc
 import { apagarHorasDoProcesso, editarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
 import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
 import { enderecoDe, idCurto } from "@/lib/enderecoCurto";
+import { podeNoModulo } from "@/lib/auth/modulo";
+import { RegistroNaJunta } from "@/components/societario/RegistroNaJunta";
+import { TIPOS_COM_REGISTRO_NA_JUNTA } from "@/lib/societario/quadro";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -106,10 +109,10 @@ export default async function ProcessoDetalhePage({
       ownerUserId: true,
       activeTimerUserId: true,
       activeTimerStartedAt: true,
-      company: { select: { id: true, number: true, name: true, displayName: true } },
+      company: { select: { id: true, number: true, name: true, displayName: true, nire: true, juntaRegistradoEm: true } },
       owner: { select: { id: true, name: true } },
       type: {
-        select: { name: true, color: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
+        select: { name: true, code: true, color: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
       },
       template: {
         select: {
@@ -310,11 +313,16 @@ export default async function ProcessoDetalhePage({
     }
   }
 
-  const [{ taxas, custo }, conversa, avisos, destinos] = await Promise.all([
+  // O registro na Junta (27/11/2026, melhoria-892): só nos tipos que terminam nela.
+  const temRegistroNaJunta = TIPOS_COM_REGISTRO_NA_JUNTA.has(processo.type.code);
+  const [{ taxas, custo }, conversa, avisos, destinos, quadrosDoProcesso, sociosNaSociedade, agePorModulo] = await Promise.all([
     taxasDoProcesso(ctx.tenantId, processo.id),
     conversaDoProcesso({ tenantId: ctx.tenantId, companyIds: null }, processo.id),
     avisosPendentes(ctx.tenantId, processo.id),
     destinosDaEmpresa(ctx, processo.company.id),
+    temRegistroNaJunta ? getPrisma().companyQuadroSocietario.count({ where: { tenantId: ctx.tenantId, processId: processo.id } }) : 0,
+    temRegistroNaJunta ? getPrisma().companyPartner.count({ where: { tenantId: ctx.tenantId, companyId: processo.company.id, exitDate: null } }) : 0,
+    podeNoModulo(ctx, MODULE, "agir"),
   ]);
 
   // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
@@ -588,6 +596,20 @@ export default async function ProcessoDetalhePage({
               apagar: apagarHorasDoProcesso,
             }}
           />
+
+          {temRegistroNaJunta && (
+            <RegistroNaJunta
+              processId={processo.id}
+              nire={processo.company.nire}
+              dataCampo={campoDaData(processo.company.juntaRegistradoEm)}
+              dataTexto={processo.company.juntaRegistradoEm ? formatInstantDate(processo.company.juntaRegistradoEm) : null}
+              quadroGuardado={quadrosDoProcesso > 0}
+              temSocios={sociosNaSociedade > 0}
+              hoje={campoDaData(new Date())}
+              sociosHref={`${enderecoDe("empresa", processo.company)}/socios`}
+              podeAgir={agePorModulo}
+            />
+          )}
 
           {/* Conversa e documentos num painel lateral (Processo B, 04/11/2026):
               eram dois cartões altos aqui, com a caixa de mensagem aberta. */}

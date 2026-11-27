@@ -622,6 +622,11 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "empresa.socio.importado_da_receita": c("importou da Receita os sócios da empresa"),
   "empresa.socio.importado_do_contrato": c("importou do contrato social os sócios da empresa"),
   "empresa.socio.saida": e("registrou a saída do sócio"),
+  // Os dados societários e o quadro por data (27/11/2026, melhoria-892).
+  "empresa.dados_societarios": e("editou os dados societários da empresa"),
+  "empresa.quadro_societario.guardado": c("guardou o quadro societário da empresa"),
+  "empresa.quadro_societario.excluido": x("excluiu um quadro societário guardado da empresa"),
+  "societario.processo.registro_na_junta": e("registrou o NIRE e a data do registro na Junta da empresa"),
   "license.create": c("cadastrou uma licença"),
   "license.update": e("editou uma licença"),
   "license.revoke": e("revogou uma licença"),
@@ -1156,6 +1161,8 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["process.", "societario"],
   ["societario.", "societario"],
   ["empresa.socio.", "societario"],
+  ["empresa.dados_societarios", "societario"],
+  ["empresa.quadro_societario.", "societario"],
   ["license.", "societario"],
   ["gestao.", "gestao"],
   // As atividades dos Quadros ficam com a Gestão, como a troca de responsável

@@ -126,6 +126,7 @@ const EMPRESA: Ligacao[] = [
   { modelo: "WorkShift", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["turno", "turnos"] },
   { modelo: "BenefitCatalog", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["benefício cadastrado", "benefícios cadastrados"] },
   { modelo: "CompanyPartner", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["sócio", "sócios"] },
+  { modelo: "CompanyQuadroSocietario", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["quadro societário guardado", "quadros societários guardados"], historico: true },
   { modelo: "CompanyRescisaoConfig", campo: "company", fk: "companyId", tratamento: "cascata" },
   // DP 2 (11/11/2026): a folha calculada da empresa (lançamentos, cálculos e
   // comparativos vão juntos com a competência), a configuração e os contratos.

@@ -2526,6 +2526,22 @@ model Company {
   stateRegistrationChangedAt DateTime?
   municipalRegistration String?       @db.VarChar(40)
   nire                  String?       @db.VarChar(20)
+  /// Os dados societários da ficha (27/11/2026, melhoria-892), como nas abas
+  /// Atividades, Responsável Legal e Quadro Societário do Domínio. Ficam em
+  /// Sócios, num formulário próprio, e alimentam os modelos de documento.
+  /// Data do registro do último ato na Junta (o NIRE é o do registro).
+  juntaRegistradoEm     DateTime?
+  objetoSocial          String?       @db.Text
+  /// Capital social do contrato, em reais. Nulo = não informado (não é zero).
+  capitalSocial         Decimal?      @db.Decimal(14, 2)
+  capitalIntegralizado  Decimal?      @db.Decimal(14, 2)
+  /// O responsável legal perante a Receita e a Junta: pode ser sócio ou não.
+  responsavelLegalNome  String?       @db.VarChar(180)
+  /// Só dígitos.
+  responsavelLegalCpf   String?       @db.VarChar(11)
+  responsavelLegalRg    String?       @db.VarChar(30)
+  responsavelLegalCargo String?       @db.VarChar(80)
+  responsavelLegalEmail String?       @db.VarChar(120)
   /// Código IBGE do município (7 dígitos), vindo do CNPJ ou do CEP (06/11/2026).
   codMunicipioIbge      String?       @db.VarChar(7)
   // Dados do SPED da empresa (06/11/2026): registros 0000, 0005 e 0100 e o
@@ -2609,6 +2625,8 @@ model Company {
   people                   Person[]
   departments              Department[]
   partners                 CompanyPartner[]
+  /// As fotos do quadro societário por data (27/11/2026, melhoria-892).
+  quadrosSocietarios       CompanyQuadroSocietario[]
   cargos                   Cargo[]
   vagas                    Vaga[]
   payrollCompetencies      PayrollCompetency[]
@@ -8633,6 +8651,37 @@ model CompanyPartner {
   @@map("company_partners")
 }
 
+/// O quadro societário numa data (27/11/2026, melhoria-892): a foto dos sócios
+/// e do capital depois de cada ato registrado — o "Quadro Societário por data"
+/// do Domínio. `CompanyPartner` guarda só o estado de agora (com entrada e
+/// saída); a foto guarda como estava o contrato naquela alteração, para o
+/// histórico e para os documentos.
+model CompanyQuadroSocietario {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  /// A data do ato (calendário, ao meio-dia UTC, como as datas do Societário).
+  data          DateTime
+  capitalSocial Decimal? @db.Decimal(14, 2)
+  /// Os sócios naquela data: [{ nome, documento, qualificacao, administrador,
+  /// percentual, quotas, capital }]. Ver src/lib/societario/quadro.ts.
+  socios        Json
+  /// MANUAL (guardado na tela de Sócios) ou PROCESSO (no registro na Junta).
+  origem        String   @db.VarChar(20)
+  processId     String?
+  /// Nome de quem guardou.
+  registradoPor String   @db.VarChar(150)
+  createdAt     DateTime @default(now())
+
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  process Process? @relation(fields: [processId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, companyId, data])
+  @@index([companyId])
+  @@index([processId])
+  @@map("company_quadros_societarios")
+}
+
 model PortalPushSubscription {
   id           String   @id @default(uuid())
   tenantId     String
@@ -9727,6 +9776,8 @@ model Process {
   timeEntries TimeEntry[]
   avisos    AvisoDeOrgao[]
   documents ProcessDocument[]
+  /// O quadro societário guardado ao registrar o ato na Junta (melhoria-892).
+  quadrosSocietarios CompanyQuadroSocietario[]
   /// O cartão do processo nos Quadros (27/11/2026, funcionalidade-844).
   cartao    PipelineItem?
 
