@@ -22,6 +22,7 @@ import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { decimalDeCentavos, digitosDoDocumento, validarCamposDoLancamento } from "@/lib/financeiro/manual";
 import { instanteDaData, competenciaDoInstante } from "@/lib/financeiro/periodo";
 import { lerOfx, type ExtratoOfx } from "@/lib/financeiro/conciliacao/ofx";
+import { ehPlanilha, lerExtratoEmPlanilha } from "@/lib/financeiro/conciliacao/planilha";
 import { avisoDoQueFicouFora, PREFIXO_DO_EXTRATO_DO_OMIE } from "@/lib/integracoes/omie/extrato";
 import { extratoDoOmie } from "@/lib/integracoes/omie/extratoServidor";
 import { contaConfere, codigoDoBanco, validarConta } from "@/lib/financeiro/conciliacao/conta";
@@ -223,7 +224,8 @@ export type ResumoDaImportacao = {
 export type ResultadoDaImportacao = { error: string } | { ok: true; resumo: ResumoDaImportacao };
 
 /**
- * Importa um OFX para a conta.
+ * Importa um OFX para a conta — ou, desde 27/11/2026, a planilha do extrato
+ * (.xls, .xlsx, .csv) dos bancos que não dão OFX.
  *
  * Idempotente: transação já importada (mesmo FITID na mesma conta) é contada
  * como repetida e pulada, então reimportar o mesmo arquivo — ou um período que
@@ -236,7 +238,7 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
 
   const bankAccountId = texto(formData, "bankAccountId");
   const arquivo = formData.get("arquivo");
-  if (!(arquivo instanceof File) || arquivo.size === 0) return { error: "Escolha o arquivo OFX." };
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { error: "Escolha o arquivo do extrato (OFX ou planilha)." };
   if (arquivo.size > MAXIMO_OFX_BYTES) return { error: "Arquivo maior que 5 MB." };
 
   const conta = await c.prisma.bankAccount.findFirst({
@@ -251,17 +253,22 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
   // Só a conta com extrato importa OFX (lote D, 20/10): a caixinha, o adiantamento, o cartão e o empréstimo não têm.
   if (!temExtrato(conta.type)) return { error: `${rotuloDoTipo(conta.type)} não tem extrato — o saldo dela sai das baixas.` };
 
-  const leitura = lerOfx(new Uint8Array(await arquivo.arrayBuffer()));
+  // A planilha do banco (funcionalidade-398, 27/11/2026), para quem não dá OFX.
+  const planilha = ehPlanilha(arquivo.name || "");
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const leitura = planilha ? lerExtratoEmPlanilha(bytes, arquivo.name) : lerOfx(bytes);
   if (!leitura.ok) return { error: leitura.erro };
   const ex = leitura.extrato;
 
-  if (!contaConfere(ex.contaId, conta)) {
+  const avisos: string[] = [];
+  if (planilha) {
+    // A planilha não traz banco nem conta: não há o que conferir, só lembrar.
+    avisos.push(`A planilha não informa a conta: confira se o extrato é mesmo da conta ${conta.accountNumber}.`);
+  } else if (!contaConfere(ex.contaId, conta)) {
     return {
       error: `O extrato é da conta ${ex.contaId}${ex.agencia ? ` (agência ${ex.agencia})` : ""}, e não da ${conta.accountNumber}. Confira se escolheu a conta certa.`,
     };
   }
-
-  const avisos: string[] = [];
   const bancoDoArquivo = codigoDoBanco(ex.bancoId);
   if (bancoDoArquivo && bancoDoArquivo !== conta.bankCode) {
     // Aviso e não recusa: há banco que exporta o BANKID de outro jeito (o do
