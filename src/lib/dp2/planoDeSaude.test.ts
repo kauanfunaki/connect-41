@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { eventoS1210, geradorDeId } from "./esocial/eventos";
-import { adesaoNoMes, descontoDoPlano, lerPeriodoDaAdesao, lerPlano, planosParaS1210 } from "./planoDeSaude";
+import { adesaoNoMes, descontoDoPlano, faixaDaIdade, idadeEm, lerPeriodoDaAdesao, lerPlano, planosParaS1210, valorDoBeneficiario } from "./planoDeSaude";
 
 const base = { nome: "Unimed Curitiba Empresarial", tipo: "SAUDE", cnpjOperadora: "75.055.772/0001-20", registroAns: "304701", valorTitular: "150,00", valorDependente: "80,00" };
 
 describe("plano de saúde", () => {
   it("lê o plano: CNPJ da operadora, ANS de 6 algarismos e a parte do empregado", () => {
-    expect(lerPlano(base)).toEqual({ ok: true, plano: { nome: "Unimed Curitiba Empresarial", tipo: "SAUDE", cnpjOperadora: "75055772000120", registroAns: "304701", valorTitular: 150, valorDependente: 80 } });
+    expect(lerPlano(base)).toEqual({ ok: true, plano: { nome: "Unimed Curitiba Empresarial", tipo: "SAUDE", cnpjOperadora: "75055772000120", registroAns: "304701", valorTitular: 150, valorDependente: 80, faixas: null } });
     expect(lerPlano({ ...base, cnpjOperadora: "11.111.111/1111-11" })).toMatchObject({ ok: false, erro: expect.stringMatching(/CNPJ/) });
     expect(lerPlano({ ...base, registroAns: "123" })).toMatchObject({ ok: false, erro: expect.stringMatching(/ANS/) });
     expect(lerPlano({ ...base, valorTitular: "", valorDependente: "" })).toMatchObject({ ok: false });
@@ -20,25 +20,40 @@ describe("plano de saúde", () => {
     expect([adesaoNoMes(a, 2027, 2), adesaoNoMes(a, 2027, 3), adesaoNoMes(a, 2027, 5), adesaoNoMes(a, 2027, 6)]).toEqual([false, true, true, false]);
   });
 
-  it("o desconto é titular + dependentes × valor", () => {
-    expect(descontoDoPlano({ tipo: "SAUDE", nome: "Unimed", valorTitular: 150, valorDependente: 80, dependentes: 2 })).toMatchObject({ valor: 310, memoria: expect.stringMatching(/2 dependente\(s\) × 80,00 = 160,00/) });
-    expect(descontoDoPlano({ tipo: "ODONTO", nome: "Odonto", valorTitular: 30, valorDependente: 20, dependentes: 0 }).valor).toBe(30);
+  it("faixa etária: as 10 faixas da ANS ou nenhuma; a idade no 1º dia do mês escolhe a faixa", () => {
+    const faixas = ["100", "120", "140", "160", "180", "200", "250", "300", "400", "600"];
+    expect(lerPlano({ ...base, valorTitular: "", valorDependente: "", faixas })).toMatchObject({ ok: true, plano: { faixas: [100, 120, 140, 160, 180, 200, 250, 300, 400, 600] } });
+    expect(lerPlano({ ...base, faixas: ["100", "", "", "", "", "", "", "", "", ""] })).toMatchObject({ ok: false, erro: expect.stringMatching(/10 faixas/) });
+    expect([idadeEm("1990-06-15", "2027-06-01"), idadeEm("1990-06-01", "2027-06-01")]).toEqual([36, 37]);
+    expect([faixaDaIdade(0), faixaDaIdade(18), faixaDaIdade(19), faixaDaIdade(58), faixaDaIdade(59), faixaDaIdade(90)]).toEqual([0, 0, 1, 8, 9, 9]);
+    const plano = { valorTitular: 150, valorDependente: 80, faixas: [100, 120, 140, 160, 180, 200, 250, 300, 400, 600] };
+    expect(valorDoBeneficiario(plano, true, "1990-06-15", 2027, 6)).toEqual({ valor: 180, faixa: "34 a 38" });
+    expect(valorDoBeneficiario(plano, false, "2015-01-10", 2027, 6)).toEqual({ valor: 100, faixa: "0 a 18" });
+    expect(valorDoBeneficiario(plano, false, null, 2027, 6)).toEqual({ valor: 80, faixa: "sem data de nascimento" });
+    expect(valorDoBeneficiario({ ...plano, faixas: null }, true, "1990-06-15", 2027, 6)).toEqual({ valor: 150, faixa: null });
+  });
+
+  it("o desconto é o titular + cada dependente", () => {
+    const v = (valor: number, faixa: string | null = null) => ({ valor, faixa });
+    expect(descontoDoPlano({ tipo: "SAUDE", nome: "Unimed", titular: v(150), dependentes: [v(80), v(80)] })).toMatchObject({ valor: 310, memoria: expect.stringMatching(/2 dependente\(s\): 80,00 \+ 80,00/) });
+    expect(descontoDoPlano({ tipo: "SAUDE", nome: "Unimed", titular: v(200, "34 a 38"), dependentes: [v(100, "0 a 18")] }).memoria).toMatch(/titular 200,00 \(34 a 38\).*100,00 \(0 a 18\)/);
+    expect(descontoDoPlano({ tipo: "ODONTO", nome: "Odonto", titular: v(30), dependentes: [] }).valor).toBe(30);
   });
 
   it("S-1210: a coparticipação vai para o titular do plano de saúde; dependente sem CPF fica de fora", () => {
-    const saude = { tipo: "SAUDE" as const, cnpjOperadora: "75055772000120", registroAns: "304701", valorTitular: 150, valorDependente: 80 };
-    const odonto = { tipo: "ODONTO" as const, cnpjOperadora: "75055772000120", registroAns: "", valorTitular: 30, valorDependente: 20 };
+    const saude = { tipo: "SAUDE" as const, cnpjOperadora: "75055772000120", registroAns: "304701" };
+    const odonto = { tipo: "ODONTO" as const, cnpjOperadora: "75055772000120", registroAns: "" };
     const r = planosParaS1210(
       [
-        { plano: odonto, dependentes: [] },
-        { plano: saude, dependentes: [{ cpf: "529.982.247-25", nome: "Ana" }, { cpf: null, nome: "Beto" }] },
+        { plano: odonto, titular: 30, dependentes: [] },
+        { plano: saude, titular: 150, dependentes: [{ cpf: "529.982.247-25", nome: "Ana", valor: 80 }, { cpf: null, nome: "Beto", valor: 80 }] },
       ],
       45.5
     );
     expect(r.planos[0]).toEqual({ cnpjOperadora: "75055772000120", registroAns: null, titular: 30, dependentes: [] });
     expect(r.planos[1]).toEqual({ cnpjOperadora: "75055772000120", registroAns: "304701", titular: 195.5, dependentes: [{ cpf: "52998224725", nome: "Ana", valor: 80 }] });
     expect(r.semCpf).toEqual(["Beto"]);
-    expect(planosParaS1210([{ plano: odonto, dependentes: [] }], 10).planos[0].titular).toBe(40);
+    expect(planosParaS1210([{ plano: odonto, titular: 30, dependentes: [] }], 10).planos[0].titular).toBe(40);
   });
 });
 

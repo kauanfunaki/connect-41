@@ -16,7 +16,7 @@ import { lancarDiferencas } from "@/lib/dp2/diferencasServidor";
 import { lerAmbiente, lerEntregaDeEpi, lerEpi, lerMedico } from "@/lib/dp2/sst";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
-import { lerPeriodoDaAdesao, lerPlano } from "@/lib/dp2/planoDeSaude";
+import { FAIXAS_ETARIAS, faixasGravadas, lerPeriodoDaAdesao, lerPlano, valorDoBeneficiario } from "@/lib/dp2/planoDeSaude";
 import { cnpjValido } from "@/lib/dp2/esocial/documentos";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
 import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
@@ -825,11 +825,12 @@ export async function criarPlanoDeSaudeAction(_: EstadoDoDp2, fd: FormData): Pro
     registroAns: texto(fd, "registroAns"),
     valorTitular: texto(fd, "valorTitular"),
     valorDependente: texto(fd, "valorDependente"),
+    faixas: FAIXAS_ETARIAS.map((_, i) => texto(fd, `faixa${i}`)),
   });
   if (!lido.ok) return erro(lido.erro);
   const p = lido.plano;
   const r = await getPrisma().dp2PlanoDeSaude.create({
-    data: { tenantId: a.tenantId, companyId, nome: p.nome, tipo: p.tipo, cnpjOperadora: p.cnpjOperadora, registroAns: p.registroAns || null, valorTitular: p.valorTitular, valorDependente: p.valorDependente, criadoPorId: a.userId },
+    data: { tenantId: a.tenantId, companyId, nome: p.nome, tipo: p.tipo, cnpjOperadora: p.cnpjOperadora, registroAns: p.registroAns || null, valorTitular: p.valorTitular, valorDependente: p.valorDependente, faixas: p.faixas ?? undefined, criadoPorId: a.userId },
     select: { id: true },
   });
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.plano_de_saude_criado", entityType: "Company", entityId: companyId, metadata: { plano: r.id, ...p } });
@@ -882,7 +883,14 @@ export async function aderirAoPlanoAction(_: EstadoDoDp2, fd: FormData): Promise
     },
     select: { id: true },
   });
-  const desconto = Number(plano.valorTitular) + dependentes.length * Number(plano.valorDependente);
+  // O desconto do primeiro mês, com as idades de então (no plano por faixa etária).
+  const [anoIni, mesIni] = periodo.inicio.split("-").map(Number);
+  const valores = { valorTitular: Number(plano.valorTitular), valorDependente: Number(plano.valorDependente), faixas: faixasGravadas(plano.faixas) };
+  const nascimentos = await prisma.dependente.findMany({ where: { id: { in: dependentes.map((d) => d.id) } }, select: { birthDate: true } });
+  const titularNasceu = (await prisma.person.findFirst({ where: { id: pessoa.id }, select: { birthDate: true } }))?.birthDate ?? null;
+  const desconto =
+    valorDoBeneficiario(valores, true, titularNasceu ? titularNasceu.toISOString().slice(0, 10) : null, anoIni, mesIni).valor +
+    nascimentos.reduce((s, d) => s + valorDoBeneficiario(valores, false, d.birthDate ? d.birthDate.toISOString().slice(0, 10) : null, anoIni, mesIni).valor, 0);
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.adesao_ao_plano", entityType: "Person", entityId: pessoa.id, metadata: { adesao: r.id, plano: plano.nome, dependentes: dependentes.map((d) => d.name), ...periodo } });
   revalidatePath("/dp2/colaboradores");
   return {

@@ -9,6 +9,7 @@ CREATE TABLE `dp2_planos_de_saude` (
     `registroAns` VARCHAR(6) NULL,
     `valorTitular` DECIMAL(12, 2) NOT NULL,
     `valorDependente` DECIMAL(12, 2) NOT NULL,
+    `faixas` JSON NULL,
     `criadoPorId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 

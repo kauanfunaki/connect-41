@@ -293,8 +293,8 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
       vinculo: VINCULO,
       eventos: [evento("COPARTICIPACAO_PLANO", null, 45.5)],
       planos: [
-        { tipo: "SAUDE", nome: "Plano de saúde empresarial", valorTitular: 150, valorDependente: 80, dependentes: 2 },
-        { tipo: "ODONTO", nome: "Plano odontológico", valorTitular: 30, valorDependente: 20, dependentes: 0 },
+        { tipo: "SAUDE", nome: "Plano de saúde empresarial", titular: { valor: 180, faixa: "34 a 38" }, dependentes: [{ valor: 100, faixa: "0 a 18" }, { valor: 100, faixa: "0 a 18" }] },
+        { tipo: "ODONTO", nome: "Plano odontológico", titular: { valor: 30, faixa: null }, dependentes: [] },
       ],
     }),
   };
@@ -464,7 +464,7 @@ export const FORMULAS: readonly Formula[] = [
     id: "plano-de-saude",
     tema: "MENSAL",
     nome: "Plano de saúde e odontológico",
-    conta: "A parte do empregado no plano do mês: valor do titular + dependentes incluídos × valor por dependente. A coparticipação do mês é lançada pelo DP na rubrica própria.",
+    conta: "A parte do empregado no plano do mês: o valor do titular + o de cada dependente incluído. No plano por faixa etária, cada um paga o valor da faixa da ANS da idade no 1º dia do mês; nos outros, o valor fixo do titular e do dependente. A coparticipação do mês é lançada pelo DP na rubrica própria.",
     detalhe: "Desconta na folha sem efeito no INSS, no FGTS e no IRRF do mês: a despesa médica só deduz no ajuste anual. O S-1210 informa, por operadora (CNPJ e registro na ANS), o que o titular pagou (com a coparticipação) e o que cada dependente com CPF pagou.",
     baseLegal: "Lei 9.250/1995, art. 8º, II, a; leiaute do eSocial S-1.3, S-1210 infoIRComplem/planSaude",
     papeis: ["PLANO_SAUDE", "PLANO_ODONTO", "COPARTICIPACAO_PLANO"],

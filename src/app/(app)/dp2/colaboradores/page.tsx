@@ -43,7 +43,7 @@ import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorD
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
-import { TIPOS_DE_PLANO } from "@/lib/dp2/planoDeSaude";
+import { FAIXAS_ETARIAS, faixasGravadas, TIPOS_DE_PLANO, valorDoBeneficiario } from "@/lib/dp2/planoDeSaude";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
 
@@ -179,12 +179,13 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     getPrisma().dp2PlanoDeSaude.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, orderBy: { nome: "asc" } }),
     getPrisma().dp2AdesaoAoPlano.findMany({
       where: { tenantId: tela.tenantId, companyId: empresaAtual },
-      include: { person: { select: { name: true } }, plano: { select: { nome: true, valorTitular: true, valorDependente: true } } },
+      include: { person: { select: { name: true, birthDate: true } }, plano: { select: { nome: true, valorTitular: true, valorDependente: true, faixas: true } } },
       orderBy: [{ inicio: "desc" }],
       take: 100,
     }),
-    getPrisma().dependente.findMany({ where: { tenantId: tela.tenantId, personId: { in: pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate).map((p) => p.id) } }, select: { id: true, name: true, cpf: true, personId: true }, orderBy: { name: "asc" } }),
+    getPrisma().dependente.findMany({ where: { tenantId: tela.tenantId, personId: { in: pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate).map((p) => p.id) } }, select: { id: true, name: true, cpf: true, personId: true, birthDate: true }, orderBy: { name: "asc" } }),
   ]);
+  const hojeDosPlanos = new Date().toISOString().slice(0, 10);
   const dependenteDe = new Map(dependentesDaEmpresa.map((d) => [d.id, d]));
   // O nome das empresas das transferências, mesmo as que hoje estão fora do grupo.
   const empresasDasTransferencias = transferencias.length
@@ -1096,8 +1097,16 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                         CNPJ {pl.cnpjOperadora.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}
                         {pl.registroAns ? ` · ANS ${pl.registroAns}` : ""}
                       </td>
-                      <td className={`${TD_NUM} align-middle`}>{brl(Number(pl.valorTitular))}</td>
-                      <td className={`${TD_NUM} align-middle`}>{brl(Number(pl.valorDependente))}</td>
+                      {faixasGravadas(pl.faixas) ? (
+                        <td className={`${TD} align-middle`} colSpan={2}>
+                          Por faixa etária: {faixasGravadas(pl.faixas)!.map((v, i) => `${FAIXAS_ETARIAS[i]} ${brl(v)}`).join(" · ")}
+                        </td>
+                      ) : (
+                        <>
+                          <td className={`${TD_NUM} align-middle`}>{brl(Number(pl.valorTitular))}</td>
+                          <td className={`${TD_NUM} align-middle`}>{brl(Number(pl.valorDependente))}</td>
+                        </>
+                      )}
                       <td className={`${TD} align-middle text-right pr-0`}>
                         {tela.podeAgir && (
                           <FormularioDoDp2
@@ -1147,6 +1156,16 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                   <Input id="pl-dep" name="valorDependente" inputMode="decimal" prefix="R$" />
                 </CampoForm>
               </div>
+              <fieldset className="mt-4">
+                <legend className="text-fs-3 text-fg-muted mb-2">Ou o valor por faixa etária da ANS (as 10 faixas; vale para o titular e cada dependente, pela idade no mês)</legend>
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">
+                  {FAIXAS_ETARIAS.map((f, i) => (
+                    <CampoForm key={f} label={`${f} anos`} htmlFor={`pl-faixa${i}`}>
+                      <Input id={`pl-faixa${i}`} name={`faixa${i}`} inputMode="decimal" prefix="R$" />
+                    </CampoForm>
+                  ))}
+                </div>
+              </fieldset>
             </FormularioDoDp2>
           )}
           {adesoesDaEmpresa.length > 0 && (
@@ -1176,7 +1195,18 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                           {formatCalendarDate(ad.inicio)}
                           {ad.fim ? ` a ${formatCalendarDate(ad.fim)}` : " em diante"}
                         </td>
-                        <td className={`${TD_NUM} align-middle`}>{brl(Number(ad.plano.valorTitular) + ids.length * Number(ad.plano.valorDependente))}</td>
+                        <td className={`${TD_NUM} align-middle`}>
+                          {(() => {
+                            // O desconto deste mês, com as idades de hoje (no plano por faixa etária).
+                            const [ano, mes] = hojeDosPlanos.split("-").map(Number);
+                            const valores = { valorTitular: Number(ad.plano.valorTitular), valorDependente: Number(ad.plano.valorDependente), faixas: faixasGravadas(ad.plano.faixas) };
+                            const nasc = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : null);
+                            return brl(
+                              valorDoBeneficiario(valores, true, nasc(ad.person.birthDate), ano, mes).valor +
+                                ids.reduce((s, id) => s + valorDoBeneficiario(valores, false, nasc(dependenteDe.get(id)?.birthDate), ano, mes).valor, 0)
+                            );
+                          })()}
+                        </td>
                         <td className={`${TD} align-middle text-right pr-0`}>
                           {tela.podeAgir && (
                             <span className="inline-flex flex-wrap items-end justify-end gap-2">

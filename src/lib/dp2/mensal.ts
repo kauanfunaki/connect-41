@@ -539,7 +539,7 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   // (a despesa médica só deduz no ajuste anual; o S-1210 informa o valor).
   for (const p of e.planos ?? []) {
     const d = descontoDoPlano(p);
-    if (d.valor > 0) itens.push(itemDaRubrica(R(p.tipo === "ODONTO" ? "PLANO_ODONTO" : "PLANO_SAUDE"), d.valor, p.dependentes > 0 ? `${p.dependentes} dep.` : "titular", d.memoria));
+    if (d.valor > 0) itens.push(itemDaRubrica(R(p.tipo === "ODONTO" ? "PLANO_ODONTO" : "PLANO_SAUDE"), d.valor, p.dependentes.length > 0 ? `${p.dependentes.length} dep.` : "titular", d.memoria));
   }
 
   // ── Bases, INSS e salário-família ──

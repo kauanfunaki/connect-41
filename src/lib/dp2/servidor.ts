@@ -9,7 +9,7 @@ import { lerDadosEsocial } from "./esocial/cadastro";
 import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
 import { diasDeSuspensaoNoMes } from "./ocorrencias";
-import { adesaoNoMes, type PlanoNoMes } from "./planoDeSaude";
+import { adesaoNoMes, faixasGravadas, valorDoBeneficiario, type PlanoNoMes } from "./planoDeSaude";
 import { afastamentosDosXml, afastamentosNoMes, type AfastamentoNoMes } from "./afastamentos";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
@@ -480,17 +480,28 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
     );
   // Planos de saúde do mês (funcionalidade-762): a parte do empregado desconta na folha.
   const adesoesAoPlano =
-    comp.tipo === "MENSAL" ? await getPrisma().dp2AdesaoAoPlano.findMany({ where: { tenantId, personId: { in: pessoas.map((p) => p.id) } }, include: { plano: true } }) : [];
+    comp.tipo === "MENSAL"
+      ? await getPrisma().dp2AdesaoAoPlano.findMany({ where: { tenantId, personId: { in: pessoas.map((p) => p.id) } }, include: { plano: true, person: { select: { birthDate: true } } } })
+      : [];
+  // O nascimento de cada dependente no plano: o valor pode ser por faixa etária.
+  const nascimentoDoDependente = new Map(
+    (adesoesAoPlano.length
+      ? await getPrisma().dependente.findMany({ where: { tenantId, id: { in: adesoesAoPlano.flatMap((a) => (Array.isArray(a.dependentes) ? (a.dependentes as string[]) : [])) } }, select: { id: true, birthDate: true } })
+      : []
+    ).map((d) => [d.id, d.birthDate ? d.birthDate.toISOString().slice(0, 10) : null])
+  );
   const planosDe = (personId: string): PlanoNoMes[] =>
     adesoesAoPlano
       .filter((a) => a.personId === personId && adesaoNoMes({ inicio: a.inicio.toISOString().slice(0, 10), fim: a.fim ? a.fim.toISOString().slice(0, 10) : null }, comp.ano, comp.mes))
-      .map((a) => ({
-        tipo: a.plano.tipo === "ODONTO" ? "ODONTO" : "SAUDE",
-        nome: a.plano.nome,
-        valorTitular: Number(a.plano.valorTitular),
-        valorDependente: Number(a.plano.valorDependente),
-        dependentes: Array.isArray(a.dependentes) ? a.dependentes.length : 0,
-      }));
+      .map((a) => {
+        const plano = { valorTitular: Number(a.plano.valorTitular), valorDependente: Number(a.plano.valorDependente), faixas: faixasGravadas(a.plano.faixas) };
+        return {
+          tipo: a.plano.tipo === "ODONTO" ? "ODONTO" : "SAUDE",
+          nome: a.plano.nome,
+          titular: valorDoBeneficiario(plano, true, a.person.birthDate ? a.person.birthDate.toISOString().slice(0, 10) : null, comp.ano, comp.mes),
+          dependentes: (Array.isArray(a.dependentes) ? (a.dependentes as string[]) : []).map((id) => valorDoBeneficiario(plano, false, nascimentoDoDependente.get(id) ?? null, comp.ano, comp.mes)),
+        };
+      });
   // Afastamentos do mês, dos S-2230 (funcionalidade-749).
   const afastamentosDe = comp.tipo === "MENSAL" ? await afastamentosDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, AfastamentoNoMes[]>();
 
