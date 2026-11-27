@@ -35,7 +35,7 @@ export default async function TestesDaAcademiaPage() {
       <BlocoRecolhivel titulo="Como funciona" resumo="Valendo, treino livre, desafio e ranking" className="mt-4 bg-surface shadow-xs">
         {/* Em duas colunas na tela larga: a linha da largura toda ficaria longa demais para ler. */}
         <ul className="grid list-disc gap-x-10 gap-y-1.5 pl-5 text-ui text-fg-secondary lg:grid-cols-2">
-          <li>Valendo: uma tentativa por dia em cada nível (Fácil, Médio e Difícil) de cada teste. Ela conta assim que o texto ou as questões aparecem, mesmo se você sair no meio.</li>
+          <li>Valendo: uma tentativa por dia em cada nível (Fácil, Médio e Difícil) de cada teste. Ela conta quando você termina. Se cancelar ou sair no meio, a tentativa volta, com o mesmo texto ou as mesmas questões e o tempo zerado.</li>
           <li>Treino livre: os mesmos testes, quantas vezes quiser. Nada vai para o ranking.</li>
           <li>Na digitação, o relógio de 60 segundos começa na primeira tecla. Colar não vale, e o texto que ficar sem digitar desconta da precisão.</li>
           <li>Nos atalhos, a tela pede uma ação e você aperta o atalho de Windows. Vale quantos acertos você faz em 60 segundos; no fim, aparece o atalho certo de cada erro.</li>

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AuthContext } from "@/lib/auth/context";
 import {
   diaValendoDaSessao, mesAnterior, mesDoInstante, mesFechado, mesesParaEscolher, mesPorExtensoLongo, nivelDaDificuldadeDoHub, nivelDoHub,
-  podeAdministrarAcademia, podeComecarValendo, podeFazerTeste, setorDoResultado,
+  podeAdministrarAcademia, podeComecarValendo, podeFazerTeste, setorDoResultado, tentativaDeHoje,
 } from "./regras";
 
 // As regras da Academia sem banco (10/11/2026).
@@ -37,6 +37,11 @@ describe("a tentativa valendo do dia", () => {
     expect(podeComecarValendo(["facil"], "facil")).toBe(false);
     expect(podeComecarValendo(["facil"], "medio")).toBe(true);
     expect(podeComecarValendo([], "dificil")).toBe(true);
+  });
+  it("cancelar devolve a tentativa: só a enviada gasta, a não enviada é retomada (melhoria-886)", () => {
+    expect(tentativaDeHoje(null)).toBe("nova");
+    expect(tentativaDeHoje({ submittedAt: null })).toBe("retomar");
+    expect(tentativaDeHoje({ submittedAt: new Date("2026-11-27T13:00:00Z") })).toBe("usada");
   });
 });
 

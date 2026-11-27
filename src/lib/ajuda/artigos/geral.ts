@@ -1101,7 +1101,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "A tentativa valendo do dia",
         passos: [
           "Valendo, cada nível de cada teste tem uma tentativa por dia. O cartão do teste mostra quais já foram usadas hoje.",
-          "A tentativa conta assim que o texto ou as questões aparecem, mesmo se você sair no meio.",
+          "A tentativa conta quando você termina. Se clicar em “Cancelar” ou sair no meio, ela volta: ao começar de novo no mesmo nível, vêm o mesmo texto ou as mesmas questões, com o tempo zerado.",
           "Quer treinar mais? Use o “Treino livre”: os mesmos testes, sem limite.",
         ],
       },
