@@ -59,7 +59,7 @@ export type CalculoParaApurar = {
   proventos: number;
   inss: number;
   irrf: number;
-  encargos: { inssEmpresa: number; rat: number; terceiros: number };
+  encargos: { inssEmpresa: number; rat: number; terceiros: number; aposentadoriaEspecial?: number };
   itens: readonly { papel: string | null; tipo: string; valor: number }[];
   /** Empregado (CLT): só a folha dos empregados é base do PIS — sem estagiário, sócio e autônomo. */
   empregado?: boolean;
@@ -107,7 +107,8 @@ export function apurarCompetencia(e: {
 
   const segurados = soma((c) => c.inss);
   const patronal = soma((c) => c.encargos.inssEmpresa);
-  const rat = soma((c) => c.encargos.rat);
+  // O adicional da aposentadoria especial (funcionalidade-763) vai com o GILRAT na DCTFWeb.
+  const rat = soma((c) => c.encargos.rat + (c.encargos.aposentadoriaEspecial ?? 0));
   const terceiros = soma((c) => c.encargos.terceiros);
   const salarioFamilia = soma(salarioFamiliaDe);
   const cpDevida = r2(segurados + patronal + rat);

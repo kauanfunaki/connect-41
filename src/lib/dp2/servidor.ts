@@ -10,6 +10,7 @@ import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
 import { diasDeSuspensaoNoMes } from "./ocorrencias";
 import { adesaoNoMes, faixasGravadas, valorDoBeneficiario, type PlanoNoMes } from "./planoDeSaude";
+import { adicionalDaAposentadoriaEspecial, diasDeLicencaPagosNoMes } from "./licencaPremio";
 import { afastamentosDosXml, afastamentosNoMes, type AfastamentoNoMes } from "./afastamentos";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
@@ -179,6 +180,7 @@ export function vinculoDoMotor(v: {
   vtCustoDiario?: unknown;
   aprendiz: boolean;
   categoria?: string;
+  grauExposicao?: string | null;
 }): VinculoDoMotor {
   return {
     salarioBase: dec(v.salarioBase),
@@ -195,6 +197,7 @@ export function vinculoDoMotor(v: {
     vtCustoDiario: v.vtCustoDiario == null ? null : Number(v.vtCustoDiario),
     aprendiz: v.aprendiz,
     categoria: v.categoria ?? "101",
+    grauExposicao: v.grauExposicao ?? null,
   };
 }
 
@@ -502,6 +505,28 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
           dependentes: (Array.isArray(a.dependentes) ? (a.dependentes as string[]) : []).map((id) => valorDoBeneficiario(plano, false, nascimentoDoDependente.get(id) ?? null, comp.ano, comp.mes)),
         };
       });
+  // Licença-prêmio paga em dinheiro no mês e aposentadorias registradas (funcionalidade-763).
+  const ocorrenciasDoContrato =
+    comp.tipo === "MENSAL"
+      ? await getPrisma().dp2Ocorrencia.findMany({
+          where: { tenantId, personId: { in: pessoas.map((p) => p.id) }, tipo: { in: ["LICENCA_PREMIO_PAGA", "APOSENTADORIA"] }, data: { lte: new Date(Date.UTC(comp.ano, comp.mes, 0)) } },
+          select: { personId: true, tipo: true, data: true, dias: true, detalhe: true },
+          orderBy: { data: "asc" },
+        })
+      : [];
+  const licencaPagaDe = (personId: string) => {
+    const r = rubricas.get("LICENCA_PREMIO_INDENIZADA");
+    const dias = diasDeLicencaPagosNoMes(
+      ocorrenciasDoContrato.filter((o) => o.personId === personId && o.tipo === "LICENCA_PREMIO_PAGA").map((o) => ({ tipo: "LICENCA_PREMIO_PAGA" as const, data: o.data.toISOString().slice(0, 10), dias: o.dias })),
+      comp.ano,
+      comp.mes
+    );
+    return r && dias > 0 ? [{ rubrica: r, quantidade: dias, valor: null }] : [];
+  };
+  const aposentadoriaDe = (personId: string) => {
+    const a = ocorrenciasDoContrato.filter((o) => o.personId === personId && o.tipo === "APOSENTADORIA").at(-1);
+    return a ? { tipo: a.detalhe ?? "", desde: a.data.toISOString().slice(0, 10) } : null;
+  };
   // Afastamentos do mês, dos S-2230 (funcionalidade-749).
   const afastamentosDe = comp.tipo === "MENSAL" ? await afastamentosDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, AfastamentoNoMes[]>();
 
@@ -580,6 +605,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
             .filter((f) => f.personId === p.id && f.rubrica.ativa)
             .map((f) => ({ rubrica: rubricaDoMotor(f.rubrica), quantidade: decOuNulo(f.quantidade), valor: decOuNulo(f.valor), origem: "FIXA" as const })),
           ...eventosDasDiferencas(p.id),
+          ...licencaPagaDe(p.id),
         ],
         rubricas,
         tabelas: tab.tabelas,
@@ -592,6 +618,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         afastamentos: afastamentosDe.get(p.id),
         outrasBasesInss: outrasDe(p.id),
         planos: planosDe(p.id),
+        aposentadoria: aposentadoriaDe(p.id),
       });
       // Transferência no mês (funcionalidade-771): o fim do trecho não é desligamento.
       if (p.transferencia) {
@@ -714,6 +741,8 @@ async function calcularDecimoDaPessoa(
   const encargoPct = empresa.patronalNoDas ? 0 : 20 + empresa.ratAliquota * empresa.fap + empresa.terceirosAliquota;
   const baseEncargos = parcela === 2 ? d.integral : 0;
   const patronal = r2((baseEncargos * encargoPct) / 100);
+  // Aposentadoria especial (funcionalidade-763): o adicional também incide sobre o 13º.
+  const especial = adicionalDaAposentadoriaEspecial(baseEncargos, empresa.patronalNoDas ? null : vinculo.grauExposicao);
   return {
     itens: d.itens,
     proventos: d.proventos,
@@ -729,9 +758,15 @@ async function calcularDecimoDaPessoa(
       inssEmpresa: patronal,
       rat: 0,
       terceiros: 0,
+      ...(especial.valor > 0 ? { aposentadoriaEspecial: especial.valor } : {}),
       fgts: d.fgts,
-      total: r2(patronal + d.fgts),
-      memoria: [...d.memoria, `Média de variáveis: ${media.memoria}`, parcela === 2 ? `Patronal sobre o 13º: ${encargoPct.toFixed(2)}%` : "Patronal do 13º sai na 2ª parcela"],
+      total: r2(patronal + especial.valor + d.fgts),
+      memoria: [
+        ...d.memoria,
+        `Média de variáveis: ${media.memoria}`,
+        parcela === 2 ? `Patronal sobre o 13º: ${encargoPct.toFixed(2)}%` : "Patronal do 13º sai na 2ª parcela",
+        ...(especial.valor > 0 ? [`Adicional da aposentadoria especial: ${especial.aliquota}% sobre o 13º = R$ ${especial.valor.toFixed(2).replace(".", ",")}`] : []),
+      ],
     },
     provisoes: { base: 0, ferias: 0, tercoFerias: 0, decimo: 0, encargosFerias: 0, encargosDecimo: 0, total: 0, memoria: ["O 13º pago baixa a provisão"] },
     diasTrabalhados: d.avos,

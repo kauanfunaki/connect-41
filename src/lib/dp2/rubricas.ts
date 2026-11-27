@@ -60,7 +60,9 @@ export type PapelDaRubrica =
   // com o INSS apurado mês a mês (vai no infoPerAnt do S-1200).
   | "DIFERENCA_RETROATIVA"
   | "INSS_DIFERENCA"
-  | "SALARIO_FAMILIA_RETROATIVO";
+  | "SALARIO_FAMILIA_RETROATIVO"
+  // Licença-prêmio não gozada paga em dinheiro (27/11/2026, funcionalidade-763): indenizatória.
+  | "LICENCA_PREMIO_INDENIZADA";
 
 /** A rubrica como o motor a recebe. */
 export type RubricaDoMotor = {
@@ -131,6 +133,8 @@ const PADRAO: Padrao[] = [
   // Diferenças retroativas (funcionalidade-760): o INSS sai mês a mês na rubrica 066, não na base do mês.
   { codigo: "012", nome: "Diferenças salariais retroativas", tipo: "PROVENTO", papel: "DIFERENCA_RETROATIVA", lancamento: "VALOR", incide: "TODAS" },
   { codigo: "013", nome: "Salário-família retroativo", tipo: "PROVENTO", papel: "SALARIO_FAMILIA_RETROATIVO", lancamento: "VALOR", incide: "NENHUMA" },
+  // Licença-prêmio paga em dinheiro (funcionalidade-763): salário ÷ 30 × dias, sem INSS, FGTS e IRRF.
+  { codigo: "014", nome: "Licença-prêmio indenizada", tipo: "PROVENTO", papel: "LICENCA_PREMIO_INDENIZADA", lancamento: "DIAS", incide: "NENHUMA" },
   // Férias na folha do mês (funcionalidade-745): o IRRF das férias é separado,
   // então férias e 1/3 entram no INSS e no FGTS do mês, mas não no IRRF.
   { codigo: "040", nome: "Férias", tipo: "PROVENTO", papel: "FERIAS_GOZADAS", lancamento: "VALOR", incide: "INSS_FGTS" },

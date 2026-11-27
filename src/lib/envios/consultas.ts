@@ -6,6 +6,7 @@
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { nomeExibicao } from "@/lib/companyName";
+import { totalDePaginas } from "@/lib/financeiro/paginaDeContas";
 import { usuariosAtivosDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 import { generateRecipientToken, recordClientDocumentSignature, recordClientDocumentView } from "@/lib/clientDocuments";
 import {
@@ -22,8 +23,8 @@ import { textoDoLembrete } from "./lembrete";
 
 // ─── Lado da equipe ──────────────────────────────────────────────────────────
 
-/** Teto da lista: os mais recentes; acima disso, filtrar por empresa. */
-export const LIMITE_DA_LISTA = 500;
+/** Envios por página na lista da equipe — paginada no servidor desde 27/11/2026 (melhoria-571). */
+export const ENVIOS_POR_PAGINA = 50;
 
 export type LinhaDoEnvio = {
   id: string;
@@ -54,21 +55,73 @@ function whereDosEnviosDaEquipe(alcance: AlcanceDosEnvios, filtros: { empresaId:
   };
 }
 
+const COM_ACEITE: Prisma.ClientDocumentRecipientWhereInput = { signedAt: { not: null } };
+const COM_ABERTURA: Prisma.ClientDocumentRecipientWhereInput = { firstViewedAt: { not: null } };
+
 /**
- * Os envios das empresas que a pessoa enxerga, o mais novo primeiro. O
- * alcance chega pronto de quem chama (`scopedCompanyWhere`, o mesmo de quando
- * a lista morava na ficha da empresa); a situação sai da prova de cada
- * destinatário.
+ * A `situacaoDoEnvio` (regras.ts) escrita como filtro de banco (27/11/2026,
+ * melhoria-571): a situação era calculada linha a linha e a lista filtrava em
+ * memória, o que prendia a tela a um teto de 500. As mesmas perguntas, na
+ * mesma ordem — rascunho/agendado pelo status e pela data marcada; aceito se
+ * pede aceite e alguém aceitou; senão, se alguém abriu, aguardando aceite ou
+ * visto; senão, enviado. O teste confere cada combinação contra a regra.
+ */
+export function whereDaSituacaoDoEnvio(situacao: SituacaoDoEnvio): Prisma.ClientDocumentWhereInput {
+  switch (situacao) {
+    case "rascunho":
+      return { status: "DRAFT", scheduledFor: null };
+    case "agendado":
+      return { status: "DRAFT", scheduledFor: { not: null } };
+    case "aceito":
+      return { status: "PUBLISHED", requiresSignature: true, recipients: { some: COM_ACEITE } };
+    case "aguardando-aceite":
+      return { status: "PUBLISHED", requiresSignature: true, AND: [{ recipients: { none: COM_ACEITE } }, { recipients: { some: COM_ABERTURA } }] };
+    case "visto":
+      return { status: "PUBLISHED", requiresSignature: false, recipients: { some: COM_ABERTURA } };
+    case "enviado":
+      return {
+        status: "PUBLISHED",
+        recipients: { none: COM_ABERTURA },
+        // Aceito sem abertura registrada continua "aceito": a regra olha o aceite primeiro.
+        OR: [{ requiresSignature: false }, { recipients: { none: COM_ACEITE } }],
+      };
+  }
+}
+
+/** Os cartões do topo: o que espera alguém (a equipe publicar, o cliente abrir ou aceitar). */
+export type ContadoresDosEnvios = { rascunhos: number; agendados: number; naoVistos: number; semAceite: number };
+
+/**
+ * Os envios das empresas que a pessoa enxerga, o mais novo primeiro, uma
+ * página por vez. O alcance chega pronto de quem chama (`scopedCompanyWhere`,
+ * o mesmo de quando a lista morava na ficha da empresa); a situação sai da
+ * prova de cada destinatário.
+ *
+ * Paginada no servidor desde 27/11/2026 (melhoria-571): ia até os 500 mais
+ * recentes, filtrava a situação em memória e contava os cartões só sobre
+ * esses 500. Agora a situação é filtro de banco (`whereDaSituacaoDoEnvio`), a
+ * lista vem por `skip`/`take`, e `total` e os cartões contam a empresa
+ * filtrada inteira. Os cartões ignoram a situação escolhida (são o mapa da
+ * lista, como nas outras abas). Página além do fim cai na última que existe.
  */
 export async function listarEnviosDaEquipe(
   alcance: AlcanceDosEnvios,
-  filtros: { empresaId: string | null }
-): Promise<{ linhas: LinhaDoEnvio[]; limitado: boolean }> {
-  const lista = await getPrisma().clientDocument.findMany({
-    where: whereDosEnviosDaEquipe(alcance, filtros),
-    orderBy: { createdAt: "desc" },
-    take: LIMITE_DA_LISTA + 1,
-    select: {
+  filtros: { empresaId: string | null; situacao?: SituacaoDoEnvio | null },
+  paginaPedida = 1
+): Promise<{ linhas: LinhaDoEnvio[]; contadores: ContadoresDosEnvios; total: number; pagina: number; totalDePaginas: number }> {
+  const prisma = getPrisma();
+  const base = whereDosEnviosDaEquipe(alcance, filtros);
+  const where: Prisma.ClientDocumentWhereInput = filtros.situacao ? { AND: [base, whereDaSituacaoDoEnvio(filtros.situacao)] } : base;
+  const contar = (s: SituacaoDoEnvio) => prisma.clientDocument.count({ where: { AND: [base, whereDaSituacaoDoEnvio(s)] } });
+  const pedida = Math.max(1, Math.floor(paginaPedida) || 1);
+
+  const buscarPagina = (p: number) =>
+    prisma.clientDocument.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (p - 1) * ENVIOS_POR_PAGINA,
+      take: ENVIOS_POR_PAGINA,
+      select: {
       id: true,
       title: true,
       status: true,
@@ -83,10 +136,24 @@ export async function listarEnviosDaEquipe(
       recipients: { select: { sentAt: true, firstViewedAt: true, signedAt: true } },
     },
   });
-  const limitado = lista.length > LIMITE_DA_LISTA;
+
+  const [primeira, total, rascunhos, agendados, naoVistos, semAceite] = await Promise.all([
+    buscarPagina(pedida),
+    prisma.clientDocument.count({ where }),
+    contar("rascunho"),
+    contar("agendado"),
+    contar("enviado"),
+    contar("aguardando-aceite"),
+  ]);
+  const ultima = totalDePaginas(total, ENVIOS_POR_PAGINA);
+  const pagina = Math.min(pedida, ultima);
+  const lista = pagina === pedida ? primeira : await buscarPagina(pagina);
   return {
-    limitado,
-    linhas: lista.slice(0, LIMITE_DA_LISTA).map((d) => ({
+    contadores: { rascunhos, agendados, naoVistos, semAceite },
+    total,
+    pagina,
+    totalDePaginas: ultima,
+    linhas: lista.map((d) => ({
       id: d.id,
       titulo: d.title,
       empresaId: d.company.id,

@@ -98,6 +98,8 @@ export type TrabalhadorEsocial = {
    * de saúde. Vão no infoIRComplem do S-1210.
    */
   irComplementar?: { previdencia: { cnpj: string | null; valor: number } | null; planos: PlanoParaS1210[]; semCpf: string[] } | null;
+  /** Grau de exposição a agente nocivo (funcionalidade-763): vai no infoAgNocivo/grauExp do empregado (1 = não exposto). */
+  grauExp?: string | null;
 };
 
 /** Um instrumento (convenção, acordo, dissídio…) e as diferenças de cada mês. */
@@ -384,6 +386,8 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
                 el("indApurIR", "0"),
               ])
             ),
+            // Empregado (categorias 1xx): o grau de exposição a agente nocivo, do contrato (aposentadoria especial).
+            t.categoria.startsWith("1") ? el("infoAgNocivo", [el("grauExp", /^[1-4]$/.test(t.grauExp ?? "") ? t.grauExp : "1")]) : null,
           ]),
         ]),
       ]),

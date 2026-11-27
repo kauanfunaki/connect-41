@@ -8,6 +8,7 @@
 import { saoPauloParts, mondayOfWeek, firstOfMonth, addDaysToKey, addMonthsToKey } from "@/lib/agenda";
 import { diasAte } from "./licencas";
 import type { SituacaoDoProcesso } from "./processo";
+import type { Prisma } from "@/generated/prisma/client";
 
 // ─── Faixas de prazo ─────────────────────────────────────────────────────────
 
@@ -201,6 +202,21 @@ export function ordenarExigencias<T extends ExigenciaParaOrdem>(linhas: T[]): T[
     }
     return a.raisedAt.getTime() - b.raisedAt.getTime();
   });
+}
+
+/**
+ * A mesma ordem de `ordenarExigencias`, no banco (27/11/2026, melhoria-571): a
+ * lista de Exigências pagina com skip/take, e a página só sai certa se o banco
+ * ordenar como a tela ordenava. Aberta (resolvedAt nulo) antes de cumprida; das
+ * abertas, o prazo mais próximo e as sem prazo no fim, da mais antiga para a
+ * mais nova; das cumpridas, a mais recente. O id desempata, para a troca de
+ * página não repetir nem pular linha.
+ */
+export function ordemDasExigenciasNoBanco(situacao: SituacaoDaExigencia): Prisma.ProcessRequirementOrderByWithRelationInput[] {
+  const abertas: Prisma.ProcessRequirementOrderByWithRelationInput[] = [{ dueAt: { sort: "asc", nulls: "last" } }, { raisedAt: "asc" }, { id: "asc" }];
+  if (situacao === "abertas") return abertas;
+  if (situacao === "resolvidas") return [{ resolvedAt: "desc" }, { raisedAt: "desc" }, { id: "desc" }];
+  return [{ resolvedAt: { sort: "desc", nulls: "first" } }, ...abertas];
 }
 
 export type SituacaoDaExigencia = "abertas" | "resolvidas" | "todas";

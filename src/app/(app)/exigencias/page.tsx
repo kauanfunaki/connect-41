@@ -21,7 +21,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatInstantDate } from "@/lib/format";
 import { faixaDoPrazo, textoDoPrazo, lerSituacaoDaExigencia, type SituacaoDaExigencia } from "@/lib/societario/prazos";
-import { listarExigencias, type LinhaDeExigencia } from "@/lib/societario/painel-data";
+import { listarExigencias, type LinhaDeExigencia, type PaginaDeExigencias } from "@/lib/societario/painel-data";
 import { AbasDePrazos } from "@/components/societario/AbasDePrazos";
 import { ResolverExigencia } from "@/components/societario/ResolverExigencia";
 import { resolverExigencia } from "@/app/(app)/processos/actions";
@@ -73,17 +73,18 @@ export default async function ExigenciasPage({
       : undefined;
 
   const agora = new Date();
-  const [todas, parados, abertas] = await Promise.all([
-    aba === "exigencias" ? listarExigencias(ctx.tenantId, { situacao, responsavelId: responsavelFiltro }) : Promise.resolve([]),
+  // A lista pagina no banco (27/11/2026, melhoria-571): vem só a página aberta.
+  const [lista, parados, abertas] = await Promise.all([
+    aba === "exigencias"
+      ? listarExigencias(ctx.tenantId, { situacao, responsavelId: responsavelFiltro }, { pagina, porPagina: POR_PAGINA })
+      : Promise.resolve<PaginaDeExigencias>({ linhas: [], total: 0, pagina: 1, totalDePaginas: 1 }),
     listarProtocolosParados(ctx.tenantId, diasDaCobranca, agora),
     // O contador da aba: as abertas de todo o setor, com ou sem filtro na lista.
     getPrisma().processRequirement.count({
       where: { tenantId: ctx.tenantId, resolvedAt: null, protocol: { process: { tenantId: ctx.tenantId, status: { notIn: STATUS_SEM_CONCLUSAO } } } },
     }),
   ]);
-  const totalDePaginas = Math.max(1, Math.ceil(todas.length / POR_PAGINA));
-  const paginaVista = Math.min(pagina, totalDePaginas);
-  const linhas = todas.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
+  const { linhas, total, pagina: paginaVista, totalDePaginas } = lista;
   const hrefDaPagina = (p: number) => {
     const q = new URLSearchParams();
     for (const chave of ["situacao", "responsavel"] as const) if (params[chave]) q.set(chave, params[chave]!);
@@ -149,7 +150,7 @@ export default async function ExigenciasPage({
       {/* Situação e responsável no botão "Filtros" — eram pílulas e um
           formulário com "Filtrar" (conferência de 30/09). */}
       <CascoDaTabela
-        contagem={contarItens(todas.length, "exigência", "exigências")}
+        contagem={contarItens(total, "exigência", "exigências")}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -288,7 +289,7 @@ export default async function ExigenciasPage({
           </>
         )}
       </CascoDaTabela>
-      <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={todas.length} rotulo="exigências" />
+      <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={total} rotulo="exigências" />
       </>
       )}
     </PageContainer>

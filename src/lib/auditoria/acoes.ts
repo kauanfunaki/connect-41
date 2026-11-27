@@ -513,6 +513,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.adesao_ao_plano": c("incluiu um colaborador no plano de saúde no DP 2"),
   "folha.adesao_ao_plano_encerrada": c("encerrou a adesão de um colaborador ao plano de saúde no DP 2"),
   "folha.adesao_ao_plano_excluida": x("excluiu a adesão de um colaborador ao plano de saúde no DP 2"),
+  "folha.licenca_premio_registrada": c("registrou gozo ou pagamento de licença-prêmio no DP 2"),
+  "folha.aposentadoria_registrada": c("registrou a aposentadoria de um colaborador no DP 2"),
   "folha.colaborador_transferido": c("transferiu um colaborador para outra empresa no DP 2"),
   "folha.reajuste_coletivo": c("aplicou um reajuste coletivo de salários no DP 2"),
   "folha.ocorrencia_registrada": c("registrou uma advertência ou suspensão no DP 2"),

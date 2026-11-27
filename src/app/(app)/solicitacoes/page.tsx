@@ -20,6 +20,8 @@ import { setoresAtivosDaFila, setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { listarParaEquipe, RECORTES_DA_EQUIPE, type RecorteDaEquipe } from "@/lib/solicitacoes/consultas";
 import { ROTULO_DA_RESPOSTA, ROTULO_PARA_EQUIPE } from "@/lib/solicitacoes/regras";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Pagination } from "@/components/shared/Pagination";
+import { paginaDaUrl } from "@/lib/financeiro/paginaDeContas";
 import { endereco } from "@/lib/enderecoCurto";
 
 export const dynamic = "force-dynamic";
@@ -53,10 +55,12 @@ export default async function SolicitacoesPage({
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const agora = new Date();
 
-  const { linhas, contadores, limitado } = await listarParaEquipe(
+  // Uma página por vez, contada no banco (melhoria-571, 27/11/2026).
+  const { linhas, contadores, total, pagina, totalDePaginas } = await listarParaEquipe(
     { tenantId: ctx.tenantId, setores: setoresDaPessoa, userId: ctx.userId },
     { recorte, setor, empresaId, atrasadas },
-    agora
+    agora,
+    paginaDaUrl(params.pagina)
   );
 
   function href(mudancas: Record<string, string | undefined>) {
@@ -120,7 +124,7 @@ export default async function SolicitacoesPage({
       </div>
 
       <CascoDaTabela
-        contagem={contarItens(linhas.length, "solicitação", "solicitações", limitado)}
+        contagem={contarItens(total, "solicitação", "solicitações")}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -164,7 +168,6 @@ export default async function SolicitacoesPage({
                   </PeDoCartao>
                 </Cartao>
               ))}
-              {limitado && <p className="text-fs-1 text-fg-muted mt-1">Mostrando as 500 mais recentes. Filtre por setor ou empresa para ver o resto.</p>}
             </CartoesNoCelular>
 
             <TabelaFiltravel
@@ -252,9 +255,15 @@ export default async function SolicitacoesPage({
                     ))}
                   </tbody>
                 </table>
-                {limitado && <p className="text-fs-1 text-fg-muted mt-3">Mostrando as 500 mais recentes. Filtre por setor ou empresa para ver o resto.</p>}
               </TabelaNoDesktop>
             </TabelaFiltravel>
+            <Pagination
+              page={pagina}
+              totalPages={totalDePaginas}
+              buildHref={(p) => href({ pagina: p > 1 ? String(p) : undefined })}
+              total={total}
+              rotulo="solicitações"
+            />
           </>
         )}
       </CascoDaTabela>

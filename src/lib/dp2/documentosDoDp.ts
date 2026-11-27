@@ -260,3 +260,48 @@ export async function pdfDaFichaDaCtps(d: DadosDoDocumento, a: AnotacoesDaCtps):
   e.assinaturas(["Empregador", "Empregado(a)"]);
   return pdf.save();
 }
+
+// ─── Movimentação de empregados (26/11/2026, funcionalidade-776) ────────────
+
+/** Uma linha da movimentação do período: entrada, saída ou afastamento. */
+export type MovimentoDeEmpregado = { data: string; nome: string; tipo: "ADMISSAO" | "DESLIGAMENTO" | "TRANSFERIDO_PARA" | "VEIO_DE" | "AFASTAMENTO" | "RETORNO"; detalhe: string };
+
+const NOME_DO_MOVIMENTO: Record<MovimentoDeEmpregado["tipo"], string> = {
+  ADMISSAO: "Admissão",
+  DESLIGAMENTO: "Desligamento",
+  TRANSFERIDO_PARA: "Transferido para",
+  VEIO_DE: "Transferido de",
+  AFASTAMENTO: "Afastamento",
+  RETORNO: "Retorno",
+};
+
+/** O resumo do período: quantos entraram, saíram e a posição no fim. */
+export function resumoDaMovimentacao(movimentos: readonly MovimentoDeEmpregado[], ativosNoInicio: number) {
+  const entraram = movimentos.filter((m) => m.tipo === "ADMISSAO" || m.tipo === "VEIO_DE").length;
+  const sairam = movimentos.filter((m) => m.tipo === "DESLIGAMENTO" || m.tipo === "TRANSFERIDO_PARA").length;
+  return { ativosNoInicio, entraram, sairam, ativosNoFim: ativosNoInicio + entraram - sairam };
+}
+
+/** O relatório da movimentação de empregados da empresa no período (Domínio, Relatórios › Outros). */
+export async function pdfDaMovimentacao(
+  e0: { empresa: string; documento: string | null; de: string; ate: string },
+  movimentos: readonly MovimentoDeEmpregado[],
+  ativosNoInicio: number
+): Promise<Uint8Array> {
+  const { pdf, e } = await novo();
+  e.paragrafo("MOVIMENTAÇÃO DE EMPREGADOS", 14, true);
+  e.paragrafo(`${e0.empresa}${e0.documento ? ` · CNPJ/CPF ${e0.documento}` : ""} · de ${br(e0.de)} a ${br(e0.ate)}`, 9);
+  e.pular(6);
+  const r = resumoDaMovimentacao(movimentos, ativosNoInicio);
+  e.campo("Ativos no início", String(r.ativosNoInicio));
+  e.campo("Entradas", String(r.entraram));
+  e.campo("Saídas", String(r.sairam));
+  e.campo("Ativos no fim", String(r.ativosNoFim));
+  e.pular(6);
+  e.paragrafo("Movimentos", 10, true);
+  if (movimentos.length === 0) e.paragrafo("Nenhuma movimentação no período.", 9);
+  for (const m of [...movimentos].sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome, "pt-BR"))) {
+    e.campo(`${br(m.data)} · ${NOME_DO_MOVIMENTO[m.tipo]}`, `${m.nome}${m.detalhe ? ` · ${m.detalhe}` : ""}`);
+  }
+  return pdf.save();
+}

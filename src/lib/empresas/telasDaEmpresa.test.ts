@@ -57,7 +57,7 @@ describe("telas pesadas", () => {
   it("Cobrança: fila e acordos pelo escopo da escolha", () => {
     const fonte = ler("src/app/(app)/cobranca/page.tsx");
     expect(fonte).toContain("escopoFinanceiroDaEscolha(");
-    expect(fonte).toContain("listarAcordos(escopo,");
+    expect(fonte).toContain("paginaDeAcordos(escopo,");
   });
 
   it("Documentos fiscais: o alcance é sempre a empresa escolhida, nunca o tenant", () => {

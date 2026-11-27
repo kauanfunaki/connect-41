@@ -19,7 +19,9 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } f
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
 import { SeloDoEnvio } from "@/components/documentosCliente/SeloDoEnvio";
-import { listarEnviosDaEquipe, LIMITE_DA_LISTA } from "@/lib/envios/consultas";
+import { Pagination } from "@/components/shared/Pagination";
+import { listarEnviosDaEquipe } from "@/lib/envios/consultas";
+import { paginaDaUrl } from "@/lib/financeiro/paginaDeContas";
 import {
   ROTULO_DA_SITUACAO,
   SITUACOES_DO_ENVIO,
@@ -74,15 +76,15 @@ export default async function EnviosPage({
   const situacao: SituacaoDoEnvio | null = ehSituacaoDoEnvio(params.situacao) ? params.situacao : null;
   const podeCriar = canWrite(ctx.role);
 
-  const { linhas: todas, limitado } = await listarEnviosDaEquipe({ tenantId: ctx.tenantId, empresas: empresasNoAlcance }, { empresaId });
-  const linhas = situacao ? todas.filter((l) => l.situacao === situacao) : todas;
-  // Os cartões contam o que espera alguém, na empresa filtrada; ignoram a
-  // situação escolhida (são o mapa da lista, como nas outras abas).
-  const quantos = (s: SituacaoDoEnvio) => todas.filter((l) => l.situacao === s).length;
-  const rascunhos = quantos("rascunho");
-  const agendados = quantos("agendado");
-  const naoVistos = quantos("enviado");
-  const semAceite = quantos("aguardando-aceite");
+  // Uma página por vez, com a situação filtrada no banco (melhoria-571,
+  // 27/11/2026). Os cartões contam o que espera alguém, na empresa filtrada;
+  // ignoram a situação escolhida (são o mapa da lista, como nas outras abas).
+  const { linhas, contadores, total, pagina, totalDePaginas } = await listarEnviosDaEquipe(
+    { tenantId: ctx.tenantId, empresas: empresasNoAlcance },
+    { empresaId, situacao },
+    paginaDaUrl(params.pagina)
+  );
+  const { rascunhos, agendados, naoVistos, semAceite } = contadores;
 
   const opcoesDeEmpresa = [...comEnvio, ...(pedida && !comEnvio.some((e) => e.id === pedida.id) ? [pedida] : [])]
     .map((e) => ({ value: e.id, label: nomeExibicao(e) }))
@@ -162,7 +164,7 @@ export default async function EnviosPage({
       </div>
 
       <CascoDaTabela
-        contagem={contarItens(linhas.length, "envio", "envios", limitado)}
+        contagem={contarItens(total, "envio", "envios")}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -213,7 +215,6 @@ export default async function EnviosPage({
                   </PeDoCartao>
                 </Cartao>
               ))}
-              {limitado && <p className="text-fs-1 text-fg-muted mt-1">Mostrando os {LIMITE_DA_LISTA} mais recentes. Filtre por empresa para ver o resto.</p>}
             </CartoesNoCelular>
 
             <TabelaFiltravel
@@ -290,9 +291,15 @@ export default async function EnviosPage({
                     ))}
                   </tbody>
                 </table>
-                {limitado && <p className="text-fs-1 text-fg-muted mt-3">Mostrando os {LIMITE_DA_LISTA} mais recentes. Filtre por empresa para ver o resto.</p>}
               </TabelaNoDesktop>
             </TabelaFiltravel>
+            <Pagination
+              page={pagina}
+              totalPages={totalDePaginas}
+              buildHref={(p) => href({ pagina: p > 1 ? String(p) : undefined })}
+              total={total}
+              rotulo="envios"
+            />
           </>
         )}
       </CascoDaTabela>

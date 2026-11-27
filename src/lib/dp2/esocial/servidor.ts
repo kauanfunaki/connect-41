@@ -15,7 +15,8 @@ import type { MotivoCanonico } from "@/lib/rescisao/motivos";
 import { lerDadosEsocial } from "./cadastro";
 import { eventoS2300, eventoS2306, eventoS2399 } from "./semVinculo";
 import { semVinculo } from "@/lib/dp2/categorias";
-import { eventoS2210, eventoS2220, eventoS2240, lerResponsaveis, type Aso, type Cat, type CondicaoAmbiental, type ResponsaveisDeSst } from "./sst";
+import { expostoANocivo } from "@/lib/dp2/licencaPremio";
+import { eventoS2210, eventoS2220, eventoS2240, lerResponsaveis, SEM_AGENTE_NOCIVO, type Aso, type Cat, type CondicaoAmbiental, type ResponsaveisDeSst } from "./sst";
 import {
   eventoS2200,
   eventoS2206,
@@ -172,7 +173,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
 
   const calculos = await prisma.dp2Calculo.findMany({
     where: { tenantId, competenciaId },
-    include: { person: { select: { id: true, name: true, cpf: true, birthDate: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true, previdenciaCnpj: true } } } } },
+    include: { person: { select: { id: true, name: true, cpf: true, birthDate: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true, previdenciaCnpj: true, grauExposicao: true } } } } },
   });
   // Plano de saúde e previdência complementar (funcionalidade-762): o infoIRComplem do S-1210.
   const adesoesAoPlano = anual
@@ -262,6 +263,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
             );
             return { previdencia: previdenciaPaga > 0 ? { cnpj: v?.previdenciaCnpj ?? null, valor: Math.round(previdenciaPaga * 100) / 100 } : null, planos, semCpf };
           })(),
+      grauExp: v?.grauExposicao ?? null,
     };
     const r1200 = aceitoDe("S-1200", c.person.id, perApur);
     const r1210 = aceitoDe("S-1210", c.person.id, perApur);
@@ -391,6 +393,16 @@ export async function gerarCondicaoAmbiental(tenantId: string, personId: string,
   const v = await doVinculo(tenantId, personId, (c.inicio ?? new Date().toISOString()).slice(0, 7));
   if (!v) return { ok: false, erro: SEM_CONTRATO };
   const ev = eventoS2240(v.empregador, v.t, c, await responsaveisDeSst(tenantId, v.companyId), v.novoId);
+  // Aposentadoria especial (funcionalidade-763): o grau de exposição do contrato tem de combinar com o S-2240.
+  const vinculo = await getPrisma().dp2Vinculo.findFirst({ where: { tenantId, personId }, select: { grauExposicao: true } });
+  const comAgente = c.agentes.some((a) => a !== SEM_AGENTE_NOCIVO);
+  const exposto = expostoANocivo(vinculo?.grauExposicao);
+  if (comAgente && !exposto) {
+    ev.pendencias.push({ onde: "colaborador", texto: `${v.t.nome}: o S-2240 tem agente nocivo e o contrato não tem grau de exposição. Se o LTCAT concluir que dá aposentadoria especial, marque o grau no contrato: ele gera o adicional do GILRAT e o grauExp do S-1200.`, link: null, bloqueia: false });
+  }
+  if (!comAgente && exposto) {
+    ev.pendencias.push({ onde: "colaborador", texto: `${v.t.nome}: o contrato tem grau de exposição para a aposentadoria especial e o S-2240 não tem agente nocivo. Confira com o LTCAT.`, link: null, bloqueia: false });
+  }
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }
 

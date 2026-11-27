@@ -407,9 +407,10 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Importar o extrato",
         passos: [
-          "No internet banking, baixe o extrato da conta em OFX, o arquivo de extrato que o banco gera para outros sistemas (às vezes aparece como Money ou Quicken).",
+          "No internet banking, baixe o extrato da conta em OFX, o arquivo de extrato que o banco gera para outros sistemas (às vezes aparece como Money ou Quicken). Se o banco não tiver OFX, baixe o extrato em planilha (.xls, .xlsx ou .csv).",
           "No Connect, clique no nome da conta bancária para selecioná-la.",
-          "Em “Importar extrato OFX”, clique em “Escolher arquivo” ou arraste o arquivo.",
+          "Em “Importar extrato”, clique em “Escolher arquivo” ou arraste o arquivo.",
+          "Na planilha, o Connect acha as colunas pelo nome (data, histórico, valor ou crédito e débito, saldo). Quando o valor vem sem sinal, a coluna “D/C” (ou um “Tipo” só com D e C) diz se é entrada ou saída. Como a planilha não informa a conta, confira se escolheu a conta certa.",
           "Clique em “Importar”. A tela mostra quantas transações novas entraram e o saldo informado pelo banco.",
         ],
       },

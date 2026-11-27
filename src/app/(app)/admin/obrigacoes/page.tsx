@@ -89,7 +89,8 @@ export default async function ObrigacoesPage() {
       <PageHeader
         title="Obrigações recorrentes"
         action={
-          <>
+          // Os dois botões numa linha só, com espaço entre eles, como nos outros cabeçalhos (bug-659).
+          <div className="flex flex-wrap items-center gap-2">
             {/* As por regime (22/10/2026): o modelo do setor aplicado à carteira, em vez de empresa a empresa. */}
             <Button href="/admin/obrigacoes/regime" variant="secondary">
               Obrigações por regime
@@ -100,7 +101,7 @@ export default async function ObrigacoesPage() {
               pipelines={pipelines.map((p) => ({ ...p, sectorLabel: sectorLabel(labels, p.sectorCode) }))}
               users={users}
             />
-          </>
+          </div>
         }
       />
 

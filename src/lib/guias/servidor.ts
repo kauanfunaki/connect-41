@@ -7,7 +7,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { nomeExibicao } from "@/lib/companyName";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { decimalDeCentavos } from "@/lib/financeiro/manual";
-import { situacaoDaGuia, type SituacaoDaGuia } from "./situacao";
+import { totalDePaginas } from "@/lib/financeiro/paginaDeContas";
+import { contarPorSituacao, situacaoDaGuia, type SituacaoDaGuia } from "./situacao";
 import type { RegistroDaGuia } from "./registro";
 
 export async function registrarGuiaEmitida(p: {
@@ -68,14 +69,41 @@ export type GuiaNaTela = {
   emitidaEm: Date;
 };
 
-/** As guias que vencem no mês (sem vencimento, as da competência), da mais urgente para a menos. */
+/** Guias por página na tela do mês (27/11/2026, melhoria-571). */
+export const GUIAS_POR_PAGINA = 50;
+
+export type GuiasDoMes = {
+  /** As guias da página aberta, da mais urgente para a menos. */
+  guias: GuiaNaTela[];
+  /** Quantas guias o mês tem, em todas as páginas. */
+  total: number;
+  pagina: number;
+  totalDePaginas: number;
+  /** Os cartões do topo: contam o mês inteiro, não a página. */
+  contagem: Record<SituacaoDaGuia, number>;
+  aPagarCentavos: number;
+};
+
+/**
+ * As guias que vencem no mês (sem vencimento, as da competência), da mais
+ * urgente para a menos: as vencidas primeiro, depois pelo vencimento.
+ *
+ * Paginada (27/11/2026, melhoria-571). Era `take: 1000`, sem aviso. A situação
+ * é calculada (o dia de hoje, o envio, o pagamento) e a vencida vem antes na
+ * ordem, então o banco não sabe paginar sozinho: uma leitura leve do mês
+ * inteiro — só o que a situação, a ordem e os cartões usam, sem teto — decide
+ * a página e os totais, e o resto (empresa, descrição, arquivo, envio) é lido
+ * só das guias da página.
+ */
 export async function guiasDoMes(
   tenantId: string,
   mes: string,
   hoje: string,
-  escopoDaEmpresa: Prisma.CompanyWhereInput = {}
-): Promise<GuiaNaTela[]> {
-  const guias = await getPrisma().guia.findMany({
+  escopoDaEmpresa: Prisma.CompanyWhereInput = {},
+  pedida = 1
+): Promise<GuiasDoMes> {
+  const prisma = getPrisma();
+  const leves = await prisma.guia.findMany({
     where: {
       tenantId,
       company: escopoDaEmpresa,
@@ -83,30 +111,16 @@ export async function guiasDoMes(
     },
     select: {
       id: true,
-      companyId: true,
-      descricao: true,
-      competencia: true,
       vencimento: true,
       validoAte: true,
       valor: true,
-      driveFileId: true,
-      clientDocumentId: true,
       pagaEm: true,
-      createdAt: true,
-      company: { select: { name: true, displayName: true } },
       clientDocument: { select: { status: true, recipients: { where: { firstViewedAt: { not: null } }, select: { id: true }, take: 1 } } },
     },
-    orderBy: [{ vencimento: "asc" }, { createdAt: "asc" }],
-    take: 1000,
+    orderBy: [{ vencimento: "asc" }, { createdAt: "asc" }, { id: "asc" }],
   });
-  return guias.map((g) => ({
+  const comSituacao = leves.map((g) => ({
     id: g.id,
-    companyId: g.companyId,
-    empresa: nomeExibicao(g.company),
-    descricao: g.descricao,
-    competencia: g.competencia,
-    vencimento: g.vencimento,
-    validoAte: g.validoAte,
     valorCentavos: g.valor === null ? null : centavosDeDecimal(g.valor),
     situacao: situacaoDaGuia(
       {
@@ -117,11 +131,59 @@ export async function guiasDoMes(
       },
       hoje
     ),
-    arquivoId: g.driveFileId,
-    envioId: g.clientDocumentId,
-    pagaEm: g.pagaEm,
-    emitidaEm: g.createdAt,
   }));
+
+  const contagem = contarPorSituacao(comSituacao.map((g) => g.situacao));
+  const aPagarCentavos = comSituacao.filter((g) => g.situacao !== "PAGA").reduce((s, g) => s + (g.valorCentavos ?? 0), 0);
+  // As vencidas primeiro; depois a ordem do vencimento, que já vem do banco (o sort é estável).
+  const ordenadas = [...comSituacao].sort((a, b) => Number(b.situacao === "VENCIDA") - Number(a.situacao === "VENCIDA"));
+  const ultima = totalDePaginas(ordenadas.length, GUIAS_POR_PAGINA);
+  // Página além do fim (link antigo, o mês esvaziou): a última que existe.
+  const pagina = Math.min(Math.max(1, pedida), ultima);
+  const daPagina = ordenadas.slice((pagina - 1) * GUIAS_POR_PAGINA, pagina * GUIAS_POR_PAGINA);
+
+  const completas =
+    daPagina.length === 0
+      ? []
+      : await prisma.guia.findMany({
+          where: { tenantId, id: { in: daPagina.map((g) => g.id) } },
+          select: {
+            id: true,
+            companyId: true,
+            descricao: true,
+            competencia: true,
+            vencimento: true,
+            validoAte: true,
+            driveFileId: true,
+            clientDocumentId: true,
+            pagaEm: true,
+            createdAt: true,
+            company: { select: { name: true, displayName: true } },
+          },
+        });
+  const porId = new Map(completas.map((g) => [g.id, g]));
+  const guias: GuiaNaTela[] = [];
+  for (const leve of daPagina) {
+    const g = porId.get(leve.id);
+    // Apagada entre as duas leituras: some da página, como sumiria ao recarregar.
+    if (!g) continue;
+    guias.push({
+      id: g.id,
+      companyId: g.companyId,
+      empresa: nomeExibicao(g.company),
+      descricao: g.descricao,
+      competencia: g.competencia,
+      vencimento: g.vencimento,
+      validoAte: g.validoAte,
+      valorCentavos: leve.valorCentavos,
+      situacao: leve.situacao,
+      arquivoId: g.driveFileId,
+      envioId: g.clientDocumentId,
+      pagaEm: g.pagaEm,
+      emitidaEm: g.createdAt,
+    });
+  }
+  return { guias, total: ordenadas.length, pagina, totalDePaginas: ultima, contagem, aPagarCentavos };
 }
 
 /** Marca (ou desmarca) como paga. Devolve a empresa da guia, para o foco e o registro; nulo se a guia não é do tenant. */

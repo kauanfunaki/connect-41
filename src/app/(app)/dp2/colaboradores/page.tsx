@@ -39,11 +39,14 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, guardarDocumentoAction, excluirAlocacaoAction, gerarEventoDaTransferenciaAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction, criarPlanoDeSaudeAction, excluirPlanoDeSaudeAction, aderirAoPlanoAction, encerrarAdesaoAction, excluirAdesaoAction } from "../actions";
+import { FAIXAS_ETARIAS, faixasGravadas, TIPOS_DE_PLANO, valorDoBeneficiario } from "@/lib/dp2/planoDeSaude";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, guardarDocumentoAction, excluirAlocacaoAction, gerarEventoDaTransferenciaAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, registrarLicencaPremioAction, registrarAposentadoriaAction, salvarVinculoAction, transferirColaboradorAction, criarPlanoDeSaudeAction, excluirPlanoDeSaudeAction, aderirAoPlanoAction, encerrarAdesaoAction, excluirAdesaoAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
-import { FAIXAS_ETARIAS, faixasGravadas, TIPOS_DE_PLANO, valorDoBeneficiario } from "@/lib/dp2/planoDeSaude";
+import { hojeIso } from "@/lib/datas/calendario";
+import { expostoANocivo, GRAUS_DE_EXPOSICAO, NOME_DO_USO, saldoDaLicencaPremio, TIPOS_DE_APOSENTADORIA, type TipoDeUsoDaLicenca } from "@/lib/dp2/licencaPremio";
+import { regraDaLicencaPremio } from "@/lib/dp2/licencaPremioServidor";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
 
@@ -130,7 +133,30 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
   const pctTransp = (v: number | null) => (v === null ? "—" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(v)}%`);
   // Advertências e suspensões da empresa (funcionalidade-763).
   const empresaId = tela.empresa.id;
-  const ocorrencias = await getPrisma().dp2Ocorrencia.findMany({ where: { tenantId: tela.tenantId, companyId: empresaId }, orderBy: { data: "desc" }, take: 100 });
+  const ocorrencias = await getPrisma().dp2Ocorrencia.findMany({ where: { tenantId: tela.tenantId, companyId: empresaId, tipo: { in: ["ADVERTENCIA", "SUSPENSAO"] } }, orderBy: { data: "desc" }, take: 100 });
+  // Licença-prêmio e aposentadoria (funcionalidade-763).
+  const doContrato = await getPrisma().dp2Ocorrencia.findMany({
+    where: { tenantId: tela.tenantId, companyId: empresaId, tipo: { in: ["LICENCA_PREMIO_GOZO", "LICENCA_PREMIO_PAGA", "APOSENTADORIA"] } },
+    orderBy: { data: "desc" },
+  });
+  const regraDaLicenca = await regraDaLicencaPremio(tela.tenantId, empresaId);
+  const usosDaLicenca = doContrato.filter((o) => o.tipo !== "APOSENTADORIA");
+  const hojeDaTela = hojeIso();
+  const saldosDaLicenca = regraDaLicenca
+    ? pessoas
+        .filter((p) => p.dp2Vinculo && !p.dismissalDate && p.admissionDate)
+        .map((p) => ({
+          p,
+          s: saldoDaLicencaPremio(
+            p.admissionDate!.toISOString().slice(0, 10),
+            hojeDaTela,
+            regraDaLicenca,
+            usosDaLicenca.filter((o) => o.personId === p.id).map((o) => ({ tipo: o.tipo as TipoDeUsoDaLicenca, data: o.data.toISOString().slice(0, 10), dias: o.dias }))
+          ),
+        }))
+    : [];
+  const aposentados = doContrato.filter((o) => o.tipo === "APOSENTADORIA");
+  const aposentadoDe = new Map(aposentados.map((o) => [o.personId, o]));
   const nomeDaPessoa = new Map(pessoas.map((p) => [p.id, p.name]));
   // Saldo inicial das médias (funcionalidade-747): o histórico de antes do DP 2.
   const saldoInicial = resumirSaldoInicial(
@@ -272,6 +298,15 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <option value="MINIMO">Grau mínimo (10%)</option>
               <option value="MEDIO">Grau médio (20%)</option>
               <option value="MAXIMO">Grau máximo (40%)</option>
+            </Select>
+          </CampoForm>
+          <CampoForm label="Exposição a agente nocivo" htmlFor="grauExposicao" dica="Conforme o LTCAT. Com exposição, a empresa paga o adicional da aposentadoria especial e o grau vai no S-1200.">
+            <Select id="grauExposicao" name="grauExposicao" defaultValue={v?.grauExposicao ?? "1"}>
+              {Object.entries(GRAUS_DE_EXPOSICAO).map(([k, t]) => (
+                <option key={k} value={k}>
+                  {t}
+                </option>
+              ))}
             </Select>
           </CampoForm>
         </div>
@@ -586,6 +621,8 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                           {p.dp2Vinculo.dependentesIrrf > 0 && <Selo tom="neutro">{p.dp2Vinculo.dependentesIrrf} dep.</Selo>}
                           {NOME_DA_INSALUBRIDADE[p.dp2Vinculo.insalubridade] && <Selo tom="neutro">{NOME_DA_INSALUBRIDADE[p.dp2Vinculo.insalubridade]}</Selo>}
                           {p.dp2Vinculo.periculosidade && <Selo tom="neutro">Periculosidade</Selo>}
+                          {expostoANocivo(p.dp2Vinculo.grauExposicao) && <Selo tom="neutro">Agente nocivo</Selo>}
+                          {aposentadoDe.has(p.id) && <Selo tom="neutro">Aposentado(a)</Selo>}
                         </span>
                       ) : (
                         <Selo tom="atencao">Sem contrato</Selo>
@@ -688,6 +725,18 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               Quadro de horário da empresa (PDF)
             </Button>
           </form>
+          <form action="/api/dp2/movimentacao" method="get" target="_blank" className="mt-4 flex flex-wrap items-end gap-4">
+            <input type="hidden" name="empresa" value={tela.empresa.id} />
+            <CampoForm label="Movimentação de empregados: de" htmlFor="mov-de">
+              <CampoData id="mov-de" name="de" required />
+            </CampoForm>
+            <CampoForm label="Até" htmlFor="mov-ate">
+              <CampoData id="mov-ate" name="ate" required />
+            </CampoForm>
+            <Button type="submit" variant="ghost">
+              Movimentação (PDF)
+            </Button>
+          </form>
           {tela.podeAgir && (
             <FormularioDoDp2 acao={guardarDocumentoAction} rotulo="Guardar nos Arquivos" rotuloEnviando="Guardando…" variante="secondary" className="mt-4">
               <input type="hidden" name="companyId" value={tela.empresa.id} />
@@ -711,7 +760,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                     <option value="CTPS">Ficha de atualização da CTPS</option>
                     <option value="PPP">Histórico PPP (S-2240 e ASO)</option>
                     <option value="QUADRO">Quadro de horário da empresa</option>
+                    <option value="MOVIMENTACAO">Movimentação de empregados (período)</option>
                   </Select>
+                </CampoForm>
+                <CampoForm label="De (movimentação)" htmlFor="gd-de">
+                  <CampoData id="gd-de" name="de" />
+                </CampoForm>
+                <CampoForm label="Até" htmlFor="gd-ate">
+                  <CampoData id="gd-ate" name="ate" />
                 </CampoForm>
               </div>
             </FormularioDoDp2>
@@ -836,6 +892,229 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <CampoForm label="Motivo" htmlFor="oc-motivo" className="mt-4" dica="O fato e quando aconteceu: vai no documento.">
                 <Textarea id="oc-motivo" name="motivo" rows={3} required />
               </CampoForm>
+            </FormularioDoDp2>
+          )}
+        </Secao>
+      )}
+
+      {pessoas.length > 0 && (
+        <Secao
+          titulo="Licença-prêmio"
+          apoio="O direito vem da convenção da empresa (a cada tantos anos de casa, tantos dias). O gozo é licença remunerada, com o salário normal (S-2230 motivo 16). O pagamento em dinheiro entra na folha do mês, sem INSS, FGTS e IRRF."
+        >
+          {!regraDaLicenca ? (
+            <p className="text-fs-3 text-fg-muted">
+              A convenção da empresa não tem licença-prêmio. Para usar, informe os anos de casa e os dias na convenção, em{" "}
+              <Link href="/dp2/convencoes" className="underline">
+                DP 2 › Convenções
+              </Link>
+              .
+            </p>
+          ) : (
+            <>
+              <p className="text-fs-3 text-fg-muted mb-3">
+                Regra da convenção: {regraDaLicenca.dias} dia(s) a cada {regraDaLicenca.anos} ano(s) de casa.
+              </p>
+              <div className="overflow-x-auto mb-4">
+                <table className="w-full min-w-[720px] text-fs-3">
+                  <thead>
+                    <tr>
+                      <th className={TH}>Colaborador</th>
+                      <th className={TH_NUM}>Períodos</th>
+                      <th className={TH_NUM}>Direito</th>
+                      <th className={TH_NUM}>Gozados</th>
+                      <th className={TH_NUM}>Pagos</th>
+                      <th className={TH_NUM}>Saldo</th>
+                      <th className={TH}>Próximo período</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {saldosDaLicenca.map(({ p, s }) => (
+                      <tr key={p.id} className={TR}>
+                        <td className={TD}>{p.name}</td>
+                        <td className={TD_NUM}>{s.periodos}</td>
+                        <td className={TD_NUM}>{s.direito} d</td>
+                        <td className={TD_NUM}>{s.gozados} d</td>
+                        <td className={TD_NUM}>{s.pagos} d</td>
+                        <td className={TD_NUM}>{s.saldo > 0 ? <Selo tom="sucesso">{s.saldo} d</Selo> : "0 d"}</td>
+                        <td className={`${TD} tabular-nums`}>{s.proximoPeriodo.split("-").reverse().join("/")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {usosDaLicenca.length > 0 && (
+                <div className="overflow-x-auto mb-4">
+                  <table className="w-full min-w-[640px] text-fs-3">
+                    <thead>
+                      <tr>
+                        <th className={TH}>Colaborador</th>
+                        <th className={TH}>Registro</th>
+                        <th className={TH}>Data</th>
+                        <th className={TH_NUM}>Dias</th>
+                        <th className={TH}>
+                          <span className="sr-only">Ações</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usosDaLicenca.map((o) => (
+                        <tr key={o.id} className={TR}>
+                          <td className={`${TD} align-middle`}>{nomeDaPessoa.get(o.personId) ?? "Fora desta empresa"}</td>
+                          <td className={`${TD} align-middle`}>
+                            <Selo tom="neutro">{NOME_DO_USO[o.tipo as TipoDeUsoDaLicenca] ?? o.tipo}</Selo>
+                          </td>
+                          <td className={`${TD} align-middle tabular-nums`}>{formatCalendarDate(o.data)}</td>
+                          <td className={`${TD_NUM} align-middle`}>{o.dias}</td>
+                          <td className={`${TD} align-middle text-right pr-0`}>
+                            {tela.podeAgir && (
+                              <FormularioDoDp2
+                                acao={excluirOcorrenciaAction}
+                                rotulo="Excluir"
+                                rotuloEnviando="Excluindo…"
+                                variante="secondary"
+                                tamanho="sm"
+                                confirmar={{ titulo: "Excluir o registro?", texto: "Os dias voltam para o saldo. O S-2230 gerado e a folha já calculada não mudam sozinhos: confira o eSocial e calcule a folha de novo.", rotulo: "Excluir" }}
+                              >
+                                <input type="hidden" name="ocorrenciaId" value={o.id} />
+                              </FormularioDoDp2>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {tela.podeAgir && (
+                <FormularioDoDp2 acao={registrarLicencaPremioAction} rotulo="Registrar" rotuloEnviando="Registrando…" variante="secondary">
+                  <input type="hidden" name="companyId" value={empresaId} />
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <CampoForm label="Colaborador" htmlFor="lp-personId">
+                      <Select id="lp-personId" name="personId" defaultValue="" required>
+                        <option value="" disabled>
+                          Escolha…
+                        </option>
+                        {saldosDaLicenca
+                          .filter(({ s }) => s.saldo > 0)
+                          .map(({ p, s }) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({s.saldo} d)
+                            </option>
+                          ))}
+                      </Select>
+                    </CampoForm>
+                    <CampoForm label="Registro" htmlFor="lp-tipo">
+                      <Select id="lp-tipo" name="tipo" defaultValue="LICENCA_PREMIO_GOZO">
+                        <option value="LICENCA_PREMIO_GOZO">Gozo (licença remunerada)</option>
+                        <option value="LICENCA_PREMIO_PAGA">Pagamento em dinheiro</option>
+                      </Select>
+                    </CampoForm>
+                    <CampoForm label="Início do gozo ou data do pagamento" htmlFor="lp-data" dica="O pagamento entra na folha do mês desta data.">
+                      <CampoData id="lp-data" name="data" required />
+                    </CampoForm>
+                    <CampoForm label="Dias" htmlFor="lp-dias">
+                      <Input id="lp-dias" name="dias" inputMode="numeric" maxLength={3} required />
+                    </CampoForm>
+                  </div>
+                  <CampoForm label="Observação" htmlFor="lp-obs" className="mt-4">
+                    <Input id="lp-obs" name="observacao" maxLength={500} />
+                  </CampoForm>
+                  <div className="mt-3">
+                    <Checkbox id="lp-s2230" name="gerarS2230" label="No gozo, gerar o S-2230 (licença remunerada, motivo 16)" defaultChecked />
+                  </div>
+                </FormularioDoDp2>
+              )}
+            </>
+          )}
+        </Secao>
+      )}
+
+      {pessoas.length > 0 && (
+        <Secao
+          titulo="Aposentadoria"
+          apoio="O aposentado que continua trabalhando segue com INSS e FGTS normais, e o cálculo do mês avisa. Na incapacidade permanente o contrato fica suspenso (S-2230 motivo 06). A aposentadoria especial depende do grau de exposição a agente nocivo no contrato, o mesmo do S-2240: ele gera o adicional do GILRAT e o grauExp do S-1200."
+        >
+          {aposentados.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Aposentadoria</th>
+                    <th className={TH}>Desde (DIB)</th>
+                    <th className={TH}>Benefício (NB)</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aposentados.map((o) => (
+                    <tr key={o.id} className={TR}>
+                      <td className={`${TD} align-middle`}>{nomeDaPessoa.get(o.personId) ?? "Fora desta empresa"}</td>
+                      <td className={`${TD} align-middle`}>
+                        <Selo tom={o.detalhe === "INCAPACIDADE" ? "atencao" : "neutro"}>{TIPOS_DE_APOSENTADORIA[o.detalhe ?? ""] ?? o.detalhe}</Selo>
+                      </td>
+                      <td className={`${TD} align-middle tabular-nums`}>{formatCalendarDate(o.data)}</td>
+                      <td className={`${TD} align-middle tabular-nums`}>{o.beneficio ?? "—"}</td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        {tela.podeAgir && (
+                          <FormularioDoDp2
+                            acao={excluirOcorrenciaAction}
+                            rotulo="Excluir"
+                            rotuloEnviando="Excluindo…"
+                            variante="secondary"
+                            tamanho="sm"
+                            confirmar={{ titulo: "Excluir a aposentadoria?", texto: "O registro sai da ficha. O S-2230 gerado não muda sozinho: confira o eSocial.", rotulo: "Excluir" }}
+                          >
+                            <input type="hidden" name="ocorrenciaId" value={o.id} />
+                          </FormularioDoDp2>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={registrarAposentadoriaAction} rotulo="Registrar" rotuloEnviando="Registrando…" variante="secondary">
+              <input type="hidden" name="companyId" value={empresaId} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <CampoForm label="Colaborador" htmlFor="ap-personId">
+                  <Select id="ap-personId" name="personId" defaultValue="" required>
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {pessoas
+                      .filter((p) => p.dp2Vinculo && !p.dismissalDate && !aposentadoDe.has(p.id))
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Tipo" htmlFor="ap-tipo">
+                  <Select id="ap-tipo" name="tipo" defaultValue="IDADE">
+                    {Object.entries(TIPOS_DE_APOSENTADORIA).map(([k, t]) => (
+                      <option key={k} value={k}>
+                        {t}
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Início do benefício (DIB)" htmlFor="ap-data">
+                  <CampoData id="ap-data" name="data" required />
+                </CampoForm>
+                <CampoForm label="Número do benefício (NB)" htmlFor="ap-nb" dica="10 algarismos, da carta de concessão.">
+                  <Input id="ap-nb" name="beneficio" inputMode="numeric" maxLength={13} />
+                </CampoForm>
+              </div>
+              <div className="mt-3">
+                <Checkbox id="ap-s2230" name="gerarS2230" label="Na incapacidade permanente, gerar o S-2230 (motivo 06): o contrato fica suspenso" defaultChecked />
+              </div>
             </FormularioDoDp2>
           )}
         </Secao>

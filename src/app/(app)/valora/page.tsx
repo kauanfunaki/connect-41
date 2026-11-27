@@ -7,6 +7,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Pagination } from "@/components/shared/Pagination";
+import { paginaDaUrl, totalDePaginas } from "@/lib/financeiro/paginaDeContas";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -31,31 +33,60 @@ const SITUACAO: Record<string, { rotulo: string; tom: TomDoSelo }> = {
 const numero = (d: { toNumber(): number } | null) => (d === null ? null : d.toNumber());
 
 /**
+ * Propostas por página (27/11/2026, melhoria-571): a lista ia até as 200 mais
+ * recentes; agora pagina no banco, e os números do topo contam todas.
+ */
+const POR_PAGINA = 50;
+
+/**
  * Propostas simuladas. O registro de ganhas e perdidas, com o motivo e o preço do
  * concorrente, é a fonte mais confiável de "quanto o mercado paga" — as tabelas
  * de sindicato são facultativas e ficam acima do praticado.
  */
-export default async function ValoraPage() {
+export default async function ValoraPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   const acesso = await acessoAoValora();
   if (!acesso) notFound();
 
-  const propostas = await getPrisma().valoraProposta.findMany({
-    where: { tenantId: acesso.tenantId },
-    select: {
-      id: true,
-      cliente: true,
-      perfil: true,
-      precoAlvo: true,
-      precoOferecido: true,
-      precoConcorrente: true,
-      status: true,
-      motivo: true,
-      createdAt: true,
-      createdBy: { select: { name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const params = await searchParams;
+  const prisma = getPrisma();
+  const where = { tenantId: acesso.tenantId };
+  const buscarPagina = (p: number) =>
+    prisma.valoraProposta.findMany({
+      where,
+      select: {
+        id: true,
+        cliente: true,
+        perfil: true,
+        precoAlvo: true,
+        precoOferecido: true,
+        precoConcorrente: true,
+        status: true,
+        motivo: true,
+        createdAt: true,
+        createdBy: { select: { name: true } },
+      },
+      // O id desempata as criadas no mesmo instante: a página não repete nem pula proposta.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (p - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+    });
+  const pedida = paginaDaUrl(params.pagina);
+  // Os números do topo contam todas as propostas, não a página: eram contados
+  // nas 200 que a tela trazia. O "Oferecido ÷ alvo" é a média das razões de
+  // cada proposta, que o banco não agrega pelo Prisma: lê só os dois preços.
+  const [porSituacao, comPreco, primeira] = await Promise.all([
+    prisma.valoraProposta.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.valoraProposta.findMany({
+      where: { ...where, precoAlvo: { not: null }, precoOferecido: { not: null } },
+      select: { precoAlvo: true, precoOferecido: true },
+    }),
+    buscarPagina(pedida),
+  ]);
+  const total = porSituacao.reduce((n, s) => n + s._count._all, 0);
+  const ultima = totalDePaginas(total, POR_PAGINA);
+  // Página além do fim (link antigo): mostra a última que existe.
+  const pagina = Math.min(pedida, ultima);
+  const propostas = pagina === pedida ? primeira : await buscarPagina(pagina);
   const linhas = propostas.map((p) => ({
     ...p,
     precoAlvo: numero(p.precoAlvo),
@@ -64,13 +95,17 @@ export default async function ValoraPage() {
     regime: ROTULO_REGIME[(p.perfil as Perfil).regime] ?? "—",
   }));
 
-  const ganhas = linhas.filter((p) => p.status === "GANHA").length;
-  const perdidas = linhas.filter((p) => p.status === "PERDIDA").length;
+  const naSituacao = (status: string) => porSituacao.find((s) => s.status === status)?._count._all ?? 0;
+  const abertas = naSituacao("ABERTA");
+  const ganhas = naSituacao("GANHA");
+  const perdidas = naSituacao("PERDIDA");
   const decididas = ganhas + perdidas;
   // Oferecido ÷ alvo: abaixo de 100% é desconto dado; acima, gordura que o cliente aceitou.
-  const comparaveis = linhas.filter((p) => p.precoAlvo && p.precoOferecido);
+  const comparaveis = comPreco
+    .map((p) => ({ alvo: numero(p.precoAlvo), oferecido: numero(p.precoOferecido) }))
+    .filter((p) => p.alvo && p.oferecido);
   const oferecidoSobreAlvo = comparaveis.length
-    ? comparaveis.reduce((s, p) => s + p.precoOferecido! / p.precoAlvo!, 0) / comparaveis.length
+    ? comparaveis.reduce((s, p) => s + p.oferecido! / p.alvo!, 0) / comparaveis.length
     : null;
 
   return (
@@ -101,7 +136,7 @@ export default async function ValoraPage() {
       {/* Os números do topo no cartão padrão, com ícone (30/09). */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Em aberto", valor: formatarNumero(linhas.filter((p) => p.status === "ABERTA").length, 0), icone: <Hourglass /> },
+          { rotulo: "Em aberto", valor: formatarNumero(abertas, 0), icone: <Hourglass /> },
           { rotulo: "Ganhas", valor: formatarNumero(ganhas, 0), icone: <Trophy />, tom: ganhas > 0 ? "text-success-fg" : undefined },
           {
             rotulo: "Taxa de fechamento",
@@ -121,7 +156,7 @@ export default async function ValoraPage() {
       {/* No casco das outras listas, com a contagem na barra — era a tabela
           sem casco (auditoria DRG-13, 07/10/2026). Sem Filtros na barra: os
           filtros desta lista são os funis das colunas. */}
-      <CascoDaTabela contagem={contarItens(linhas.length, "proposta", "propostas", linhas.length === 200)}>
+      <CascoDaTabela contagem={contarItens(total, "proposta", "propostas")}>
         {linhas.length === 0 ? (
           <EmptyState
             title="Nenhuma proposta ainda"
@@ -160,9 +195,10 @@ export default async function ValoraPage() {
               ))}
             </CartoesNoCelular>
 
-            {/* Casco padrão e funil por coluna (30/09). A lista vem inteira do
-                servidor (as 200 mais recentes), então o funil filtra no
-                navegador. Sem funil em cliente e nos preços: são únicos. */}
+            {/* Casco padrão e funil por coluna (30/09). O funil filtra no
+                navegador a página aberta — desde a paginação (27/11/2026,
+                melhoria-571), como em Exigências e Certificados. Sem funil em
+                cliente e nos preços: são únicos. */}
             <TabelaFiltravel
               linhas={linhas.map((p) => ({
                 id: p.id,
@@ -235,6 +271,13 @@ export default async function ValoraPage() {
           </>
         )}
       </CascoDaTabela>
+      <Pagination
+        page={pagina}
+        totalPages={ultima}
+        buildHref={(p) => (p > 1 ? `/valora?pagina=${p}` : "/valora")}
+        total={total}
+        rotulo="propostas"
+      />
     </PageContainer>
   );
 }

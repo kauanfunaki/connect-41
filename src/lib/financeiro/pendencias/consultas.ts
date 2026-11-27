@@ -8,6 +8,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
+import { totalDePaginas } from "@/lib/financeiro/paginaDeContas";
 import { situacaoDoPrazo, type SituacaoDoPrazo, type StatusDaPendencia, type TipoDaPendencia } from "./regras";
 import { whereDoRecorteDeSetor, type RecorteDeSetor } from "./setor";
 
@@ -92,74 +93,140 @@ export type LinhaDePendencia = {
 
 export type ContadoresDePendencias = { aguardando: number; respondidas: number; vencidas: number; encerradas: number };
 
+/** Teto de `listarPendencias` (portal e IA); as filas da equipe paginam. */
 const LIMITE_DA_LISTA = 500;
 
-export async function listarPendencias(
-  escopo: EscopoDePendencias,
-  filtro: { recorte: RecorteDePendencia; empresaId?: string | null; vencidas?: boolean },
-  agora: Date
-): Promise<{ linhas: LinhaDePendencia[]; contadores: ContadoresDePendencias; limitado: boolean }> {
-  const prisma = getPrisma();
+/** Pendências por página nas filas da equipe — paginadas no servidor desde 27/11/2026 (melhoria-571). */
+export const PENDENCIAS_POR_PAGINA = 50;
+
+type FiltroDePendencias = { recorte: RecorteDePendencia; empresaId?: string | null; vencidas?: boolean };
+
+const SELECT_DA_LINHA = {
+  id: true,
+  number: true,
+  title: true,
+  kind: true,
+  status: true,
+  dueDate: true,
+  updatedAt: true,
+  sectorCode: true,
+  company: { select: { id: true, name: true, displayName: true } },
+  _count: { select: { messages: true, attachments: true } },
+} satisfies Prisma.ClientRequestSelect;
+
+// Prazo mais próximo primeiro, sem prazo por último; empate pela mais parada —
+// é a ordem em que alguém precisa cobrar. O `id` no fim só desempata, para a
+// ordem não mudar entre uma página e a outra.
+const ORDEM_DA_FILA: Prisma.ClientRequestOrderByWithRelationInput[] = [
+  { dueDate: { sort: "asc", nulls: "last" } },
+  { updatedAt: "asc" },
+  { id: "asc" },
+];
+
+/** O `where` da lista e os pedaços que os contadores reaproveitam. */
+function consultaDaFila(escopo: EscopoDePendencias, filtro: FiltroDePendencias, agora: Date) {
   const base = whereDoEscopo(escopo);
   const daEmpresa: Prisma.ClientRequestWhereInput = filtro.empresaId ? { companyId: filtro.empresaId } : {};
   const vencida: Prisma.ClientRequestWhereInput = {
     status: { in: ["ABERTA", "RESPONDIDA"] },
     dueDate: { lt: inicioDeHoje(agora) },
   };
-
   const where: Prisma.ClientRequestWhereInput = {
     AND: [base, daEmpresa, whereDoRecorte(filtro.recorte), filtro.vencidas ? vencida : {}],
   };
+  return { base, daEmpresa, vencida, where };
+}
 
-  const [linhas, porStatus, vencidas] = await Promise.all([
-    prisma.clientRequest.findMany({
-      where,
-      select: {
-        id: true,
-        number: true,
-        title: true,
-        kind: true,
-        status: true,
-        dueDate: true,
-        updatedAt: true,
-        sectorCode: true,
-        company: { select: { id: true, name: true, displayName: true } },
-        _count: { select: { messages: true, attachments: true } },
-      },
-      // Prazo mais próximo primeiro, sem prazo por último; empate pela mais
-      // parada — é a ordem em que alguém precisa cobrar.
-      orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { updatedAt: "asc" }],
-      take: LIMITE_DA_LISTA + 1,
-    }),
+/** Os cartões do topo: da empresa filtrada, sem o recorte (são o mapa da fila). */
+async function contadoresDaFila(consulta: ReturnType<typeof consultaDaFila>): Promise<ContadoresDePendencias> {
+  const prisma = getPrisma();
+  const { base, daEmpresa, vencida } = consulta;
+  const [porStatus, vencidas] = await Promise.all([
     prisma.clientRequest.groupBy({ by: ["status"], where: { AND: [base, daEmpresa] }, _count: { _all: true } }),
     prisma.clientRequest.count({ where: { AND: [base, daEmpresa, vencida] } }),
   ]);
-
   const conta = (s: StatusDaPendencia) => porStatus.find((p) => p.status === s)?._count._all ?? 0;
   return {
-    linhas: linhas.slice(0, LIMITE_DA_LISTA).map((l) => ({
-      id: l.id,
-      numero: l.number,
-      titulo: l.title,
-      tipo: l.kind,
-      status: l.status,
-      prazo: l.dueDate,
-      situacaoDoPrazo: situacaoDoPrazo(l.dueDate, agora),
-      empresaId: l.company.id,
-      empresaNome: nomeExibicao(l.company),
-      setor: l.sectorCode,
-      atualizadaEm: l.updatedAt,
-      mensagens: l._count.messages,
-      anexos: l._count.attachments,
-    })),
-    contadores: {
-      aguardando: conta("ABERTA"),
-      respondidas: conta("RESPONDIDA"),
-      vencidas,
-      encerradas: conta("RESOLVIDA") + conta("CANCELADA"),
-    },
+    aguardando: conta("ABERTA"),
+    respondidas: conta("RESPONDIDA"),
+    vencidas,
+    encerradas: conta("RESOLVIDA") + conta("CANCELADA"),
+  };
+}
+
+function linhaDaFila(l: Prisma.ClientRequestGetPayload<{ select: typeof SELECT_DA_LINHA }>, agora: Date): LinhaDePendencia {
+  return {
+    id: l.id,
+    numero: l.number,
+    titulo: l.title,
+    tipo: l.kind,
+    status: l.status,
+    prazo: l.dueDate,
+    situacaoDoPrazo: situacaoDoPrazo(l.dueDate, agora),
+    empresaId: l.company.id,
+    empresaNome: nomeExibicao(l.company),
+    setor: l.sectorCode,
+    atualizadaEm: l.updatedAt,
+    mensagens: l._count.messages,
+    anexos: l._count.attachments,
+  };
+}
+
+/**
+ * A fila inteira até o teto — a lista do portal e a leitura da IA. As telas da
+ * equipe (Pendências do BPO e Pedidos ao cliente) usam `paginaDePendencias`.
+ */
+export async function listarPendencias(
+  escopo: EscopoDePendencias,
+  filtro: FiltroDePendencias,
+  agora: Date
+): Promise<{ linhas: LinhaDePendencia[]; contadores: ContadoresDePendencias; limitado: boolean }> {
+  const consulta = consultaDaFila(escopo, filtro, agora);
+  const [linhas, contadores] = await Promise.all([
+    getPrisma().clientRequest.findMany({ where: consulta.where, select: SELECT_DA_LINHA, orderBy: ORDEM_DA_FILA, take: LIMITE_DA_LISTA + 1 }),
+    contadoresDaFila(consulta),
+  ]);
+  return {
+    linhas: linhas.slice(0, LIMITE_DA_LISTA).map((l) => linhaDaFila(l, agora)),
+    contadores,
     limitado: linhas.length > LIMITE_DA_LISTA,
   };
+}
+
+/**
+ * Uma página da fila, para as telas da equipe (27/11/2026, melhoria-571): elas
+ * iam até as 500 primeiras, com o aviso "filtre para ver o resto". Mesmo
+ * `where`, mesma ordem e mesmos contadores de `listarPendencias`; a lista vem
+ * por `skip`/`take`, e `total` conta o recorte inteiro no banco. Página além do
+ * fim (link antigo, a fila andou) cai na última que existe.
+ */
+export async function paginaDePendencias(
+  escopo: EscopoDePendencias,
+  filtro: FiltroDePendencias,
+  agora: Date,
+  paginaPedida: number
+): Promise<{ linhas: LinhaDePendencia[]; contadores: ContadoresDePendencias; total: number; pagina: number; totalDePaginas: number }> {
+  const prisma = getPrisma();
+  const consulta = consultaDaFila(escopo, filtro, agora);
+  const pedida = Math.max(1, Math.floor(paginaPedida) || 1);
+  const buscarPagina = (p: number) =>
+    prisma.clientRequest.findMany({
+      where: consulta.where,
+      select: SELECT_DA_LINHA,
+      orderBy: ORDEM_DA_FILA,
+      skip: (p - 1) * PENDENCIAS_POR_PAGINA,
+      take: PENDENCIAS_POR_PAGINA,
+    });
+
+  const [primeira, total, contadores] = await Promise.all([
+    buscarPagina(pedida),
+    prisma.clientRequest.count({ where: consulta.where }),
+    contadoresDaFila(consulta),
+  ]);
+  const ultima = totalDePaginas(total, PENDENCIAS_POR_PAGINA);
+  const pagina = Math.min(pedida, ultima);
+  const linhas = pagina === pedida ? primeira : await buscarPagina(pagina);
+  return { linhas: linhas.map((l) => linhaDaFila(l, agora)), contadores, total, pagina, totalDePaginas: ultima };
 }
 
 /**
