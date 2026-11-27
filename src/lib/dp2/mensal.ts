@@ -28,6 +28,7 @@ import type { TabelasDaCompetencia } from "./tabelas";
 import { MARCA_DA_FIXA } from "./rubricasFixas";
 import { ehDomestico } from "./categorias";
 import { diasPeloInss, type AfastamentoNoMes } from "./afastamentos";
+import { descontoDoPlano, type PlanoNoMes } from "./planoDeSaude";
 
 export type Insalubridade = "NENHUM" | "MINIMO" | "MEDIO" | "MAXIMO";
 
@@ -171,6 +172,8 @@ export type EntradaMensal = {
    * pelo INSS saem do salário; os avisos vão para os alertas.
    */
   afastamentos?: readonly AfastamentoNoMes[];
+  /** Planos de saúde e odontológicos em que a pessoa está no mês (funcionalidade-762): a parte do empregado desconta. */
+  planos?: readonly PlanoNoMes[];
 };
 
 export const FGTS_ALIQUOTA = 8;
@@ -529,6 +532,14 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
           : `${reais(r2(cheio))} ÷ 30 = um dia de trabalho, autorizado pelo empregado (CLT arts. 545 e 578)`
       )
     );
+  }
+
+  // ── Plano de saúde e odontológico (funcionalidade-762) ──
+  // A parte do empregado desconta no mês, sem efeito no INSS, no FGTS e no IRRF
+  // (a despesa médica só deduz no ajuste anual; o S-1210 informa o valor).
+  for (const p of e.planos ?? []) {
+    const d = descontoDoPlano(p);
+    if (d.valor > 0) itens.push(itemDaRubrica(R(p.tipo === "ODONTO" ? "PLANO_ODONTO" : "PLANO_SAUDE"), d.valor, p.dependentes > 0 ? `${p.dependentes} dep.` : "titular", d.memoria));
   }
 
   // ── Bases, INSS e salário-família ──

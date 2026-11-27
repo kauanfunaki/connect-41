@@ -39,10 +39,11 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, guardarDocumentoAction, excluirAlocacaoAction, gerarEventoDaTransferenciaAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction } from "../actions";
+import { apagarSaldoInicialAction, conferirSaldoInicialAction, criarColaboradorDp2Action, excluirOcorrenciaAction, importarSaldoInicialAction, alterarEmLoteAction, aplicarNiveisAction, guardarDocumentoAction, excluirAlocacaoAction, gerarEventoDaTransferenciaAction, excluirEntregaDeEpiAction, registrarEntregaDeEpiAction, reajusteColetivoAction, registrarAlocacaoAction, registrarOcorrenciaAction, salvarVinculoAction, transferirColaboradorAction, criarPlanoDeSaudeAction, excluirPlanoDeSaudeAction, aderirAoPlanoAction, encerrarAdesaoAction, excluirAdesaoAction } from "../actions";
 import { nomeExibicao } from "@/lib/companyName";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { resumirSaldoInicial } from "@/lib/dp2/saldoInicial";
+import { TIPOS_DE_PLANO } from "@/lib/dp2/planoDeSaude";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
 
@@ -173,6 +174,18 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     getPrisma().dp2EntregaDeEpi.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, include: { person: { select: { name: true } }, epi: { select: { nome: true, ca: true } } }, orderBy: [{ data: "desc" }, { createdAt: "desc" }], take: 50 }),
   ]);
   const hojeNoEpi = new Date().toISOString().slice(0, 10);
+  // Planos de saúde (funcionalidade-762): os planos da empresa, as adesões e os dependentes dos colaboradores.
+  const [planosDaEmpresa, adesoesDaEmpresa, dependentesDaEmpresa] = await Promise.all([
+    getPrisma().dp2PlanoDeSaude.findMany({ where: { tenantId: tela.tenantId, companyId: empresaAtual }, orderBy: { nome: "asc" } }),
+    getPrisma().dp2AdesaoAoPlano.findMany({
+      where: { tenantId: tela.tenantId, companyId: empresaAtual },
+      include: { person: { select: { name: true } }, plano: { select: { nome: true, valorTitular: true, valorDependente: true } } },
+      orderBy: [{ inicio: "desc" }],
+      take: 100,
+    }),
+    getPrisma().dependente.findMany({ where: { tenantId: tela.tenantId, personId: { in: pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate).map((p) => p.id) } }, select: { id: true, name: true, cpf: true, personId: true }, orderBy: { name: "asc" } }),
+  ]);
+  const dependenteDe = new Map(dependentesDaEmpresa.map((d) => [d.id, d]));
   // O nome das empresas das transferências, mesmo as que hoje estão fora do grupo.
   const empresasDasTransferencias = transferencias.length
     ? await getPrisma().company.findMany({
@@ -491,6 +504,9 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             placeholder="0,00"
             defaultValue={v?.previdenciaComplementar != null ? reais(Number(v.previdenciaComplementar)) : ""}
           />
+        </CampoForm>
+        <CampoForm label="CNPJ da entidade de previdência" htmlFor="previdenciaCnpj" className="mt-4 max-w-xs" dica="Vai no S-1210 com o valor deduzido do IRRF.">
+          <Input id="previdenciaCnpj" name="previdenciaCnpj" inputMode="numeric" maxLength={18} defaultValue={v?.previdenciaCnpj ?? ""} />
         </CampoForm>
         <CampoForm
           label="Custo diário do vale-transporte"
@@ -1047,6 +1063,194 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                 );
               })}
             </ul>
+          )}
+        </Secao>
+      )}
+
+      {pessoas.some((p) => p.dp2Vinculo) && (
+        <Secao
+          titulo="Planos de saúde"
+          apoio="Os planos de saúde e odontológicos da empresa e quem está em cada um, com os dependentes. A parte do empregado desconta na folha do mês, sem efeito no INSS, FGTS e IRRF; a coparticipação é lançada na competência (rubrica 069). O S-1210 informa o que o titular e cada dependente pagaram, com o CNPJ e o registro ANS da operadora."
+        >
+          {planosDaEmpresa.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[720px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Plano</th>
+                    <th className={TH}>Operadora</th>
+                    <th className={TH_NUM}>Titular</th>
+                    <th className={TH_NUM}>Por dependente</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {planosDaEmpresa.map((pl) => (
+                    <tr key={pl.id} className={TR}>
+                      <td className={`${TD} align-middle`}>
+                        {pl.nome} <Selo tom="neutro">{TIPOS_DE_PLANO[pl.tipo] ?? pl.tipo}</Selo>
+                      </td>
+                      <td className={`${TD} align-middle tabular-nums`}>
+                        CNPJ {pl.cnpjOperadora.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}
+                        {pl.registroAns ? ` · ANS ${pl.registroAns}` : ""}
+                      </td>
+                      <td className={`${TD_NUM} align-middle`}>{brl(Number(pl.valorTitular))}</td>
+                      <td className={`${TD_NUM} align-middle`}>{brl(Number(pl.valorDependente))}</td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        {tela.podeAgir && (
+                          <FormularioDoDp2
+                            acao={excluirPlanoDeSaudeAction}
+                            rotulo="Excluir"
+                            rotuloEnviando="Excluindo…"
+                            variante="secondary"
+                            tamanho="sm"
+                            confirmar={{ titulo: "Excluir o plano?", texto: "Só sai se ninguém estiver nele.", rotulo: "Excluir" }}
+                          >
+                            <input type="hidden" name="planoId" value={pl.id} />
+                          </FormularioDoDp2>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={criarPlanoDeSaudeAction} rotulo="Cadastrar plano" rotuloEnviando="Cadastrando…" variante="secondary" className="mb-6">
+              <input type="hidden" name="companyId" value={empresaId} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <CampoForm label="Plano" htmlFor="pl-nome">
+                  <Input id="pl-nome" name="nome" maxLength={120} placeholder="Operadora e produto" required />
+                </CampoForm>
+                <CampoForm label="Tipo" htmlFor="pl-tipo">
+                  <Select id="pl-tipo" name="tipo" defaultValue="SAUDE">
+                    {Object.entries(TIPOS_DE_PLANO).map(([k, t]) => (
+                      <option key={k} value={k}>
+                        {t}
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="CNPJ da operadora" htmlFor="pl-cnpj">
+                  <Input id="pl-cnpj" name="cnpjOperadora" inputMode="numeric" maxLength={18} required />
+                </CampoForm>
+                <CampoForm label="Registro na ANS" htmlFor="pl-ans" dica="6 algarismos, na carteirinha ou no contrato.">
+                  <Input id="pl-ans" name="registroAns" inputMode="numeric" maxLength={6} />
+                </CampoForm>
+                <CampoForm label="Parte do empregado: titular" htmlFor="pl-tit">
+                  <Input id="pl-tit" name="valorTitular" inputMode="decimal" prefix="R$" />
+                </CampoForm>
+                <CampoForm label="Parte do empregado: por dependente" htmlFor="pl-dep">
+                  <Input id="pl-dep" name="valorDependente" inputMode="decimal" prefix="R$" />
+                </CampoForm>
+              </div>
+            </FormularioDoDp2>
+          )}
+          {adesoesDaEmpresa.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[820px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Plano</th>
+                    <th className={TH}>Dependentes</th>
+                    <th className={TH}>Período</th>
+                    <th className={TH_NUM}>Desconto/mês</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adesoesDaEmpresa.map((ad) => {
+                    const ids = Array.isArray(ad.dependentes) ? (ad.dependentes as string[]) : [];
+                    return (
+                      <tr key={ad.id} className={TR}>
+                        <td className={`${TD} align-middle`}>{ad.person.name}</td>
+                        <td className={`${TD} align-middle`}>{ad.plano.nome}</td>
+                        <td className={`${TD} align-middle`}>{ids.length ? ids.map((id) => dependenteDe.get(id)?.name ?? "—").join(", ") : "—"}</td>
+                        <td className={`${TD} align-middle tabular-nums`}>
+                          {formatCalendarDate(ad.inicio)}
+                          {ad.fim ? ` a ${formatCalendarDate(ad.fim)}` : " em diante"}
+                        </td>
+                        <td className={`${TD_NUM} align-middle`}>{brl(Number(ad.plano.valorTitular) + ids.length * Number(ad.plano.valorDependente))}</td>
+                        <td className={`${TD} align-middle text-right pr-0`}>
+                          {tela.podeAgir && (
+                            <span className="inline-flex flex-wrap items-end justify-end gap-2">
+                              {!ad.fim && (
+                                <FormularioDoDp2 acao={encerrarAdesaoAction} rotulo="Encerrar" rotuloEnviando="Encerrando…" variante="secondary" tamanho="sm" className="flex items-end gap-2">
+                                  <input type="hidden" name="adesaoId" value={ad.id} />
+                                  <CampoData id={`ad-fim-${ad.id}`} name="fim" />
+                                </FormularioDoDp2>
+                              )}
+                              <FormularioDoDp2
+                                acao={excluirAdesaoAction}
+                                rotulo="Excluir"
+                                rotuloEnviando="Excluindo…"
+                                variante="secondary"
+                                tamanho="sm"
+                                confirmar={{ titulo: "Excluir a adesão?", texto: "O desconto sai das próximas folhas calculadas. Para quem saiu do plano, prefira encerrar.", rotulo: "Excluir" }}
+                              >
+                                <input type="hidden" name="adesaoId" value={ad.id} />
+                              </FormularioDoDp2>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && planosDaEmpresa.length > 0 && (
+            <FormularioDoDp2 acao={aderirAoPlanoAction} rotulo="Incluir no plano" rotuloEnviando="Incluindo…" variante="secondary">
+              <input type="hidden" name="companyId" value={empresaId} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <CampoForm label="Colaborador" htmlFor="ad-personId">
+                  <Select id="ad-personId" name="personId" defaultValue="" required>
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {pessoas
+                      .filter((p) => p.dp2Vinculo && !p.dismissalDate)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Plano" htmlFor="ad-planoId">
+                  <Select id="ad-planoId" name="planoId" defaultValue={planosDaEmpresa[0].id}>
+                    {planosDaEmpresa.map((pl) => (
+                      <option key={pl.id} value={pl.id}>
+                        {pl.nome}
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Desde" htmlFor="ad-inicio">
+                  <CampoData id="ad-inicio" name="inicio" required />
+                </CampoForm>
+                <CampoForm label="Até (se já tiver data)" htmlFor="ad-fim">
+                  <CampoData id="ad-fim" name="fim" />
+                </CampoForm>
+              </div>
+              {dependentesDaEmpresa.length > 0 && (
+                <fieldset className="mt-4">
+                  <legend className="text-fs-3 text-fg-muted mb-2">Dependentes no plano (marque só os do colaborador escolhido)</legend>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {dependentesDaEmpresa.map((d) => (
+                      <Checkbox key={d.id} id={`ad-dep-${d.id}`} name="dependentes" value={d.id} label={`${d.name} (de ${nomeDaPessoa.get(d.personId) ?? "—"})${d.cpf ? "" : " · sem CPF"}`} />
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+            </FormularioDoDp2>
           )}
         </Secao>
       )}

@@ -13,6 +13,7 @@
 //
 // Puro, sem banco.
 
+import type { PlanoParaS1210 } from "../planoDeSaude";
 import { semVinculo } from "../categorias";
 import { el, serializar, decimal, type No } from "./xml";
 import { cnaeDoEsocial, cnpjValido, cpfValido, digitos, idDoEvento, raizDoCnpj } from "./documentos";
@@ -91,6 +92,12 @@ export type TrabalhadorEsocial = {
    * ideADC por instrumento e um idePeriodo por mês de referência.
    */
   perAnt?: PeriodosAnteriores[];
+  /**
+   * Informações complementares do IRRF (funcionalidade-762): a previdência
+   * complementar deduzida e o que o titular e cada dependente pagaram ao plano
+   * de saúde. Vão no infoIRComplem do S-1210.
+   */
+  irComplementar?: { previdencia: { cnpj: string | null; valor: number } | null; planos: PlanoParaS1210[]; semCpf: string[] } | null;
 };
 
 /** Um instrumento (convenção, acordo, dissídio…) e as diferenças de cada mês. */
@@ -408,9 +415,38 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
  * O pagamento. `perApur` é o mês em que se pagou; `perRef`, o período do
  * demonstrativo pago (o mesmo mês na folha; o ano no 13º).
  */
+/** Código de receita do IRRF sobre o trabalho assalariado (tpCR do infoIRCR). */
+export const CODIGO_DA_RECEITA_DO_IRRF = "056107";
+
 export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId, perRef: string = perApur, retifica: string | null = null): EventoGerado {
   const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t).filter((p) => !p.texto.includes("matrícula") && !p.texto.includes("nascimento"))];
   if (!dtPgto) pendencias.push({ onde: "competencia", texto: "Informe a data do pagamento ao gerar os periódicos.", link: null, bloqueia: true });
+  // Previdência complementar e plano de saúde (funcionalidade-762): o infoIRComplem.
+  const ir = t.irComplementar;
+  const previdencia = ir?.previdencia && ir.previdencia.valor > 0 ? ir.previdencia : null;
+  if (previdencia && !previdencia.cnpj) {
+    pendencias.push({ onde: "colaborador", texto: `${t.nome}: informe no contrato o CNPJ da entidade de previdência complementar; sem ele a dedução não vai no S-1210.`, link: null, bloqueia: false });
+  }
+  for (const nome of ir?.semCpf ?? []) {
+    pendencias.push({ onde: "colaborador", texto: `${t.nome}: o dependente ${nome} está no plano de saúde sem CPF e ficou fora do S-1210. Informe o CPF no cadastro de dependentes.`, link: null, bloqueia: false });
+  }
+  const planos = ir?.planos ?? [];
+  const infoIRComplem =
+    previdencia?.cnpj || planos.length
+      ? el("infoIRComplem", [
+          previdencia?.cnpj
+            ? el("infoIRCR", [el("tpCR", CODIGO_DA_RECEITA_DO_IRRF), el("previdCompl", [el("tpPrev", "1"), el("cnpjEntidPC", digitos(previdencia.cnpj)), el("vlrDedPC", decimal(previdencia.valor))])])
+            : null,
+          ...planos.map((p) =>
+            el("planSaude", [
+              el("cnpjOper", digitos(p.cnpjOperadora)),
+              el("regANS", p.registroAns),
+              el("vlrSaudeTit", decimal(p.titular)),
+              ...p.dependentes.map((d) => el("infoDepSau", [el("cpfDep", d.cpf), el("vlrSaudeDep", decimal(d.valor))])),
+            ])
+          ),
+        ])
+      : null;
   const id = novoId();
   const xml = envelope("S-1210", id, [
     el("ideEvento", [el("indRetif", retifica ? "2" : "1"), el("nrRecibo", retifica), el("perApur", perApur), el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]),
@@ -418,6 +454,7 @@ export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: strin
     el("ideBenef", [
       el("cpfBenef", digitos(t.cpf)),
       el("infoPgto", [el("dtPgto", dtPgto), el("tpPgto", "1"), el("perRef", perRef), el("ideDmDev", ideDmDev(perRef)), el("vrLiq", decimal(t.liquido))]),
+      infoIRComplem,
     ]),
   ]);
   return { tipo: "S-1210", referencia: `${perRef} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };

@@ -7,6 +7,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { garantirRubricas, mediaDaPessoa, tabelasDoEscritorio, vinculoDoMotor } from "@/lib/dp2/servidor";
+import { adesaoNoMes, planosParaS1210 } from "@/lib/dp2/planoDeSaude";
 import { competenciaDe, tabelasDaCompetencia } from "@/lib/dp2/tabelas";
 import { calcularRescisaoDoDp2 } from "@/lib/dp2/rescisao";
 import { dataProjetada, diasDeAvisoPrevio } from "@/lib/rescisao/avos";
@@ -171,8 +172,18 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
 
   const calculos = await prisma.dp2Calculo.findMany({
     where: { tenantId, competenciaId },
-    include: { person: { select: { id: true, name: true, cpf: true, birthDate: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true } } } } },
+    include: { person: { select: { id: true, name: true, cpf: true, birthDate: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true, previdenciaCnpj: true } } } } },
   });
+  // Plano de saúde e previdência complementar (funcionalidade-762): o infoIRComplem do S-1210.
+  const adesoesAoPlano = anual
+    ? []
+    : (await prisma.dp2AdesaoAoPlano.findMany({ where: { tenantId, personId: { in: calculos.map((c) => c.person.id) } }, include: { plano: true } })).filter((a) =>
+        adesaoNoMes({ inicio: a.inicio.toISOString().slice(0, 10), fim: a.fim ? a.fim.toISOString().slice(0, 10) : null }, comp.ano, comp.mes)
+      );
+  const idsDosDependentes = adesoesAoPlano.flatMap((a) => (Array.isArray(a.dependentes) ? (a.dependentes as string[]) : []));
+  const dependentesDoPlano = new Map(
+    (idsDosDependentes.length ? await prisma.dependente.findMany({ where: { tenantId, id: { in: idsDosDependentes } }, select: { id: true, name: true, cpf: true } }) : []).map((d) => [d.id, d])
+  );
   // Os S-1200/S-1210 já aceitos do período: o novo sai como retificação, com o recibo (funcionalidade-754).
   const aceitos = await prisma.dp2EventoEsocial.findMany({
     where: { tenantId, companyId: comp.companyId, tipo: { in: ["S-1200", "S-1210"] }, situacao: "ACEITO", personId: { in: calculos.map((c) => c.person.id) } },
@@ -228,6 +239,25 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
       nascimento: isoDoDia(c.person.birthDate),
       infoMV: infoMVDoCalculo(c.memoria, outrasBases.filter((o) => o.personId === c.person.id)),
       perAnt,
+      irComplementar: anual
+        ? null
+        : (() => {
+            const previdenciaPaga = doCalculo.filter((i) => i.papel === "PREVIDENCIA_COMPLEMENTAR").reduce((s, i) => s + i.valor, 0);
+            const coparticipacao = doCalculo.filter((i) => i.papel === "COPARTICIPACAO_PLANO").reduce((s, i) => s + i.valor, 0);
+            const { planos, semCpf } = planosParaS1210(
+              adesoesAoPlano
+                .filter((a) => a.personId === c.person.id)
+                .map((a) => ({
+                  plano: { tipo: a.plano.tipo === "ODONTO" ? ("ODONTO" as const) : ("SAUDE" as const), cnpjOperadora: a.plano.cnpjOperadora, registroAns: a.plano.registroAns ?? "", valorTitular: n(a.plano.valorTitular), valorDependente: n(a.plano.valorDependente) },
+                  dependentes: (Array.isArray(a.dependentes) ? (a.dependentes as string[]) : [])
+                    .map((id) => dependentesDoPlano.get(id))
+                    .filter((d): d is { id: string; name: string; cpf: string | null } => !!d)
+                    .map((d) => ({ cpf: d.cpf, nome: d.name })),
+                })),
+              coparticipacao
+            );
+            return { previdencia: previdenciaPaga > 0 ? { cnpj: v?.previdenciaCnpj ?? null, valor: Math.round(previdenciaPaga * 100) / 100 } : null, planos, semCpf };
+          })(),
     };
     const r1200 = aceitoDe("S-1200", c.person.id, perApur);
     const r1210 = aceitoDe("S-1210", c.person.id, perApur);

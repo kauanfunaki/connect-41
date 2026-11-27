@@ -9,6 +9,7 @@ import { lerDadosEsocial } from "./esocial/cadastro";
 import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
 import { diasDeSuspensaoNoMes } from "./ocorrencias";
+import { adesaoNoMes, type PlanoNoMes } from "./planoDeSaude";
 import { afastamentosDosXml, afastamentosNoMes, type AfastamentoNoMes } from "./afastamentos";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
@@ -477,6 +478,19 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
       comp.ano,
       comp.mes
     );
+  // Planos de saúde do mês (funcionalidade-762): a parte do empregado desconta na folha.
+  const adesoesAoPlano =
+    comp.tipo === "MENSAL" ? await getPrisma().dp2AdesaoAoPlano.findMany({ where: { tenantId, personId: { in: pessoas.map((p) => p.id) } }, include: { plano: true } }) : [];
+  const planosDe = (personId: string): PlanoNoMes[] =>
+    adesoesAoPlano
+      .filter((a) => a.personId === personId && adesaoNoMes({ inicio: a.inicio.toISOString().slice(0, 10), fim: a.fim ? a.fim.toISOString().slice(0, 10) : null }, comp.ano, comp.mes))
+      .map((a) => ({
+        tipo: a.plano.tipo === "ODONTO" ? "ODONTO" : "SAUDE",
+        nome: a.plano.nome,
+        valorTitular: Number(a.plano.valorTitular),
+        valorDependente: Number(a.plano.valorDependente),
+        dependentes: Array.isArray(a.dependentes) ? a.dependentes.length : 0,
+      }));
   // Afastamentos do mês, dos S-2230 (funcionalidade-749).
   const afastamentosDe = comp.tipo === "MENSAL" ? await afastamentosDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, AfastamentoNoMes[]>();
 
@@ -566,6 +580,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         diasDeSuspensao: suspensaoDe(p.id),
         afastamentos: afastamentosDe.get(p.id),
         outrasBasesInss: outrasDe(p.id),
+        planos: planosDe(p.id),
       });
       // Transferência no mês (funcionalidade-771): o fim do trecho não é desligamento.
       if (p.transferencia) {

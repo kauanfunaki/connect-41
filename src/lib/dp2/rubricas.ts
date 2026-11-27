@@ -28,6 +28,10 @@ export type PapelDaRubrica =
   | "ADIANTAMENTO"
   | "PENSAO"
   | "PREVIDENCIA_COMPLEMENTAR"
+  // Plano de saúde e odontológico (27/11/2026, funcionalidade-762): a parte do empregado e a coparticipação.
+  | "PLANO_SAUDE"
+  | "PLANO_ODONTO"
+  | "COPARTICIPACAO_PLANO"
   | "CONTRIBUICAO_SINDICAL"
   | "FGTS"
   | "DECIMO_PRIMEIRA"
@@ -151,6 +155,10 @@ const PADRAO: Padrao[] = [
   { codigo: "063", nome: "INSS sobre o 13º", tipo: "DESCONTO", papel: "INSS_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "064", nome: "IRRF sobre o 13º", tipo: "DESCONTO", papel: "IRRF_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "065", nome: "Previdência complementar", tipo: "DESCONTO", papel: "PREVIDENCIA_COMPLEMENTAR", lancamento: "VALOR", incide: "NENHUMA" },
+  // Plano de saúde (funcionalidade-762): sem efeito no INSS, FGTS e IRRF do mês; vai no S-1210.
+  { codigo: "067", nome: "Plano de saúde", tipo: "DESCONTO", papel: "PLANO_SAUDE", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "068", nome: "Plano odontológico", tipo: "DESCONTO", papel: "PLANO_ODONTO", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "069", nome: "Coparticipação do plano de saúde", tipo: "DESCONTO", papel: "COPARTICIPACAO_PLANO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "066", nome: "INSS sobre diferenças retroativas", tipo: "DESCONTO", papel: "INSS_DIFERENCA", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "070", nome: "Aviso prévio indenizado", tipo: "PROVENTO", papel: "AVISO_INDENIZADO", lancamento: "VALOR", incide: "SO_FGTS" },
   { codigo: "071", nome: "Desconto do aviso prévio", tipo: "DESCONTO", papel: "AVISO_DESCONTO", lancamento: "VALOR", incide: "NENHUMA" },
