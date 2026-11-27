@@ -726,6 +726,16 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Gravar o NIRE e o quadro societário depois do registro",
+        passos: [
+          "Na constituição, alteração, distrato, reorganização ou baixa, o processo tem o cartão “Registro na Junta”.",
+          "Antes, confira em “Sócios” se o quadro já está como ficou depois do ato: quem entrou, quem saiu, quotas e capital.",
+          "No cartão, informe o NIRE e a data do registro e deixe marcado “Guardar o quadro societário de agora com esta data”. Clique em “Gravar na empresa”.",
+          "O NIRE e a data vão para a ficha da empresa, e a foto dos sócios fica em Sócios › “Quadro societário por data”, com o que mudou desde a foto anterior.",
+          "Em Sócios, “Dados societários” guarda também o capital social e o integralizado, o objeto social e o responsável legal. “Guardar o quadro de hoje” tira a foto fora de um processo.",
+        ],
+      },
+      {
         titulo: "Revisar as propostas da Ceci",
         passos: [
           "Clique em “Ceci · Societário”, no alto de “Processos”. O botão aparece para a coordenação.",
