@@ -177,7 +177,7 @@ function opcional(v: string | undefined, max: number): string | null {
 type Quadro = { tag: string; campos: Map<string, string> };
 
 /** Normaliza texto para compor o id gerado: sem espaço duplo nem caixa. */
-function chaveDeTexto(t: string | null): string {
+export function chaveDeTexto(t: string | null): string {
   return (t ?? "").replace(/\s+/g, " ").trim().toUpperCase();
 }
 
@@ -195,7 +195,7 @@ function chaveDeTexto(t: string | null): string {
  * se a ordem mudar. É o banco que precisa mandar FITID; a tela avisa quando não
  * mandou.
  */
-function idDeterministico(t: { dataKey: string; centavos: number; memo: string | null; nome: string | null }, ordinal: number) {
+export function idDeterministico(t:{ dataKey: string; centavos: number; memo: string | null; nome: string | null }, ordinal: number) {
   const base = [t.dataKey, t.centavos, chaveDeTexto(t.memo), chaveDeTexto(t.nome), ordinal].join("|");
   return `GERADO-${createHash("sha256").update(base).digest("hex").slice(0, 40)}`;
 }
