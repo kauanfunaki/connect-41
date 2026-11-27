@@ -747,6 +747,25 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Enviar os modelos de documento",
+        passos: [
+          "No botão “⋯” do alto de “Processos”, escolha “Modelos de documento”. A tela é da coordenação do setor.",
+          "Clique em “Baixar a lista de campos (.docx)” para ver todos os campos que o Connect preenche, como {EMPRESA_RAZAO_SOCIAL} e {CAPITAL_SOCIAL_EXTENSO}.",
+          "No .docx do contrato social, da alteração ou do distrato, escreva cada campo entre chaves onde o dado deve entrar. Para repetir um trecho por sócio, abra com {#SOCIOS} e feche com {/SOCIOS}.",
+          "Clique em “Enviar modelo”, escolha o tipo, dê um nome e envie o arquivo. Se algum campo não for do Connect, a tela avisa: ele sai em branco.",
+          "Em “Advogados e testemunhas”, cadastre quem costuma assinar, com CPF, RG e, no advogado, a OAB.",
+        ],
+      },
+      {
+        titulo: "Gerar um documento no processo",
+        passos: [
+          "No processo, em “Gerar documento”, escolha o modelo.",
+          "Escolha o advogado e as duas testemunhas. A escolha fica gravada no processo.",
+          "Se aparecer “Sai em branco”, falta aquele dado no cadastro da empresa ou dos sócios. Dá para gerar assim e completar no Word, ou corrigir antes na ficha da empresa.",
+          "Clique em “Gerar e baixar”. O .docx sai preenchido com o cadastro de agora e fica guardado nos Arquivos da empresa, na pasta Societário. O cliente não vê.",
+        ],
+      },
+      {
         titulo: "Escolher a cor de cada tipo de processo",
         passos: [
           "No botão “⋯” do alto de “Processos”, escolha “Roteiros dos processos”.",

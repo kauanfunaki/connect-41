@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Contador } from "@/components/ui/Contador";
-import { Plus, Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle, ListOrdered } from "lucide-react";
+import { Plus, Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle, ListOrdered, FileText } from "lucide-react";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { podeNoModulo } from "@/lib/auth/modulo";
@@ -196,6 +196,9 @@ export default async function ProcessosPage({
           <MenuDeMaisAcoes rotulo="Mais ações dos processos" size="md" width={300} sempreMenu classeDoGatilho="h-9! w-9!">
             <ItemDoMenu href="/processos/roteiros" icone={<ListOrdered />} descricao="Etapas, órgãos e checklist de cada tipo de processo.">
               Roteiros dos processos
+            </ItemDoMenu>
+            <ItemDoMenu href="/processos/modelos" icone={<FileText />} descricao="Contrato, alteração e distrato em .docx, com advogados e testemunhas.">
+              Modelos de documento
             </ItemDoMenu>
           </MenuDeMaisAcoes>
         )}
