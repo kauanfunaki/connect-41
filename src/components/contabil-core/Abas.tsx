@@ -4,7 +4,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { formatCalendarDate, formatCnpj, formatCpf, formatInstantDateTime } from "@/lib/format";
 import { listarAgencias, listarContas, listarContrapartes, listarRegras } from "@/lib/contabil-core/servidor/cadastros";
 import { listarImportacoes } from "@/lib/contabil-core/servidor/importacao";
-import { listarPendencias } from "@/lib/contabil-core/servidor/neo";
+import { listarPendencias, PENDENCIAS_POR_PAGINA } from "@/lib/contabil-core/servidor/neo";
 import { filaAgrupada } from "@/lib/contabil-core/servidor/neoAvancado";
 import { texto as textoDec } from "@/lib/contabil-core/motor/decimal";
 import { listarExtrato, listarRegistros, POR_PAGINA, ultimoMesComLancamento } from "@/lib/contabil-core/servidor/consultas";
@@ -71,8 +71,12 @@ async function opcoes(c: ContextoDaAba) {
   };
 }
 
-function Paginacao({ c, aba, total }: { c: ContextoDaAba; aba: string; total: number }) {
-  const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+/**
+ * `pagina` é a que o servidor mostrou (a pedida, ou a última quando a pedida passou do fim); sem ela, a da
+ * URL. `porPagina` muda na fila do NEO (melhoria-571).
+ */
+function Paginacao({ c, aba, total, pagina = c.pagina, porPagina = POR_PAGINA }: { c: ContextoDaAba; aba: string; total: number; pagina?: number; porPagina?: number }) {
+  const paginas = Math.max(1, Math.ceil(total / porPagina));
   if (paginas === 1) return null;
   const href = (p: number) => {
     const q = new URLSearchParams({ empresa: c.empresaId, aba, pagina: String(p) });
@@ -84,11 +88,11 @@ function Paginacao({ c, aba, total }: { c: ContextoDaAba; aba: string; total: nu
   };
   return (
     <nav className="mt-3 flex items-center gap-3 text-sm" aria-label="Páginas">
-      {c.pagina > 1 && <Link href={href(c.pagina - 1)} className="text-brand hover:underline">Anterior</Link>}
+      {pagina > 1 && <Link href={href(pagina - 1)} className="text-brand hover:underline">Anterior</Link>}
       <span className="text-fg-muted">
-        Página {c.pagina} de {paginas} · {total} itens
+        Página {pagina} de {paginas} · {total} itens
       </span>
-      {c.pagina < paginas && <Link href={href(c.pagina + 1)} className="text-brand hover:underline">Próxima</Link>}
+      {pagina < paginas && <Link href={href(pagina + 1)} className="text-brand hover:underline">Próxima</Link>}
     </nav>
   );
 }
@@ -290,12 +294,12 @@ export async function AbaNeo({ c }: { c: ContextoDaAba }) {
 }
 
 async function PendenciasDoNeo({ c, vistas }: { c: ContextoDaAba; vistas: React.ReactNode }) {
-  const [{ opcoesDeAgencia, opcoesDeConta }, pendencias, fila] = await Promise.all([
+  const [{ opcoesDeAgencia, opcoesDeConta }, { itens: pendencias, total, pagina }, fila] = await Promise.all([
     opcoes(c),
-    listarPendencias(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes, busca: c.busca }),
+    listarPendencias(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes, busca: c.busca, pagina: c.pagina }),
     filaAgrupada(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes }),
   ]);
-  // Os grupos marcam só o que está na tela (as 500 primeiras pendências da seleção).
+  // Os grupos marcam só o que está na tela (as pendências da página aberta).
   const naTela = new Set(pendencias.map((p) => p.id));
   return (
     <div className="flex flex-col gap-4">
@@ -303,6 +307,8 @@ async function PendenciasDoNeo({ c, vistas }: { c: ContextoDaAba; vistas: React.
       <Filtros empresaId={c.empresaId} aba="neo" mes={c.mes} agenciaId={c.agenciaId} agencias={opcoesDeAgencia} busca={c.busca} />
       {c.podeAgir && <ProcessarNeo empresaId={c.empresaId} agenciaId={c.agenciaId} mes={c.mes} />}
       <FilaDoNeo
+        // A chave zera as marcadas ao trocar de página: a marca de uma página não vale na outra.
+        key={pagina}
         empresaId={c.empresaId}
         contas={opcoesDeConta}
         agencias={opcoesDeAgencia}
@@ -330,7 +336,7 @@ async function PendenciasDoNeo({ c, vistas }: { c: ContextoDaAba; vistas: React.
           recusadaPorPessoa: !!p.autoRecusadoEm,
         }))}
       />
-      {pendencias.length >= 500 && <p className="text-micro text-fg-muted">Mostrando as 500 primeiras. Filtre por mês ou conta para ver o resto.</p>}
+      <Paginacao c={c} aba="neo" total={total} pagina={pagina} porPagina={PENDENCIAS_POR_PAGINA} />
     </div>
   );
 }
@@ -338,7 +344,10 @@ async function PendenciasDoNeo({ c, vistas }: { c: ContextoDaAba; vistas: React.
 // ─── Regras ───────────────────────────────────────────────────────────────
 
 export async function AbaRegras({ c }: { c: ContextoDaAba }) {
-  const [{ opcoesDeAgencia, opcoesDeConta }, regras] = await Promise.all([opcoes(c), listarRegras(c.tenantId, c.empresaId, { busca: c.busca ?? undefined, agenciaId: c.agenciaId })]);
+  const [{ opcoesDeAgencia, opcoesDeConta }, { itens: regras, total, pagina }] = await Promise.all([
+    opcoes(c),
+    listarRegras(c.tenantId, c.empresaId, { busca: c.busca ?? undefined, agenciaId: c.agenciaId, pagina: c.pagina }),
+  ]);
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -388,6 +397,7 @@ export async function AbaRegras({ c }: { c: ContextoDaAba }) {
           </table>
         </div>
       )}
+      <Paginacao c={c} aba="regras" total={total} pagina={pagina} />
     </div>
   );
 }
@@ -397,7 +407,10 @@ export async function AbaRegras({ c }: { c: ContextoDaAba }) {
 const ROTULO_TIPO_CP: Record<string, string> = { fornecedor: "Fornecedor", cliente: "Cliente", ambos: "Fornecedor e cliente" };
 
 export async function AbaContrapartes({ c }: { c: ContextoDaAba }) {
-  const [{ opcoesDeConta }, contrapartes] = await Promise.all([opcoes(c), listarContrapartes(c.tenantId, c.empresaId, c.busca ?? undefined)]);
+  const [{ opcoesDeConta }, { itens: contrapartes, total, pagina }] = await Promise.all([
+    opcoes(c),
+    listarContrapartes(c.tenantId, c.empresaId, { busca: c.busca ?? undefined, pagina: c.pagina }),
+  ]);
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -443,6 +456,7 @@ export async function AbaContrapartes({ c }: { c: ContextoDaAba }) {
           </table>
         </div>
       )}
+      <Paginacao c={c} aba="contrapartes" total={total} pagina={pagina} />
     </div>
   );
 }
