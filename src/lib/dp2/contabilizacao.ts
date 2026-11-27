@@ -59,7 +59,7 @@ export type CalculoContabil = {
   /** O centro de custo do contrato (código ou nome), funcionalidade-751; vazio = sem centro. */
   centro?: string | null;
   itens: ItemContabil[];
-  encargos: { inssEmpresa: number; rat: number; terceiros: number };
+  encargos: { inssEmpresa: number; rat: number; terceiros: number; aposentadoriaEspecial?: number };
   provisoes: { ferias: number; tercoFerias: number; decimo: number; encargosFerias: number; encargosDecimo: number };
 };
 
@@ -103,7 +103,7 @@ export function contabilizar(
         somar(r?.contaDebito?.trim() || conta(contas.fgtsDespesa, "Despesa de FGTS (contas da folha)"), r?.contaCredito?.trim() || conta(contas.fgtsARecolher, "FGTS a recolher (contas da folha)"), i.valor, historico);
       }
     }
-    const patronal = r2(c.encargos.inssEmpresa + c.encargos.rat + c.encargos.terceiros);
+    const patronal = r2(c.encargos.inssEmpresa + c.encargos.rat + c.encargos.terceiros + (c.encargos.aposentadoriaEspecial ?? 0));
     somar(conta(contas.inssEmpresaDespesa, "Despesa de INSS da empresa (contas da folha)"), conta(contas.inssARecolher, "INSS a recolher (contas da folha)"), patronal, `INSS da empresa, RAT e terceiros ${referencia}`);
     const p = c.provisoes;
     somar(conta(contas.provisaoFeriasDespesa, "Despesa com provisão de férias (contas da folha)"), conta(contas.provisaoFerias, "Provisão de férias (contas da folha)"), r2(p.ferias + p.tercoFerias + p.encargosFerias), `Provisão de férias ${referencia}`);

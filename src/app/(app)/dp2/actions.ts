@@ -16,6 +16,9 @@ import { lancarDiferencas } from "@/lib/dp2/diferencasServidor";
 import { lerAmbiente, lerEntregaDeEpi, lerEpi, lerMedico } from "@/lib/dp2/sst";
 import { lerReajuste, preverReajuste } from "@/lib/dp2/reajuste";
 import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
+import { hojeIso } from "@/lib/datas/calendario";
+import { fimDoGozo, lerAposentadoria, lerRegraDaLicencaPremio, lerUsoDaLicencaPremio, saldoDaLicencaPremio } from "@/lib/dp2/licencaPremio";
+import { regraDaLicencaPremio, usosDaLicencaPremio } from "@/lib/dp2/licencaPremioServidor";
 import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
 import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
 import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
@@ -806,6 +809,91 @@ export async function excluirOcorrenciaAction(_: EstadoDoDp2, fd: FormData): Pro
   await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ocorrencia_excluida", entityType: "Person", entityId: o.personId, metadata: { ocorrencia: o.id, tipo: o.tipo } });
   revalidatePath("/dp2/colaboradores");
   return { ok: true, texto: "Ocorrência excluída. Se era suspensão de um mês já calculado, calcule a folha de novo." };
+}
+
+// ─── Licença-prêmio e aposentadoria (27/11/2026, funcionalidade-763) ───────
+
+const isoDoDia = (d: Date) => d.toISOString().slice(0, 10);
+const brDoDia = (iso: string) => iso.split("-").reverse().join("/");
+
+/** O gozo ou o pagamento em dinheiro da licença-prêmio, dentro do saldo; no gozo, o S-2230 motivo 16. */
+export async function registrarLicencaPremioAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2.");
+  if (!pessoa.admissionDate) return erro(`${pessoa.name} não tem data de admissão: o direito à licença-prêmio conta do início do contrato.`);
+  const regra = await regraDaLicencaPremio(a.tenantId, companyId);
+  if (!regra) return erro("A convenção da empresa não tem licença-prêmio: informe os anos de casa e os dias em DP 2 › Convenções.");
+  const data = texto(fd, "data");
+  const naData = /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : hojeIso();
+  const saldo = saldoDaLicencaPremio(isoDoDia(pessoa.admissionDate), naData, regra, await usosDaLicencaPremio(a.tenantId, pessoa.id));
+  const lido = lerUsoDaLicencaPremio({ tipo: texto(fd, "tipo"), data, dias: texto(fd, "dias") }, saldo.saldo);
+  if (!lido.ok) return erro(lido.erro);
+  const u = lido.uso;
+  const criada = await getPrisma().dp2Ocorrencia.create({
+    data: { tenantId: a.tenantId, companyId, personId: pessoa.id, tipo: u.tipo, data: new Date(`${u.data}T00:00:00Z`), dias: u.dias, motivo: texto(fd, "observacao").slice(0, 500), criadoPorId: a.userId },
+    select: { id: true },
+  });
+  let doEsocial = "";
+  if (u.tipo === "LICENCA_PREMIO_GOZO" && marcado(fd, "gerarS2230")) {
+    if (!(await acesso("dp2_esocial", "agir"))) doEsocial = " O S-2230 não foi gerado: falta permissão no eSocial do DP 2.";
+    else {
+      const r = await gerarAfastamento(a.tenantId, pessoa.id, { motivo: "16", inicio: u.data, fim: fimDoGozo(u), observacao: "Licença-prêmio" }, a.userId);
+      doEsocial = r.ok ? " O S-2230 (licença remunerada, motivo 16) foi para DP 2 › eSocial." : ` O S-2230 não foi gerado: ${r.erro}`;
+    }
+  }
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.licenca_premio_registrada", entityType: "Person", entityId: pessoa.id, metadata: { ocorrencia: criada.id, ...u, saldoAntes: saldo.saldo } });
+  revalidatePath("/dp2/colaboradores");
+  return {
+    ok: true,
+    texto:
+      u.tipo === "LICENCA_PREMIO_GOZO"
+        ? `Gozo de ${u.dias} dia(s) de licença-prêmio de ${pessoa.name} registrado, de ${brDoDia(u.data)} a ${brDoDia(fimDoGozo(u))}, com o salário normal. Saldo: ${saldo.saldo - u.dias} dia(s).${doEsocial}`
+        : `${u.dias} dia(s) de licença-prêmio de ${pessoa.name} pagos em dinheiro na folha de ${u.data.slice(5, 7)}/${u.data.slice(0, 4)}: calcule a folha do mês. Saldo: ${saldo.saldo - u.dias} dia(s).`,
+  };
+}
+
+/** A aposentadoria do colaborador; na incapacidade permanente, o S-2230 motivo 06 (contrato suspenso). */
+export async function registrarAposentadoriaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2.");
+  const lido = lerAposentadoria({ tipo: texto(fd, "tipo"), data: texto(fd, "data"), beneficio: texto(fd, "beneficio") });
+  if (!lido.ok) return erro(lido.erro);
+  const ap = lido.aposentadoria;
+  const prisma = getPrisma();
+  if (await prisma.dp2Ocorrencia.findFirst({ where: { tenantId: a.tenantId, personId: pessoa.id, tipo: "APOSENTADORIA" }, select: { id: true } })) {
+    return erro(`A aposentadoria de ${pessoa.name} já está registrada. Exclua o registro para informar de novo.`);
+  }
+  const criada = await prisma.dp2Ocorrencia.create({
+    data: { tenantId: a.tenantId, companyId, personId: pessoa.id, tipo: "APOSENTADORIA", data: new Date(`${ap.data}T00:00:00Z`), dias: 0, motivo: "", detalhe: ap.tipo, beneficio: ap.beneficio, criadoPorId: a.userId },
+    select: { id: true },
+  });
+  let doEsocial = "";
+  if (ap.tipo === "INCAPACIDADE" && marcado(fd, "gerarS2230")) {
+    if (!(await acesso("dp2_esocial", "agir"))) doEsocial = " O S-2230 não foi gerado: falta permissão no eSocial do DP 2.";
+    else {
+      const r = await gerarAfastamento(a.tenantId, pessoa.id, { motivo: "06", inicio: ap.data, fim: null, observacao: ap.beneficio ? `NB ${ap.beneficio}` : null }, a.userId);
+      doEsocial = r.ok ? " O S-2230 (motivo 06) foi para DP 2 › eSocial e o salário sai da folha a partir dessa data." : ` O S-2230 não foi gerado: ${r.erro}`;
+    }
+  }
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.aposentadoria_registrada", entityType: "Person", entityId: pessoa.id, metadata: { ocorrencia: criada.id, ...ap } });
+  revalidatePath("/dp2/colaboradores");
+  return {
+    ok: true,
+    texto:
+      ap.tipo === "INCAPACIDADE"
+        ? `Aposentadoria por incapacidade permanente de ${pessoa.name} registrada desde ${brDoDia(ap.data)}: o contrato fica suspenso.${doEsocial}`
+        : `Aposentadoria de ${pessoa.name} registrada desde ${brDoDia(ap.data)}. Ele(a) continua com INSS e FGTS normais, e o cálculo do mês avisa.`,
+  };
 }
 
 // ─── Horários de trabalho (25/11/2026, funcionalidade-752) ──────────────────
@@ -1766,6 +1854,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     valeTransporte: marcado(fd, "valeTransporte"),
     previdenciaComplementar: lerNumero(texto(fd, "previdenciaComplementar")),
     contribuicaoSindical: marcado(fd, "contribuicaoSindical"),
+    grauExposicao: /^[1-4]$/.test(texto(fd, "grauExposicao")) ? texto(fd, "grauExposicao") : null,
     horarioId,
     costCenterId,
     ambienteId,
@@ -2080,7 +2169,12 @@ export async function salvarConvencaoAction(_: EstadoDoDp2, fd: FormData): Promi
   const contribuicaoPercentual = lerNumero(texto(fd, "contribuicaoPercentual"));
   if (contribuicaoMes !== null && (contribuicaoMes < 1 || contribuicaoMes > 12)) return erro("O mês da contribuição vai de 1 a 12.");
   if (contribuicaoPercentual !== null && (contribuicaoPercentual <= 0 || contribuicaoPercentual > 20)) return erro("O percentual da contribuição vai de 0 a 20%.");
+  // Licença-prêmio (funcionalidade-763): os anos de casa e os dias, juntos ou nenhum.
+  const licenca = lerRegraDaLicencaPremio(lerInteiro(texto(fd, "licencaPremioAnos")), lerInteiro(texto(fd, "licencaPremioDias")));
+  if (!licenca.ok) return erro(licenca.erro);
   const data = {
+    licencaPremioAnos: licenca.regra?.anos ?? null,
+    licencaPremioDias: licenca.regra?.dias ?? null,
     contribuicaoMes,
     contribuicaoPercentual,
     nome: nome.slice(0, 160),

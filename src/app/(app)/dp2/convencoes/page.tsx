@@ -149,6 +149,12 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                 <CampoForm label="Contribuição sindical (% do salário)" htmlFor="contribuicaoPercentual" dica="Em branco, um dia de trabalho (salário ÷ 30).">
                   <Input id="contribuicaoPercentual" name="contribuicaoPercentual" inputMode="decimal" defaultValue={aberta?.contribuicaoPercentual != null ? num(aberta.contribuicaoPercentual) : ""} />
                 </CampoForm>
+                <CampoForm label="Licença-prêmio: a cada (anos de casa)" htmlFor="licencaPremioAnos" dica="Em branco, a convenção não tem licença-prêmio.">
+                  <Input id="licencaPremioAnos" name="licencaPremioAnos" inputMode="numeric" maxLength={2} defaultValue={aberta?.licencaPremioAnos != null ? String(aberta.licencaPremioAnos) : ""} />
+                </CampoForm>
+                <CampoForm label="Licença-prêmio: dias de licença" htmlFor="licencaPremioDias" dica="Os dias que cada período dá, para gozar ou receber em dinheiro.">
+                  <Input id="licencaPremioDias" name="licencaPremioDias" inputMode="numeric" maxLength={3} defaultValue={aberta?.licencaPremioDias != null ? String(aberta.licencaPremioDias) : ""} />
+                </CampoForm>
               </div>
               <CampoForm label="Observações" htmlFor="observacoes" className="mt-4">
                 <Textarea id="observacoes" name="observacoes" rows={3} defaultValue={aberta?.observacoes ?? ""} />
