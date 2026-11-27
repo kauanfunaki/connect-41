@@ -64,6 +64,9 @@ import { ObservacoesDoProcesso } from "@/components/societario/ObservacoesDoProc
 import { apagarHorasDoProcesso, editarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
 import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
 import { enderecoDe, idCurto } from "@/lib/enderecoCurto";
+import { podeNoModulo } from "@/lib/auth/modulo";
+import { GerarDocumentoDoProcesso } from "@/components/societario/GerarDocumentoDoProcesso";
+import { paraGerarNoProcesso } from "@/lib/societario/modelos/servidor";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -310,11 +313,15 @@ export default async function ProcessoDetalhePage({
     }
   }
 
-  const [{ taxas, custo }, conversa, avisos, destinos] = await Promise.all([
+  const [{ taxas, custo }, conversa, avisos, destinos, paraGerar, gereModelos, agePorModulo] = await Promise.all([
     taxasDoProcesso(ctx.tenantId, processo.id),
     conversaDoProcesso({ tenantId: ctx.tenantId, companyIds: null }, processo.id),
     avisosPendentes(ctx.tenantId, processo.id),
     destinosDaEmpresa(ctx, processo.company.id),
+    // Os modelos de documento (27/11/2026, funcionalidade-891).
+    paraGerarNoProcesso(ctx.tenantId, processo.id),
+    podeNoModulo(ctx, MODULE, "gerir"),
+    podeNoModulo(ctx, MODULE, "agir"),
   ]);
 
   // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
@@ -587,6 +594,26 @@ export default async function ProcessoDetalhePage({
               editar: editarHorasDoProcesso,
               apagar: apagarHorasDoProcesso,
             }}
+          />
+
+          {/* Os modelos do escritório preenchidos com o cadastro (27/11/2026,
+              funcionalidade-891): perto das taxas e horas, que também são do
+              trabalho da equipe, e não no painel da conversa, que o cliente vê. */}
+          <GerarDocumentoDoProcesso
+            processId={processo.id}
+            modelos={paraGerar.modelos}
+            participantes={paraGerar.participantes}
+            escolhidos={paraGerar.escolhidos}
+            historico={paraGerar.historico.map((h) => ({
+              id: h.id,
+              nomeArquivo: h.nomeArquivo,
+              modelo: h.modelo,
+              geradoPor: h.geradoPor,
+              geradoEm: formatInstantDate(h.geradoEm),
+              nosArquivos: h.driveFileId !== null,
+            }))}
+            podeGerirModelos={gereModelos}
+            podeAgir={agePorModulo}
           />
 
           {/* Conversa e documentos num painel lateral (Processo B, 04/11/2026):

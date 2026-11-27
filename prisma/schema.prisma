@@ -9727,6 +9727,10 @@ model Process {
   timeEntries TimeEntry[]
   avisos    AvisoDeOrgao[]
   documents ProcessDocument[]
+  /// Os documentos gerados dos modelos e quem assina como advogado e
+  /// testemunha (27/11/2026, funcionalidade-891).
+  documentosGerados SocietarioDocumentoGerado[]
+  participantes     ProcessoParticipante[]
   /// O cartão do processo nos Quadros (27/11/2026, funcionalidade-844).
   cartao    PipelineItem?
 
@@ -9795,6 +9799,104 @@ model ProcessDocument {
   @@index([messageId])
   @@index([tenantId])
   @@map("process_documents")
+}
+
+/// Modelo .docx de documento societário do escritório (27/11/2026,
+/// funcionalidade-891): contrato social, alteração, distrato, declaração de
+/// ME/EPP, ata, requerimento — o "Modelos de Documentos" do Domínio Registro.
+/// O arquivo fica no banco, como o modelo do termo aditivo; os campos entre
+/// chaves estão em src/lib/societario/modelos/campos.ts.
+model SocietarioModeloDocumento {
+  id          String   @id @default(uuid())
+  tenantId    String
+  /// CONTRATO_SOCIAL, ALTERACAO_CONTRATUAL, DISTRATO, DECLARACAO_ME_EPP, ATA,
+  /// REQUERIMENTO ou OUTRO (TIPOS_DE_MODELO).
+  tipo        String   @db.VarChar(30)
+  /// "Alteração — endereço", "Contrato social com quotas desiguais".
+  nome        String   @db.VarChar(120)
+  nomeArquivo String   @db.VarChar(255)
+  conteudo    Bytes    @db.MediumBlob
+  /// Desativado sai da lista do processo e fica no histórico dos gerados.
+  ativo       Boolean  @default(true)
+  /// Nome de quem enviou, como em `HonorarioModeloDoTermo.enviadoPor`.
+  enviadoPor  String   @db.VarChar(150)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  gerados SocietarioDocumentoGerado[]
+
+  @@index([tenantId, tipo])
+  @@map("soc_modelos_documento")
+}
+
+/// Advogado ou testemunha que assina os documentos societários (27/11/2026,
+/// funcionalidade-891). Cadastro do escritório, como no Domínio Registro.
+model SocietarioParticipante {
+  id            String   @id @default(uuid())
+  tenantId      String
+  /// ADVOGADO ou TESTEMUNHA.
+  papel         String   @db.VarChar(12)
+  nome          String   @db.VarChar(180)
+  /// Só dígitos.
+  cpf           String?  @db.VarChar(11)
+  rg            String?  @db.VarChar(30)
+  /// "OAB/PR 12.345" — só do advogado.
+  oab           String?  @db.VarChar(30)
+  nacionalidade String?  @db.VarChar(60)
+  estadoCivil   String?  @db.VarChar(40)
+  profissao     String?  @db.VarChar(120)
+  /// Numa linha, como sai no documento.
+  endereco      String?  @db.VarChar(300)
+  ativo         Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  processos ProcessoParticipante[]
+
+  @@index([tenantId, papel])
+  @@map("soc_participantes")
+}
+
+/// Quem assina no processo: um advogado e duas testemunhas, como na aba Geral
+/// da Alteração Contratual do Domínio (27/11/2026, funcionalidade-891).
+model ProcessoParticipante {
+  id             String @id @default(uuid())
+  tenantId       String
+  processId      String
+  participanteId String
+  /// ADVOGADO, TESTEMUNHA_1 ou TESTEMUNHA_2.
+  lugar          String @db.VarChar(14)
+
+  process      Process                @relation(fields: [processId], references: [id], onDelete: Cascade)
+  participante SocietarioParticipante @relation(fields: [participanteId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, lugar])
+  @@index([participanteId])
+  @@index([tenantId])
+  @@map("soc_processo_participantes")
+}
+
+/// Cada documento gerado de um modelo (27/11/2026, funcionalidade-891). O
+/// arquivo fica nos Arquivos da empresa; aqui fica qual modelo, quem e quando.
+model SocietarioDocumentoGerado {
+  id          String   @id @default(uuid())
+  tenantId    String
+  processId   String
+  /// Nulo quando o modelo foi excluído depois.
+  modeloId    String?
+  nomeArquivo String   @db.VarChar(255)
+  /// O arquivo nos Arquivos; nulo quando a pasta da empresa não existia.
+  driveFileId String?
+  geradoPor   String   @db.VarChar(150)
+  geradoEm    DateTime @default(now()) @db.DateTime(3)
+
+  process Process                    @relation(fields: [processId], references: [id], onDelete: Cascade)
+  modelo  SocietarioModeloDocumento? @relation(fields: [modeloId], references: [id], onDelete: SetNull)
+
+  @@index([processId, geradoEm])
+  @@index([modeloId])
+  @@index([tenantId])
+  @@map("soc_documentos_gerados")
 }
 
 model ProcessStep {
