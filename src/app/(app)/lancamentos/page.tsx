@@ -18,7 +18,8 @@ import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { TOM_DA_SITUACAO, tomDoFechamento } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
+import { Pagination } from "@/components/shared/Pagination";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
@@ -39,6 +40,15 @@ import { contasBancariasDaEmpresa } from "@/lib/financeiro/contaPrevistaServidor
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
+import { paginaDaUrl } from "@/lib/financeiro/paginaDeContas";
+import {
+  funisDoLancamentoNaConsulta,
+  funisDosLancamentosDaUrl,
+  temFunilNoLancamento,
+  type ChaveDoFunilDoLancamento,
+  type FunisDosLancamentos,
+} from "@/lib/financeiro/paginaDeLancamentos";
+import { opcoesDosFunisDosLancamentos, paginaDeLancamentos } from "@/lib/financeiro/paginaDeLancamentosServidor";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +57,15 @@ const MODULE = "bpo_lancamentos";
 // é só o padrão.
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
-/** Teto da lista de uma empresa num mês — com aviso quando chega nele. */
-const LIMITE_DA_LISTA = 500;
+/** Os funis das colunas, na ordem do cabeçalho — a faixa "Filtro nas colunas" os nomeia assim. */
+const COLUNAS_COM_FUNIL = [
+  { chave: "tipo", rotulo: "Tipo" },
+  { chave: "contraparte", rotulo: "Contraparte" },
+  { chave: "categoria", rotulo: "Categoria" },
+  { chave: "centro", rotulo: "Centro de custo" },
+  { chave: "vencimento", rotulo: "Vencimento" },
+  { chave: "situacao", rotulo: "Situação" },
+] satisfies { chave: ChaveDoFunilDoLancamento; rotulo: string }[];
 
 /**
  * As três telas da rota, pelo `?aba=`: a lista, o lançamento à mão e a
@@ -83,13 +100,16 @@ const STATUS: Record<string, { rotulo: string; variante: VarianteDoBadge }> = {
 export default async function LancamentosPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
-  const params = await searchParams;
+  // Os funis das colunas vêm repetidos na URL (`?tipo=PAGAR&tipo=RECEBER`);
+  // os outros parâmetros são de um valor só.
+  const brutos = await searchParams;
+  const params = Object.fromEntries(Object.entries(brutos).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])) as Record<string, string | undefined>;
   const podeLancar = canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   // Sem permissão para lançar, a tela de criar não existe: cai na lista.
   const pedida = TELAS.find((t) => t.chave === params.aba) ?? TELAS[0];
@@ -146,8 +166,6 @@ export default async function LancamentosPage({
 
   const href = (chave: string) => `/lancamentos?empresa=${companyId}&mes=${mes}${chave === "lista" ? "" : `&aba=${chave}`}`;
 
-  const prisma = getPrisma();
-
   return comEmpresa(
     <PageContainer>
       {aba === "lista" ? (
@@ -193,11 +211,12 @@ export default async function LancamentosPage({
 
       {aba === "lista" && (
         <ListaDeManuais
-          prisma={prisma}
           tenantId={ctx.tenantId}
           companyId={companyId}
           mes={mes}
           podeCancelar={podeLancar}
+          funis={funisDosLancamentosDaUrl(brutos)}
+          pedida={paginaDaUrl(brutos.pagina)}
         />
       )}
     </PageContainer>
@@ -256,51 +275,41 @@ async function FormularioDaEmpresa({
   );
 }
 
+/**
+ * A lista paginada no servidor (27/11/2026, melhoria-571): a página aberta, e
+ * a contagem e os totais da barra do filtro inteiro. Era até 500 de uma vez,
+ * com o aviso "Mostrando os 500 primeiros". Os funis das colunas filtram pela
+ * URL — ver `paginaDeLancamentos.ts`.
+ */
 async function ListaDeManuais({
-  prisma,
   tenantId,
   companyId,
   mes,
   podeCancelar,
+  funis,
+  pedida,
 }: {
-  prisma: ReturnType<typeof getPrisma>;
   tenantId: string;
   companyId: string;
   mes: string;
   podeCancelar: boolean;
+  funis: FunisDosLancamentos;
+  pedida: number;
 }) {
-  const encontradas = await prisma.financeEntry.findMany({
-    where: { tenantId, companyId, competence: mes, fiscalDocumentId: null },
-    select: {
-      id: true,
-      omieTitleId: true,
-      omieMovementId: true,
-      company: { select: { omieCutoverAt: true } },
-      kind: true,
-      status: true,
-      amount: true,
-      dueDate: true,
-      paidAt: true,
-      description: true,
-      fiscalDocumentId: true,
-      closeReason: true,
-      agreementId: true,
-      paidPrincipal: true,
-      counterparty: { select: { name: true } },
-      category: { select: { name: true } },
-      costCenter: { select: { name: true } },
-      project: { select: { name: true } },
-      documentNumber: true,
-      recurrenceId: true,
-      recurrenceIndex: true,
-      recurrenceTotal: true,
-    },
-    orderBy: [{ dueDate: "asc" }, { id: "asc" }],
-    // Um a mais que o teto, para saber se parou nele.
-    take: LIMITE_DA_LISTA + 1,
-  });
-  const limitado = encontradas.length > LIMITE_DA_LISTA;
-  const linhas = limitado ? encontradas.slice(0, LIMITE_DA_LISTA) : encontradas;
+  const recorte = { tenantId, companyId, mes, funis };
+  const [{ linhas, total, pagina, totalDePaginas, aPagarCentavos, aReceberCentavos }, opcoes] = await Promise.all([
+    paginaDeLancamentos(recorte, pedida),
+    opcoesDosFunisDosLancamentos(recorte),
+  ]);
+  const filtrando = temFunilNoLancamento(funis);
+
+  // A página conserva a empresa, o mês e os funis.
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams({ empresa: companyId, mes });
+    funisDoLancamentoNaConsulta(funis, q);
+    if (p > 1) q.set("pagina", String(p));
+    return `/lancamentos?${q}`;
+  };
 
   // Renegociado e perda são cancelamentos com nome: a dívida seguiu num acordo,
   // ou alguém decidiu dar por perdida — "cancelado" diria outra coisa.
@@ -315,8 +324,7 @@ async function ListaDeManuais({
 
   // O total da barra por lado, sem os cancelados: somar a pagar com a receber
   // não diz nada, e o cancelado já saiu dos totais (ver a nota de rodapé).
-  const somaDe = (kind: "PAGAR" | "RECEBER") =>
-    linhas.filter((l) => l.kind === kind && l.status !== "CANCELADO").reduce((s, l) => s + centavosDeDecimal(l.amount), 0);
+  // Do filtro inteiro, no banco — não só da página.
 
   // No casco das listas irmãs (contas, pendências, cobrança), com a contagem
   // e o total na barra — e o vazio dentro dele (08/10/2026). Era a tabela
@@ -326,15 +334,21 @@ async function ListaDeManuais({
   return (
     <>
       <CascoDaTabela
-        contagem={contarItens(linhas.length, "lançamento", "lançamentos", limitado)}
-        total={linhas.length > 0 ? `a pagar ${moeda(somaDe("PAGAR"))} · a receber ${moeda(somaDe("RECEBER"))}` : undefined}
+        contagem={contarItens(total, "lançamento", "lançamentos")}
+        total={total > 0 ? `a pagar ${moeda(aPagarCentavos)} · a receber ${moeda(aReceberCentavos)}` : undefined}
       >
+        {/* Acima da tabela e do vazio: quando o funil esvazia a lista, é daqui que se desfaz. */}
+        {filtrando && <FiltrosDasColunasNaUrl colunas={COLUNAS_COM_FUNIL} />}
         {linhas.length === 0 ? (
-          <EmptyState
-            title="Nenhum lançamento manual nesta competência"
-            description="Use “Novo lançamento”, no topo da tela, para registrar uma conta sem nota, ou importe uma planilha."
-            icon={<NotebookPen />}
-          />
+          filtrando ? (
+            <EmptyState title="Nenhum lançamento neste filtro" description="Tire um filtro das colunas para ver os outros." icon={<NotebookPen />} />
+          ) : (
+            <EmptyState
+              title="Nenhum lançamento manual nesta competência"
+              description="Use “Novo lançamento”, no topo da tela, para registrar uma conta sem nota, ou importe uma planilha."
+              icon={<NotebookPen />}
+            />
+          )
         ) : (
           <>
             <CartoesNoCelular>
@@ -375,30 +389,17 @@ async function ListaDeManuais({
               })}
             </CartoesNoCelular>
 
-            <TabelaFiltravel
-              linhas={linhas.map((l) => ({
-                id: l.id,
-                valores: {
-                  tipo: l.kind === "PAGAR" ? "A pagar" : "A receber",
-                  contraparte: l.counterparty.name,
-                  categoria: l.category?.name ?? "",
-                  centro: l.costCenter?.name ?? "",
-                  vencimento: saoPauloParts(l.dueDate).dateKey,
-                  situacao: statusDe(l).rotulo,
-                },
-              }))}
-            >
               <TabelaNoDesktop padrao>
                 <table className="w-full min-w-[880px]">
                   <thead>
                     <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
-                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Tipo" chave="tipo" /></th>
-                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Contraparte" chave="contraparte" /></th>
-                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Categoria" chave="categoria" /></th>
-                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Centro de custo" chave="centro" /></th>
-                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColunaNaUrl rotulo="Tipo" chave="tipo" opcoes={opcoes.tipo} /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColunaNaUrl rotulo="Contraparte" chave="contraparte" opcoes={opcoes.contraparte} /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColunaNaUrl rotulo="Categoria" chave="categoria" opcoes={opcoes.categoria} /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColunaNaUrl rotulo="Centro de custo" chave="centro" opcoes={opcoes.centro} /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColunaNaUrl rotulo="Vencimento" chave="vencimento" opcoes={opcoes.vencimento} /></th>
                       <th className="py-2 pr-3 font-medium">Valor</th>
-                      <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
+                      <th className="py-2 pr-3 font-medium"><FiltroDaColunaNaUrl rotulo="Situação" chave="situacao" opcoes={opcoes.situacao} align="right" /></th>
                       <th className="py-2 font-medium"></th>
                     </tr>
                   </thead>
@@ -406,7 +407,7 @@ async function ListaDeManuais({
                     {linhas.map((l) => {
                       const status = statusDe(l);
                       return (
-                        <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
+                        <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                           {/* Tipo é categoria: Badge neutro, sem cor de alerta em toda linha (D1, 15/10/2026). */}
                           <td className="py-2.5 pr-3">
                             <Badge variant="neutral">{l.kind === "PAGAR" ? "A pagar" : "A receber"}</Badge>
@@ -445,21 +446,17 @@ async function ListaDeManuais({
                               </div>
                             )}
                           </td>
-                        </LinhaFiltravel>
+                        </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </TabelaNoDesktop>
-            </TabelaFiltravel>
-            {limitado && (
-              <p className="text-micro text-fg-muted mt-3">
-                Mostrando os {LIMITE_DA_LISTA} primeiros pelo vencimento.
-              </p>
-            )}
           </>
         )}
       </CascoDaTabela>
+      {/* Fora do casco, como nas outras listas paginadas (Contas a pagar e a receber). */}
+      <Pagination page={pagina} totalPages={totalDePaginas} total={total} rotulo="lançamentos" buildHref={hrefDaPagina} />
     </>
   );
 }
