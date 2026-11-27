@@ -7397,6 +7397,47 @@ model Dp2Medico {
   @@map("dp2_medicos")
 }
 
+/// Parcelamento de encargos da empresa (27/11/2026, funcionalidade-764): INSS
+/// na Receita ou na PGFN e FGTS na Caixa, com as parcelas e o que já foi pago.
+model Dp2Parcelamento {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  companyId          String
+  /// "INSS_RFB", "INSS_PGFN" ou "FGTS".
+  tipo               String   @db.VarChar(12)
+  numero             String   @db.VarChar(40)
+  valorConsolidado   Decimal  @db.Decimal(14, 2)
+  quantidade         Int
+  primeiroVencimento DateTime @db.Date
+  observacao         String?  @db.VarChar(300)
+  criadoPorId        String?
+  createdAt          DateTime @default(now())
+
+  parcelas Dp2ParcelaDoParcelamento[]
+
+  @@index([tenantId, companyId])
+  @@map("dp2_parcelamentos")
+}
+
+model Dp2ParcelaDoParcelamento {
+  id              String    @id @default(uuid())
+  tenantId        String
+  parcelamentoId  String
+  numero          Int
+  vencimento      DateTime  @db.Date
+  valor           Decimal   @db.Decimal(14, 2)
+  pagaEm          DateTime? @db.Date
+  /// O valor efetivamente pago (a parcela do INSS é corrigida pela Selic).
+  valorPago       Decimal?  @db.Decimal(14, 2)
+  pagaPorId       String?
+
+  parcelamento Dp2Parcelamento @relation(fields: [parcelamentoId], references: [id], onDelete: Cascade)
+
+  @@unique([parcelamentoId, numero])
+  @@index([tenantId, vencimento])
+  @@map("dp2_parcelas_de_parcelamento")
+}
+
 /// Ambiente de trabalho da empresa, como está no LTCAT (26/11/2026,
 /// funcionalidade-761): setor, atividade, agentes nocivos (Tabela 24,
 /// separados por vírgula) e uso de EPC/EPI. O S-2240 sai do ambiente.

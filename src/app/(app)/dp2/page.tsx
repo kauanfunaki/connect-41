@@ -16,6 +16,14 @@ import { brl, mesAtual, nomeDaCompetencia, NOME_DA_SITUACAO, NOME_DO_TIPO_DE_COM
 import { avisosDasEmpresas, type TotaisDaCompetencia } from "@/lib/dp2/servidor";
 import { NOME_DO_AVISO } from "@/lib/dp2/avisos";
 import { hojeIso } from "@/lib/datas/calendario";
+import { podeNoModulo } from "@/lib/auth/modulo";
+import { FormularioDoDp2 } from "@/components/dp2/Formulario";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoData } from "@/components/ui/CampoData";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { situacaoDoParcelamento, TIPOS_DE_PARCELAMENTO } from "@/lib/dp2/parcelamentos";
+import { criarParcelamentoAction, excluirParcelamentoAction, pagarParcelaAction } from "./actions";
 
 /**
  * Painel do DP 2 (11/11/2026): as competências do mês de todas as empresas,
@@ -66,6 +74,22 @@ export default async function PainelDoDp2({ searchParams }: { searchParams: Prom
   const alertasDoCalculo = calculosComAlerta
     .flatMap((c) => ((c.alertas as string[] | null) ?? []).map((texto) => ({ competenciaId: c.competenciaId, personId: c.personId, nome: c.person.name, texto })))
     .sort((a, b) => (empresaDaCompetencia.get(a.competenciaId) ?? "").localeCompare(empresaDaCompetencia.get(b.competenciaId) ?? "", "pt-BR") || a.nome.localeCompare(b.nome, "pt-BR"));
+
+  // Parcelamentos de encargos (funcionalidade-764): os das empresas do filtro, com a situação das parcelas.
+  const hoje = hojeIso();
+  const podeAgir = await podeNoModulo(ctx, "dp2_competencia", "agir");
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const parcelamentos = (
+    await prisma.dp2Parcelamento.findMany({
+      where: { tenantId: ctx.tenantId, companyId: { in: filtro ? [filtro.id] : empresas.map((e) => e.id) } },
+      include: { parcelas: { orderBy: { numero: "asc" } } },
+      orderBy: { createdAt: "asc" },
+    })
+  ).map((pc) => {
+    const parcelas = pc.parcelas.map((x) => ({ id: x.id, numero: x.numero, vencimento: iso(x.vencimento), valor: Number(x.valor), pagaEm: x.pagaEm ? iso(x.pagaEm) : null, valorPago: x.valorPago === null ? null : Number(x.valorPago) }));
+    const situacao = situacaoDoParcelamento(parcelas, hoje);
+    return { id: pc.id, companyId: pc.companyId, tipo: pc.tipo, numero: pc.numero, valorConsolidado: Number(pc.valorConsolidado), parcelas, situacao: { ...situacao, primeiraAberta: parcelas.find((x) => !x.pagaEm)?.id ?? null } };
+  });
 
   return (
     <PageContainer>
@@ -194,6 +218,121 @@ export default async function PainelDoDp2({ searchParams }: { searchParams: Prom
             </table>
           </div>
         )}
+      </Secao>
+      <Secao
+        titulo="Parcelamentos de encargos"
+        className="mt-5"
+        apoio="Os parcelamentos de INSS (Receita ou PGFN) e de FGTS (Caixa): as parcelas, o que já foi pago e o que vence. O pedido e as guias continuam no e-CAC, no Regularize ou na Caixa; aqui o DP acompanha e marca as pagas, com o valor efetivamente pago."
+      >
+        {parcelamentos.length === 0 && <p className="text-fs-3 text-fg-muted mb-3">Nenhum parcelamento{filtro ? " desta empresa" : ""}.</p>}
+        {parcelamentos.map((pc) => (
+          <div key={pc.id} className="mb-5">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+              <span className="font-medium">{TIPOS_DE_PARCELAMENTO[pc.tipo] ?? pc.tipo} · nº {pc.numero}</span>
+              {!filtro && <span className="text-fs-2 text-fg-muted">{nomeDaEmpresa.get(pc.companyId) ?? ""}</span>}
+              <Selo tom={pc.situacao.quitado ? "sucesso" : pc.situacao.vencidas ? "perigo" : "neutro"}>
+                {pc.situacao.quitado ? "Quitado" : `${pc.situacao.pagas}/${pc.situacao.total} pagas${pc.situacao.vencidas ? ` · ${pc.situacao.vencidas} vencida(s)` : ""}`}
+              </Selo>
+              <span className="text-fs-3 text-fg-muted tabular-nums">
+                Consolidado {brl(pc.valorConsolidado)} · pago {brl(pc.situacao.pago)} · saldo {brl(pc.situacao.saldo)}
+                {pc.situacao.proxima ? ` · próxima ${pc.situacao.proxima.vencimento.split("-").reverse().join("/")}` : ""}
+              </span>
+              {podeAgir && (
+                <FormularioDoDp2
+                  acao={excluirParcelamentoAction}
+                  rotulo="Excluir"
+                  rotuloEnviando="Excluindo…"
+                  variante="secondary"
+                  tamanho="sm"
+                  confirmar={{ titulo: "Excluir o parcelamento?", texto: `O parcelamento ${pc.numero} e as parcelas saem do Connect (não muda nada no e-CAC, no Regularize ou na Caixa).`, rotulo: "Excluir" }}
+                >
+                  <input type="hidden" name="parcelamentoId" value={pc.id} />
+                </FormularioDoDp2>
+              )}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Parcela</th>
+                    <th className={TH}>Vencimento</th>
+                    <th className={TH_NUM}>Valor</th>
+                    <th className={TH}>Pagamento</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pc.parcelas.map((x) => (
+                    <tr key={x.id} className={TR}>
+                      <td className={`${TD} tabular-nums`}>
+                        {x.numero}/{pc.parcelas.length}
+                      </td>
+                      <td className={`${TD} tabular-nums`}>
+                        {x.vencimento.split("-").reverse().join("/")}
+                        {!x.pagaEm && x.vencimento < hoje && (
+                          <Selo tom="perigo" className="ml-2">
+                            Vencida
+                          </Selo>
+                        )}
+                      </td>
+                      <td className={TD_NUM}>{brl(x.valor)}</td>
+                      <td className={`${TD} tabular-nums`}>{x.pagaEm ? `${x.pagaEm.split("-").reverse().join("/")} · ${brl(x.valorPago ?? x.valor)}` : "—"}</td>
+                      <td className={`${TD} text-right pr-0`}>
+                        {podeAgir &&
+                          (x.pagaEm ? (
+                            <FormularioDoDp2 acao={pagarParcelaAction} rotulo="Desfazer" rotuloEnviando="Desfazendo…" variante="secondary" tamanho="sm">
+                              <input type="hidden" name="parcelaId" value={x.id} />
+                              <input type="hidden" name="desfazer" value="1" />
+                            </FormularioDoDp2>
+                          ) : x.id === pc.situacao.primeiraAberta ? (
+                            <FormularioDoDp2 acao={pagarParcelaAction} rotulo="Marcar paga" rotuloEnviando="Marcando…" variante="secondary" tamanho="sm" className="flex flex-wrap items-end justify-end gap-2">
+                              <input type="hidden" name="parcelaId" value={x.id} />
+                              <CampoData id={`pg-${x.id}`} name="pagaEm" defaultValue={hoje} />
+                              <Input id={`pv-${x.id}`} name="valorPago" inputMode="decimal" placeholder="Valor pago" className="w-28" />
+                            </FormularioDoDp2>
+                          ) : null)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+        {podeAgir && filtro && (
+          <FormularioDoDp2 acao={criarParcelamentoAction} rotulo="Cadastrar parcelamento" rotuloEnviando="Cadastrando…" variante="secondary">
+            <input type="hidden" name="companyId" value={filtro.id} />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <CampoForm label="Tipo" htmlFor="parc-tipo">
+                <Select id="parc-tipo" name="tipo" defaultValue="INSS_RFB">
+                  {Object.entries(TIPOS_DE_PARCELAMENTO).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+              <CampoForm label="Número do parcelamento" htmlFor="parc-numero">
+                <Input id="parc-numero" name="numero" maxLength={40} required />
+              </CampoForm>
+              <CampoForm label="Valor consolidado" htmlFor="parc-valor">
+                <Input id="parc-valor" name="valorConsolidado" inputMode="decimal" prefix="R$" required />
+              </CampoForm>
+              <CampoForm label="Parcelas" htmlFor="parc-qtd">
+                <Input id="parc-qtd" name="quantidade" inputMode="numeric" maxLength={3} required />
+              </CampoForm>
+              <CampoForm label="Vencimento da 1ª parcela" htmlFor="parc-venc">
+                <CampoData id="parc-venc" name="primeiroVencimento" required />
+              </CampoForm>
+              <CampoForm label="Observação" htmlFor="parc-obs">
+                <Input id="parc-obs" name="observacao" maxLength={300} placeholder="Competências 01 a 06/2026" />
+              </CampoForm>
+            </div>
+          </FormularioDoDp2>
+        )}
+        {podeAgir && !filtro && <p className="text-fs-3 text-fg-muted">Escolha a empresa no filtro para cadastrar um parcelamento.</p>}
       </Secao>
     </PageContainer>
   );
