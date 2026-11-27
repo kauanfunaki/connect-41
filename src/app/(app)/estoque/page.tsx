@@ -15,19 +15,21 @@ import { FormularioDoItem } from "@/components/financeiroInterno/Estoque";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
 import { CATEGORIAS_SUGERIDAS, MODULO_ESTOQUE, SITUACOES, TIPOS_DE_ITEM, abaixoDoMinimo, precisaConferir, type SituacaoDoItem } from "@/lib/financeiroInterno/estoque";
+import { whereDaBusca, whereDoRecorte, type RecorteDoEstoque } from "@/lib/financeiroInterno/estoqueLista";
+import type { Prisma } from "@/generated/prisma/client";
 import { salvarItemDoEstoque } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 const POR_PAGINA = 50;
 
-const RECORTES = [
+const RECORTES: readonly { chave: RecorteDoEstoque; rotulo: string }[] = [
   { chave: "todos", rotulo: "Todos" },
   { chave: "com-alguem", rotulo: "Com alguém" },
   { chave: "repor", rotulo: "A repor" },
   { chave: "conferir", rotulo: "A conferir" },
   { chave: "baixados", rotulo: "Baixados" },
-] as const;
+];
 
 const TOM: Record<SituacaoDoItem, TomDoSelo> = {
   DISPONIVEL: "sucesso",
@@ -37,45 +39,62 @@ const TOM: Record<SituacaoDoItem, TomDoSelo> = {
   BAIXADO: "neutro",
 };
 
-const semAcento = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-
 /**
  * O Estoque do Financeiro (05/11/2026, decisão do Kauan, fase 1): máquinas e
  * materiais do escritório — com quem está cada um, o que precisa repor e o que
- * não é conferido há tempo. Lista do escritório (centenas de itens): lê tudo e
- * recorta aqui, como Certificados.
+ * não é conferido há tempo.
+ *
+ * Pagina no banco desde 27/11/2026 (melhoria-571): lia todos os itens e
+ * recortava aqui. Os recortes e a busca viram `where` (`estoqueLista.ts`), a
+ * lista traz só a página e os cartões do topo contam no banco, sem a busca,
+ * como antes.
  */
 export default async function EstoquePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo(MODULO_ESTOQUE);
+  const tenantId = ctx.tenantId!;
+  const prisma = getPrisma();
   const params = await searchParams;
   const recorte = RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "todos";
-  const pagina = Math.max(1, Math.min(1000, Number.parseInt(params.pagina ?? "1", 10) || 1));
-  const busca = semAcento((params.q ?? "").trim());
+  const pedida = Math.max(1, Math.min(1000, Number.parseInt(params.pagina ?? "1", 10) || 1));
+  const busca = (params.q ?? "").trim();
 
-  const [itens, podeGerir] = await Promise.all([
-    getPrisma().inventoryItem.findMany({
-      where: { tenantId: ctx.tenantId! },
+  const hoje = new Date();
+  const minimo = prisma.inventoryItem.fields.minQuantity;
+  const doRecorte = (r: RecorteDoEstoque): Prisma.InventoryItemWhereInput => ({ AND: [{ tenantId }, whereDoRecorte(r, hoje, minimo)] });
+  const where: Prisma.InventoryItemWhereInput = { AND: [{ tenantId }, whereDoRecorte(recorte, hoje, minimo), whereDaBusca(busca)] };
+  const lerPagina = (p: number) =>
+    prisma.inventoryItem.findMany({
+      where,
       select: {
         id: true, kind: true, name: true, category: true, assetTag: true, serialNumber: true, location: true,
         holderName: true, status: true, quantity: true, unit: true, minQuantity: true, lastCheckedAt: true, createdAt: true,
       },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
-    }),
+      orderBy: [{ category: "asc" }, { name: "asc" }, { id: "asc" }],
+      skip: (p - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+    });
+
+  const [total, primeira, porSituacao, aRepor, aConferir, categoriasGravadas, podeGerir] = await Promise.all([
+    prisma.inventoryItem.count({ where }),
+    lerPagina(pedida),
+    // Os cartões: a situação e o tipo de cada item, contados no banco.
+    prisma.inventoryItem.groupBy({ by: ["status", "kind"], where: { tenantId }, _count: { _all: true } }),
+    prisma.inventoryItem.count({ where: doRecorte("repor") }),
+    prisma.inventoryItem.count({ where: doRecorte("conferir") }),
+    prisma.inventoryItem.findMany({ where: { tenantId }, distinct: ["category"], select: { category: true } }),
     podeNoModulo(ctx, MODULO_ESTOQUE, "gerir"),
   ]);
+  const totalDePaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  // Página além do fim (link antigo, a última esvaziou): mostra a última que existe.
+  const paginaVista = Math.min(pedida, totalDePaginas);
+  const daPagina = paginaVista === pedida ? primeira : await lerPagina(paginaVista);
 
-  const hoje = new Date();
-  const ativos = itens.filter((i) => i.status !== "BAIXADO");
-  const comAlguem = ativos.filter((i) => i.status === "EM_USO" || i.status === "EMPRESTADO");
-  const aRepor = ativos.filter(abaixoDoMinimo);
-  const aConferir = ativos.filter((i) => precisaConferir(i, hoje));
-  const noRecorte = { todos: ativos, "com-alguem": comAlguem, repor: aRepor, conferir: aConferir, baixados: itens.filter((i) => i.status === "BAIXADO") }[recorte];
-  const visiveis = busca
-    ? noRecorte.filter((i) => semAcento([i.name, i.category, i.assetTag, i.serialNumber, i.location, i.holderName].filter(Boolean).join(" ")).includes(busca))
-    : noRecorte;
-  const totalDePaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA));
-  const paginaVista = Math.min(pagina, totalDePaginas);
-  const daPagina = visiveis.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
+  const contar = (f: (g: (typeof porSituacao)[number]) => boolean) => porSituacao.filter(f).reduce((s, g) => s + g._count._all, 0);
+  const temAlgum = contar(() => true) > 0;
+  const ativos = contar((g) => g.status !== "BAIXADO");
+  const patrimonios = contar((g) => g.status !== "BAIXADO" && g.kind === "patrimonio");
+  const comAlguem = contar((g) => g.status === "EM_USO" || g.status === "EMPRESTADO");
+  const emprestados = contar((g) => g.status === "EMPRESTADO");
   const href = (r: string, p = 1) => {
     const q = new URLSearchParams();
     if (r !== "todos") q.set("recorte", r);
@@ -84,9 +103,9 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
     const t = q.toString();
     return t ? `/estoque?${t}` : "/estoque";
   };
-  const categorias = [...new Set([...CATEGORIAS_SUGERIDAS, ...itens.map((i) => i.category)])].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  const quantidade = (i: (typeof itens)[number]) => (i.kind === "material" ? `${i.quantity} ${i.unit}` : "—");
-  const comQuem = (i: (typeof itens)[number]) => i.holderName ?? i.location ?? "—";
+  const categorias = [...new Set([...CATEGORIAS_SUGERIDAS, ...categoriasGravadas.map((c) => c.category)])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const quantidade = (i: (typeof daPagina)[number]) => (i.kind === "material" ? `${i.quantity} ${i.unit}` : "—");
+  const comQuem = (i: (typeof daPagina)[number]) => i.holderName ?? i.location ?? "—";
 
   return (
     <PageContainer>
@@ -98,15 +117,15 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
       <FaixaDeTotais
         className="mb-6"
         itens={[
-          { rotulo: "Itens", valor: String(ativos.length), icone: <Boxes />, detalhe: `${ativos.filter((i) => i.kind === "patrimonio").length} de patrimônio`, href: href("todos"), ativo: recorte === "todos" },
-          { rotulo: "Com alguém", valor: String(comAlguem.length), icone: <UserRound />, detalhe: `${comAlguem.filter((i) => i.status === "EMPRESTADO").length} emprestados`, href: href("com-alguem"), ativo: recorte === "com-alguem" },
-          { rotulo: "A repor", valor: String(aRepor.length), icone: <PackageMinus />, tom: aRepor.length > 0 ? "text-warning-fg" : undefined, detalhe: "abaixo do mínimo", href: href("repor"), ativo: recorte === "repor" },
-          { rotulo: "A conferir", valor: String(aConferir.length), icone: <ClipboardCheck />, detalhe: "há mais de 6 meses", href: href("conferir"), ativo: recorte === "conferir" },
+          { rotulo: "Itens", valor: String(ativos), icone: <Boxes />, detalhe: `${patrimonios} de patrimônio`, href: href("todos"), ativo: recorte === "todos" },
+          { rotulo: "Com alguém", valor: String(comAlguem), icone: <UserRound />, detalhe: `${emprestados} emprestados`, href: href("com-alguem"), ativo: recorte === "com-alguem" },
+          { rotulo: "A repor", valor: String(aRepor), icone: <PackageMinus />, tom: aRepor > 0 ? "text-warning-fg" : undefined, detalhe: "abaixo do mínimo", href: href("repor"), ativo: recorte === "repor" },
+          { rotulo: "A conferir", valor: String(aConferir), icone: <ClipboardCheck />, detalhe: "há mais de 6 meses", href: href("conferir"), ativo: recorte === "conferir" },
         ]}
       />
 
       <CascoDaTabela
-        contagem={contarItens(visiveis.length, "item", "itens")}
+        contagem={contarItens(total, "item", "itens")}
         busca={
           <FormularioDeFiltro action="/estoque" className="max-w-full">
             {recorte !== "todos" && <input type="hidden" name="recorte" value={recorte} />}
@@ -115,11 +134,11 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
         }
         filtros={<FiltrosDaTela naBarra campos={[{ chave: "recorte", rotulo: "Recorte", vazioLabel: "Todos", opcoes: RECORTES.filter((r) => r.chave !== "todos").map((r) => ({ value: r.chave, label: r.rotulo })) }]} />}
       >
-        {visiveis.length === 0 ? (
+        {total === 0 ? (
           <EmptyState
             icon={<Boxes />}
-            title={itens.length === 0 ? "Nenhum item no estoque" : busca ? "Nada encontrado" : "Nenhum item neste recorte"}
-            description={itens.length === 0 ? (podeGerir ? "Cadastre a primeira máquina ou o primeiro material em “Novo item”." : "Os itens aparecem aqui quando a coordenação do Financeiro cadastrar.") : undefined}
+            title={!temAlgum ? "Nenhum item no estoque" : busca ? "Nada encontrado" : "Nenhum item neste recorte"}
+            description={!temAlgum ? (podeGerir ? "Cadastre a primeira máquina ou o primeiro material em “Novo item”." : "Os itens aparecem aqui quando a coordenação do Financeiro cadastrar.") : undefined}
           />
         ) : (
           <>
@@ -183,7 +202,7 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
                 </tbody>
               </table>
             </TabelaNoDesktop>
-            <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={(p) => href(recorte, p)} total={visiveis.length} rotulo="itens" />
+            <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={(p) => href(recorte, p)} total={total} rotulo="itens" />
           </>
         )}
       </CascoDaTabela>

@@ -114,21 +114,16 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
   ]);
   const nomeDe = new Map(equipe.map((u) => [u.id, u.name]));
   const atuais = atuaisPorDocumento(certs);
-  const linhas = certs.map((c) => {
-    const usos: UsoDoDocumento[] = porDocumento.get(c.documento) ?? [];
-    const situacao = situacaoDoCertificado(c, atuais.get(c.documento), hoje);
-    return {
-      ...c,
-      situacao,
-      dias: diasAte(c.expiresAt, hoje),
-      usos,
-      usosAtivos: usosQueContam(usos, hoje),
-      ultimo: ultimoUso(usos),
-      vezes30: usos.reduce((s, u) => s + (u.vezes30 ?? 0), 0),
-      impacto: seVencerPara(usos, hoje),
-      renovacao: statusDaRenovacao(c.renovacaoStatus, situacao),
-    };
-  });
+  // A lista continua lida inteira (27/11/2026, melhoria-571): a situação depende
+  // do certificado mais novo do mesmo documento e do dia, e os recortes do uso
+  // registrado — nada disso dá para filtrar no banco sem mudar o schema. A
+  // leitura já é leve (só as colunas da linha, sem teto); aqui fica só o que o
+  // recorte, a busca e os cartões usam, e o resto da linha sai só da página.
+  const linhas = certs.map((c) => ({
+    ...c,
+    situacao: situacaoDoCertificado(c, atuais.get(c.documento), hoje),
+    usos: porDocumento.get(c.documento) ?? ([] as UsoDoDocumento[]),
+  }));
   const t = totaisPorRisco(linhas, hoje);
 
   const naAba = (c: (typeof linhas)[number]) => {
@@ -151,7 +146,16 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
   );
   const totalDePaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA));
   const paginaVista = Math.min(pagina, totalDePaginas);
-  const daPagina = visiveis.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
+  const daPagina = visiveis.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA).map((c) => ({
+    ...c,
+    dias: diasAte(c.expiresAt, hoje),
+    usosAtivos: usosQueContam(c.usos, hoje),
+    ultimo: ultimoUso(c.usos),
+    vezes30: c.usos.reduce((s, u) => s + (u.vezes30 ?? 0), 0),
+    impacto: seVencerPara(c.usos, hoje),
+    renovacao: statusDaRenovacao(c.renovacaoStatus, c.situacao),
+  }));
+  type LinhaDaPagina = (typeof daPagina)[number];
   const hrefDaPagina = (p: number) => {
     const q = new URLSearchParams();
     if (aba !== PADRAO) q.set("aba", aba);
@@ -167,10 +171,10 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
   // quase tudo aparece sem uso só porque o registro acabou de começar.
   const diasDeRegistro = registroDesde ? -diasAte(registroDesde, hoje) : 0;
   const registroCurto = diasDeRegistro < DIAS_SEM_USO;
-  const nome = (c: (typeof linhas)[number]) => (c.company ? nomeExibicao(c.company) : c.titular);
+  const nome = (c: LinhaDaPagina) => (c.company ? nomeExibicao(c.company) : c.titular);
 
   // As peças de cada linha, iguais na tabela e no cartão do celular.
-  const usadoPor = (c: (typeof linhas)[number]) => (
+  const usadoPor = (c: LinhaDaPagina) => (
     <div className="flex flex-col items-start gap-1">
       {c.usosAtivos.length ? (
         <ul className="flex flex-wrap gap-1" aria-label="Usado por">
@@ -197,7 +201,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       )}
     </div>
   );
-  const ultimoUsoTexto = (c: (typeof linhas)[number]) =>
+  const ultimoUsoTexto = (c: LinhaDaPagina) =>
     c.ultimo ? (
       <>
         <span className="tabular-nums">{quando(c.ultimo, hoje)}</span>
@@ -206,7 +210,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
     ) : (
       <span className="text-fg-muted">—</span>
     );
-  const seVencer = (c: (typeof linhas)[number]) => {
+  const seVencer = (c: LinhaDaPagina) => {
     if (c.situacao === "substituido") return <span className="text-fg-muted">— (o novo assume)</span>;
     if (!c.impacto) return <span className="text-fg-muted">—</span>;
     const perto = c.situacao === "vencido" || c.situacao === "a_renovar";
@@ -220,7 +224,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       </span>
     );
   };
-  const resumoDaRenovacao = (c: (typeof linhas)[number]) => {
+  const resumoDaRenovacao = (c: LinhaDaPagina) => {
     const resp = c.renovacaoResponsavelId ? nomeDe.get(c.renovacaoResponsavelId) : null;
     const custo = c.renovacaoCustoCentavos !== null ? formatarReaisDeCentavos(c.renovacaoCustoCentavos) : null;
     const paga = c.renovacaoPagaQuem ? ROTULO_DE_QUEM_PAGA[c.renovacaoPagaQuem as PagaQuem] : null;
@@ -235,7 +239,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       </>
     );
   };
-  const renovacao = (c: (typeof linhas)[number]) =>
+  const renovacao = (c: LinhaDaPagina) =>
     acesso.podeImportar && c.situacao !== "substituido" ? (
       <EditarRenovacao
         id={c.id}
