@@ -135,6 +135,14 @@ export type FiltroDaFila = {
 };
 
 /**
+ * O teto de quem lê a fila sem página (27/11/2026, melhoria-571): o kanban,
+ * que mostra todos os cartões de uma vez, e a fila com as etapas de cada linha
+ * (`listarFila`: a Ceci e o painel da home). A lista de /processos não passa
+ * teto: pagina na tela e só a página ganha as etapas.
+ */
+export const TETO_DA_FILA_SEM_PAGINA = 500;
+
+/**
  * Os processos abertos do tenant, já com situação e prazo, na ordem da fila —
  * sem as etapas liberadas (`comEtapasAgora`, para as linhas que aparecem).
  *
@@ -148,12 +156,27 @@ export type FiltroDaFila = {
  * Os dois não brigam porque só um é fonte para cada coisa: estado fino que
  * alguém precisasse lembrar de atualizar seria estado que mente na primeira vez
  * que uma gravação falhasse no meio.
+ *
+ * ─── Sem teto, por padrão (27/11/2026, melhoria-571) ────────────────────────
+ *
+ * Era `take: 500` fixo, sem aviso na tela: passando disso, o resto da fila
+ * sumia calado da lista e dos contadores. A situação e o prazo são derivados
+ * (protocolos, dias úteis com feriados), então o banco não filtra nem ordena
+ * por eles, e a fila do filtro inteira vem para a memória. Por isso a leitura
+ * é leve: o select tem só o que o filtro, a ordem, a busca e os contadores usam
+ * — as relações (empresa, responsável, tipo, protocolos) são todas da busca, da
+ * situação ou do prazo; as colunas soltas que só a linha mostra (número,
+ * prioridade, data combinada, cor do tipo) vêm na mesma linha da tabela e
+ * servem também ao kanban, que não enriquece. O pesado — roteiro e etapas de
+ * cada processo — fica em `comEtapasAgora`, só para a página. Quem lê sem
+ * página passa `teto` (ver `TETO_DA_FILA_SEM_PAGINA`).
  */
 export async function listarFilaLeve(
   tenantId: string,
   filtro: FiltroDaFila,
   feriados: Set<string>,
-  agora: Date
+  agora: Date,
+  opcoes: { teto?: number } = {}
 ): Promise<LinhaDaFilaLeve[]> {
   const prisma = getPrisma();
 
@@ -183,9 +206,7 @@ export async function listarFilaLeve(
       },
       protocols: { select: { organId: true, attempt: true, outcome: true } },
     },
-    // Teto defensivo: a fila é para trabalhar, não para inventariar. Passando
-    // disto, o setor precisa de filtro, não de mais linhas.
-    take: 500,
+    ...(opcoes.teto ? { take: opcoes.teto } : {}),
   });
 
   const linhas: LinhaDaFilaLeve[] = processos.map((p) => {
@@ -255,9 +276,13 @@ export async function comEtapasAgora(tenantId: string, linhas: readonly LinhaDaF
   return linhas.map((l) => ({ ...l, etapasAgora: etapas.get(l.id) ?? [] }));
 }
 
-/** A fila inteira com as etapas de cada linha — para quem lê tudo (a Ceci do Societário). */
+/**
+ * A fila com as etapas de cada linha — para quem lê tudo (a Ceci do Societário
+ * e o painel da home). Sem página, então com o teto: as etapas de cada linha
+ * são a parte cara da leitura.
+ */
 export async function listarFila(tenantId: string, filtro: FiltroDaFila, feriados: Set<string>, agora: Date): Promise<LinhaDaFila[]> {
-  return comEtapasAgora(tenantId, await listarFilaLeve(tenantId, filtro, feriados, agora));
+  return comEtapasAgora(tenantId, await listarFilaLeve(tenantId, filtro, feriados, agora, { teto: TETO_DA_FILA_SEM_PAGINA }));
 }
 
 /** Quantos processos em cada situação — para os contadores do filtro. */
@@ -281,7 +306,7 @@ export function contarPorSituacao(linhas: readonly Pick<LinhaDaFilaLeve, "situac
  *
  * Cada palavra precisa casar em algum dos campos ("alvorada baixa" acha a baixa
  * da Ótica Alvorada). Roda depois da consulta: a fila inteira do filtro já está
- * em memória para os contadores (ver /processos), e o teto é de 500 linhas.
+ * em memória para os contadores (ver /processos), na leitura leve.
  */
 export function filtrarPelaBusca<T extends Pick<LinhaDaFila, "empresaNome" | "tipoNome" | "titulo" | "responsavelNome">>(
   linhas: T[],
