@@ -17,7 +17,8 @@ import {
   type SituacaoDoProcesso,
   type Prazo,
 } from "./processo";
-import { ordenarExigencias, type ItemDePrazo, type SituacaoDaExigencia } from "./prazos";
+import { ordemDasExigenciasNoBanco, ordenarExigencias, type ItemDePrazo, type SituacaoDaExigencia } from "./prazos";
+import type { Prisma } from "@/generated/prisma/client";
 import type { FiltroDaFila, LinhaDaFila } from "./fila";
 import type { ProcessoParaRelatorio } from "./relatorios";
 import type { Prioridade } from "./prioridade";
@@ -237,23 +238,33 @@ export type LinhaDeExigencia = {
   responsavelNome: string | null;
 };
 
+export type PaginaDeExigencias = { linhas: LinhaDeExigencia[]; total: number; pagina: number; totalDePaginas: number };
+
+/**
+ * Uma página da lista de Exigências (27/11/2026, melhoria-571). Era a lista
+ * inteira até o teto de 500, cortada em memória; agora o banco filtra, ordena
+ * (`ordemDasExigenciasNoBanco`, a mesma ordem de `ordenarExigencias`) e entrega
+ * só a página. Página além do fim cai na última que existe.
+ */
 export async function listarExigencias(
   tenantId: string,
-  filtro: { situacao: SituacaoDaExigencia; responsavelId?: string }
-): Promise<LinhaDeExigencia[]> {
+  filtro: { situacao: SituacaoDaExigencia; responsavelId?: string },
+  paginacao: { pagina: number; porPagina: number }
+): Promise<PaginaDeExigencias> {
   const prisma = getPrisma();
-  const linhas = await prisma.processRequirement.findMany({
-    where: {
-      tenantId,
-      resolvedAt: filtro.situacao === "abertas" ? null : filtro.situacao === "resolvidas" ? { not: null } : undefined,
-      protocol: {
-        process: {
-          tenantId,
-          status: { notIn: STATUS_SEM_CONCLUSAO },
-          ownerUserId: filtro.responsavelId === "nenhum" ? null : filtro.responsavelId || undefined,
-        },
+  const where: Prisma.ProcessRequirementWhereInput = {
+    tenantId,
+    resolvedAt: filtro.situacao === "abertas" ? null : filtro.situacao === "resolvidas" ? { not: null } : undefined,
+    protocol: {
+      process: {
+        tenantId,
+        status: { notIn: STATUS_SEM_CONCLUSAO },
+        ownerUserId: filtro.responsavelId === "nenhum" ? null : filtro.responsavelId || undefined,
       },
     },
+  };
+  const lerPagina = (p: number) => prisma.processRequirement.findMany({
+    where,
     select: {
       id: true,
       description: true,
@@ -277,14 +288,23 @@ export async function listarExigencias(
         },
       },
     },
-    // Com o teto, quem cai fora é a mais antiga — que em "todas" é a resolvida
-    // de meses atrás, e não a aberta de hoje.
-    orderBy: { raisedAt: "desc" },
-    take: TETO,
+    orderBy: ordemDasExigenciasNoBanco(filtro.situacao),
+    skip: (p - 1) * paginacao.porPagina,
+    take: paginacao.porPagina,
   });
 
-  return ordenarExigencias(
-    linhas.map((r) => ({
+  const pedida = Math.max(1, paginacao.pagina);
+  const [total, primeira] = await Promise.all([prisma.processRequirement.count({ where }), lerPagina(pedida)]);
+  const totalDePaginas = Math.max(1, Math.ceil(total / paginacao.porPagina));
+  // Página além do fim (link antigo, a última esvaziou): mostra a última que existe.
+  const pagina = Math.min(pedida, totalDePaginas);
+  const linhas = pagina === pedida ? primeira : await lerPagina(pagina);
+
+  return {
+    total,
+    pagina,
+    totalDePaginas,
+    linhas: linhas.map((r) => ({
       id: r.id,
       descricao: r.description,
       raisedAt: r.raisedAt,
@@ -299,8 +319,8 @@ export async function listarExigencias(
       orgaoNome: sigla(r.protocol.organ)!,
       tentativa: r.protocol.attempt,
       responsavelNome: r.protocol.process.owner?.name ?? null,
-    }))
-  );
+    })),
+  };
 }
 
 // ─── Kanban ──────────────────────────────────────────────────────────────────

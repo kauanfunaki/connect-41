@@ -8,6 +8,7 @@ import {
   fimDoDia,
   lerVisaoDaAgenda,
   ordenarExigencias,
+  ordemDasExigenciasNoBanco,
   lerSituacaoDaExigencia,
   colunasDoKanban,
 } from "./prazos";
@@ -133,6 +134,50 @@ describe("ordenarExigencias", () => {
       "resolvida-nova",
       "resolvida-antiga",
     ]);
+  });
+
+  // A lista pagina no banco (melhoria-571): o orderBy precisa dar a mesma ordem
+  // da função. O banco é simulado com as regras do ORDER BY (nulo no começo do
+  // asc e no fim do desc, salvo `nulls`).
+  type Ordem = Record<string, "asc" | "desc" | { sort: "asc" | "desc"; nulls?: "first" | "last" }>;
+  const noBanco = <T extends Record<string, unknown>>(ordens: Ordem[], linhas: T[]) =>
+    [...linhas].sort((a, b) => {
+      for (const o of ordens) {
+        const [campo, regra] = Object.entries(o)[0];
+        const sort = typeof regra === "string" ? regra : regra.sort;
+        const nulls = typeof regra === "string" ? (sort === "asc" ? "first" : "last") : (regra.nulls ?? (sort === "asc" ? "first" : "last"));
+        const va = a[campo] instanceof Date ? (a[campo] as Date).getTime() : (a[campo] as string | null);
+        const vb = b[campo] instanceof Date ? (b[campo] as Date).getTime() : (b[campo] as string | null);
+        if (va === vb) continue;
+        if (va === null) return nulls === "first" ? -1 : 1;
+        if (vb === null) return nulls === "first" ? 1 : -1;
+        const c = va < vb ? -1 : 1;
+        return sort === "asc" ? c : -c;
+      }
+      return 0;
+    });
+  const todas = [
+    ex("resolvida-antiga", { resolvedAt: "2026-09-02" }),
+    ex("sem-prazo-nova", { raisedAt: "2026-09-10" }),
+    ex("prazo-longe", { dueAt: "2026-10-01" }),
+    ex("resolvida-nova", { resolvedAt: "2026-09-12" }),
+    ex("sem-prazo-velha", { raisedAt: "2026-09-03" }),
+    ex("prazo-perto", { dueAt: "2026-09-18" }),
+  ];
+  const ids = (l: { id: string }[]) => l.map((e) => e.id);
+
+  it("o orderBy do banco dá a mesma ordem em cada situação", () => {
+    const abertas = todas.filter((e) => e.resolvedAt === null);
+    const resolvidas = todas.filter((e) => e.resolvedAt !== null);
+    expect(ids(noBanco(ordemDasExigenciasNoBanco("todas") as Ordem[], todas))).toEqual(ids(ordenarExigencias(todas)));
+    expect(ids(noBanco(ordemDasExigenciasNoBanco("abertas") as Ordem[], abertas))).toEqual(ids(ordenarExigencias(abertas)));
+    expect(ids(noBanco(ordemDasExigenciasNoBanco("resolvidas") as Ordem[], resolvidas))).toEqual(ids(ordenarExigencias(resolvidas)));
+  });
+
+  it("o id desempata, para a página não repetir linha", () => {
+    for (const s of ["abertas", "resolvidas", "todas"] as const) {
+      expect(Object.keys(ordemDasExigenciasNoBanco(s).at(-1)!)).toEqual(["id"]);
+    }
   });
 
   it("filtro desconhecido cai em abertas", () => {
