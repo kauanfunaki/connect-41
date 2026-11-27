@@ -18,7 +18,7 @@ vi.mock("@/lib/prisma", () => ({
   }),
 }));
 
-const { listarFila, listarFilaLeve, comEtapasAgora } = await import("./fila");
+const { listarFila, listarFilaLeve, comEtapasAgora, TETO_DA_FILA_SEM_PAGINA } = await import("./fila");
 
 const ROTEIRO = {
   steps: [
@@ -91,6 +91,20 @@ describe("a fila em duas leituras", () => {
     banco.pedidos = [];
     expect(await comEtapasAgora("t1", [])).toEqual([]);
     expect(banco.pedidos).toHaveLength(0);
+  });
+
+  // 27/11/2026, melhoria-571: a lista de /processos pagina na tela e não tem
+  // mais o teto de 500, que cortava calado; quem lê sem página pede o teto.
+  it("a leitura leve não tem teto, a menos que quem chama peça", async () => {
+    await listarFilaLeve("t1", {}, new Set(), AGORA);
+    expect(banco.pedidos[0]).not.toHaveProperty("take");
+    await listarFilaLeve("t1", {}, new Set(), AGORA, { teto: 20 });
+    expect(banco.pedidos[1].take).toBe(20);
+  });
+
+  it("a fila com as etapas (Ceci e home), sem página, segue com o teto", async () => {
+    await listarFila("t1", {}, new Set(), AGORA);
+    expect(banco.pedidos[0].take).toBe(TETO_DA_FILA_SEM_PAGINA);
   });
 
   it("a fila inteira (a da Ceci) segue com as etapas de todas as linhas", async () => {
